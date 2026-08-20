@@ -50,21 +50,31 @@ framework does *not* provide — and what this repo is for — is the tile's
 own docs mark BEL timing as placeholder-constant, so every timing number here
 has to be earned from characterized data.
 
-## Target specification (DRAFT — engineering to ratify, see issue #1)
+## Target specification (draft ratified in `spec/`, see #1)
+
+Framework choice and a draft tile spec are recorded in `spec/` — see
+[`spec/decisions/0001-fabric-framework-choice.md`](spec/decisions/0001-fabric-framework-choice.md)
+and [`spec/tile-spec.md`](spec/tile-spec.md) for the full rationale.
 
 | Parameter | Target |
 |---|---|
-| Logic tile | LUT4-class; LUT count, FF, and carry support to be ratified in `spec/` |
-| Routing | FABulous-style switch matrix; pitch target to be ratified |
-| Demonstration fabric | 2×2 to 4×4 tiles, bitstream-programmable |
+| Logic tile | LUT4-class: 4× LUT4, 1 output FF per LUT, no dedicated carry chain in v1 |
+| Routing | FABulous-style per-tile switch matrix; 4 general-purpose tracks/edge (architectural target — physical metal pitch deferred to physical design) |
+| Demonstration fabric | 2×2 to 4×4 tiles, single tile type, bitstream-programmable |
 | Bitstream | fully documented, open format |
 | Timing | claims only from characterized sky130 data — no inherited numbers |
+
+Framework-gap work items (physical design, DRC/LVS, timing characterization,
+bitstream-level verification) that a sky130 tile implementation needs beyond
+what FABulous provides are tracked in
+[`spec/framework-gaps.md`](spec/framework-gaps.md).
 
 Maturity ladder: framework evaluated → tile spec ratified → tile RTL +
 fabric description passing bitstream-level tests → tile layout
 DRC/LVS-clean → tile timing characterized → demonstration fabric assembled
 and re-verified → shuttle seat → measured silicon. **Current position:
-pre-spec.**
+framework evaluated, draft tile spec recorded — RTL/tile-description work
+not yet started.**
 
 ## Repo layout
 
