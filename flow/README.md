@@ -182,5 +182,99 @@ confusing one — expected behavior per `klt drc --help`, not a tool gap. See
 curated-engine "clean" verdict does and does not cover.
 
 **Out of scope here**: LVS (`klt lvs`, `spec/framework-gaps.md` item G3's
-other half — a separate follow-on issue, #12) and the PDK-native
+other half — see `flow/lvs.sh` below, issue #12) and the PDK-native
 `--engine klayout` DRC-DSL signoff path (not exercised — see above).
+
+### `flow/lvs.sh` — LVS clean report (T1 item 4)
+
+`flow/lvs.sh` runs `klt lvs` comparing `layout/logic_tile.gds` against its
+own as-built gate-level reference netlist and checks the result against the
+committed report at `layout/logic_tile.lvs.json`. This is the T1 "LVS
+clean" pass condition (item 4 of `docs/design-evidence-tiers.md` in
+`2AMLogic/klayout-tools`, per issue #12): *"latest LVS report with `status:
+match`, fresh, engine named."*
+
+**Reference-netlist form**: `design/netlist/logic_tile_netlist.v`
+(`flow/synth.sh`'s generic-cell netlist) cannot topologically match a
+`sky130_fd_sc_hd`-built layout, so this uses `klt lvs`'s documented
+"Digital gate-level LVS" path instead (`reference.form =
+"gate-level-verilog"`, `docs/cli/lvs.md`): the layout side is `klt extract
+--abstract-cells 'sky130_fd_sc_hd__*' --def-net-names` against
+`layout/logic_tile.gds`, and the reference side is `klt place-and-route`'s
+own as-built `verilog_path` netlist from the *same* synthesize +
+place-and-route run (`flow/layout.sh`).
+
+**Why the same run, not the committed GDS as some independent artifact** (a
+real, live finding from building this evidence): re-running
+`flow/layout.sh`'s synth + place-and-route sequence in an environment whose
+`yosys`/OpenROAD build differs from whatever produced the
+currently-committed layout is not just *physically* non-reproducible
+(differing wirelength/timing numbers) but can be *logically*
+non-reproducible too — verified live: two independent place-and-route runs
+in the *same* environment (same seed, same synthesized netlist) produce a
+byte-identical as-built netlist, but comparing a netlist regenerated in a
+*different* environment against a layout built by yet another environment
+found 8 `sky130_fd_sc_hd__mux4_2` instances that could not be
+topologically matched — two environments' synthesis genuinely picked a
+different (if functionally equivalent) gate-level structure for those
+instances. An LVS "match" is therefore only honest when the layout and its
+reference netlist come from the identical run — `./flow/lvs.sh --update`
+regenerates and commits `layout/logic_tile.gds` and
+`layout/logic_tile.par.json` (via `flow/layout.sh --update`) together with
+`layout/logic_tile.lvs.json`, so all three describe the same, LVS-proven
+circuit. Since the GDS content changes, `layout/logic_tile.drc.json`'s own
+provenance is re-derived (`flow/drc.sh --update`) in the same pass whenever
+this happens, so all four committed layout artifacts stay mutually
+consistent.
+
+Running:
+
+```
+./flow/lvs.sh            # regenerate the as-built reference netlist, run
+                          # LVS against the already-committed GDS, and diff
+                          # the (trimmed) report against the committed copy
+                          # under layout/. Does NOT touch layout/'s
+                          # committed GDS/report.
+./flow/lvs.sh --update   # regenerate AND commit a fresh, mutually
+                          # consistent layout/logic_tile.gds,
+                          # logic_tile.par.json, and logic_tile.lvs.json.
+                          # Refuses to write a non-"match" report. Run
+                          # ./flow/drc.sh --update afterward to keep the
+                          # DRC report's provenance in sync with the new
+                          # GDS.
+```
+
+Requires everything `flow/layout.sh` requires (`klt`, a native `yosys`
+build, `openroad`, a resolvable sky130A PDK); LVS itself runs fully
+headless via `klt`'s own bundled `klayout` Python package. `flow/lvs.sh`
+also auto-exports `$PDK_ROOT`/`$PDK` (only when unset) from `klt pdk
+find`'s own resolved root before delegating to `flow/layout.sh` — some
+local `openroad` installs are thin Docker wrappers that only mount
+`$PDK_ROOT` into the container when that variable is set in the invoking
+shell, even when `klt pdk find` itself resolves the PDK fine via a
+different search path.
+
+**Friction encountered — escaped identifiers.** This design's
+`generate`-block RTL (`design/rtl/logic_tile.v`'s `g_slice[N].u_slice`)
+produces an as-built netlist whose internal net/instance names are
+Verilog *escaped* identifiers containing `[`, `]`, `.`, `/` — a real `klt
+lvs` parsing gap in its `reference.form = "gate-level-verilog"` converter,
+filed generically as
+[`2AMLogic/klayout-tools#1371`](https://github.com/2AMLogic/klayout-tools/issues/1371).
+`flow/lvs_sanitize_verilog.py` works around this with a
+connectivity-preserving, name-only rewrite before handing the netlist to
+`klt lvs`. `flow/lvs_declared_pins.py` derives the layout side's `--pins`
+allow-list from the same as-built netlist's own port declarations, since a
+flat `klt extract` promotes every DEF-recovered internal net name to a
+top-level pin by default. `flow/lvs_report_trim.py` strips local-path and
+tool-version fields out of the response before committing, and injects
+`layout_gds_sha256`/`rtl_input_sha256` (content-addressed provenance tied
+to the persistent, git-tracked GDS and RTL sources — not the ephemeral
+scratch netlists `klt lvs`'s own `environment.*_sha256` hash) so freshness
+is verifiable later without re-running the flow.
+
+**Out of scope here**: the `netgen` LVS engine (not exercised — this uses
+`klt lvs`'s default `"klayout"` engine) and a power-connectivity check
+(this compare is signal-connectivity only, per `docs/cli/lvs.md` — not a
+gap here, since `layout/README.md`'s "No power delivery network" note
+means there is no power connectivity for this mode to miss).

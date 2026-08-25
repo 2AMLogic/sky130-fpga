@@ -100,10 +100,10 @@
     "deck": {
       "content_hash": "sha256:2e78949d63f03012c505528158948a250e18c2c21c8710c85a23a8243649f4d0",
       "name": "sky130",
-      "released": false
+      "released": true
     },
     "input": {
-      "content_hash": "sha256:b9f66c6044e1cac268612c665fafd9648516874f70221e1cf5a236069c05b659"
+      "content_hash": "sha256:1e05b29f3a97c87aaf1d77a7b18142709ddfb6722ac23284a9f254b3c2f839e1"
     },
     "pdk": null
   },
