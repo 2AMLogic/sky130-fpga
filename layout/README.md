@@ -2,7 +2,7 @@
 
 Tile physical design — GDS + DRC/LVS reports.
 
-## Current contents (T1 items 2-3)
+## Current contents (T1 items 2-4)
 
 - `logic_tile.gds` — a placed-and-routed sky130 GDS for the tile
   (`logic_tile` = 4x `lut4_slice`, per `design/rtl/`), synthesized against
@@ -24,8 +24,16 @@ Tile physical design — GDS + DRC/LVS reports.
   `docs/design-evidence-tiers.md` in `2AMLogic/klayout-tools`, per issue
   #11 — see "DRC scope, concretely" below for exactly what this claim does
   and does not cover.
+- `logic_tile.lvs.json` — a `klt lvs` (klayout-tools, `"klayout"` engine)
+  LVS report comparing `logic_tile.gds` against its own as-built
+  gate-level reference netlist (`reference.form = "gate-level-verilog"`,
+  from the same `klt place-and-route` run): `status: "match"`, 0
+  mismatches. Regenerated and checked by `flow/lvs.sh` on every invocation.
+  This is T1 item 4 (LVS clean) of `docs/design-evidence-tiers.md` in
+  `2AMLogic/klayout-tools`, per issue #12 — see "LVS scope, concretely"
+  below for exactly what this claim does and does not cover.
 
-Regenerate + check all three with:
+Regenerate + check all with:
 
 ```
 ./flow/layout.sh            # regenerate GDS + P&R report, diff against the
@@ -37,6 +45,17 @@ Regenerate + check all three with:
                             # provenance freshness
 ./flow/drc.sh --update     # rerun DRC and overwrite the committed report
                             # (run after ./flow/layout.sh --update)
+
+./flow/lvs.sh                # rerun LVS against the committed GDS and its
+                              # freshly-regenerated as-built reference
+                              # netlist, and diff the report against the
+                              # committed copy. Does NOT touch the
+                              # committed GDS/P&R report.
+./flow/lvs.sh --update       # regenerate AND commit a fresh, mutually
+                              # consistent GDS + P&R report + LVS report
+                              # together (see "LVS scope, concretely"
+                              # below for why) -- run ./flow/drc.sh --update
+                              # afterward to keep the DRC report in sync.
 ```
 
 ## What this is, concretely
@@ -75,9 +94,60 @@ engine — KLayout's native `Region`-primitive checks, run fully headless
   fails cleanly with "binary not found on PATH" — expected, documented
   behavior per `klt drc --help`, not a tool gap). A full foundry-signoff
   DRC-DSL pass, if wanted, is separate follow-on work.
-- **LVS is separate.** `klt lvs` (netlist-vs-layout comparison) is not run
-  here — that is `spec/framework-gaps.md` item G3's other half, filed as
-  its own follow-on issue (#12).
+- **LVS is separate.** `klt lvs` (netlist-vs-layout comparison) is
+  `spec/framework-gaps.md` item G3's other half — see "LVS scope,
+  concretely" below (issue #12).
+
+## LVS scope, concretely (issue #12)
+
+`logic_tile.lvs.json`'s `status: "match"` is a `klt lvs` run (klayout-tools,
+default `"klayout"` engine, `klayout.db.NetlistComparer`) comparing
+`logic_tile.gds` against `klt place-and-route`'s own as-built gate-level
+Verilog netlist from the same run (`reference.form =
+"gate-level-verilog"`, `docs/cli/lvs.md`'s "Digital gate-level LVS" path),
+since the generic-cell `design/netlist/logic_tile_netlist.v` cannot
+topologically match a `sky130_fd_sc_hd`-built layout (see
+`design/README.md`). Precisely:
+
+- **What it checks**: every `sky130_fd_sc_hd` standard-cell instance is
+  abstracted to a pin-only black box on both sides (`klt extract
+  --abstract-cells 'sky130_fd_sc_hd__*' --def-net-names`), so the compare
+  is device/net/pin *topology* only — 44 standard-cell instances, 0
+  mismatches, `counts.pins`/`counts.nets` both sides matching once the
+  layout's internal, DEF-recovered net names are demoted from top-level
+  pins via `--pins` (see `flow/README.md`'s `flow/lvs.sh` section).
+- **What it is not**: this compare is **signal-connectivity only** — no
+  power/ground pins are compared (`docs/cli/lvs.md`'s "No power/ground
+  pins" note: `verilog_path` is written without `-include_pwr_gnd`). This
+  is not a gap for this tile specifically: per "No power delivery network"
+  below, this layout has no PDN to begin with, so there is no power
+  connectivity for this mode to miss. It is also not a device-parameter
+  (transistor-level) check — the abstracted black-box cells carry no
+  device geometry to compare.
+- **Why the layout and reference netlist must come from the same run**:
+  verified live while building this evidence — two independent
+  `klt place-and-route` runs in the *same* environment (same seed, same
+  synthesized netlist) reproduce a byte-identical as-built netlist, but a
+  netlist regenerated in a *different* toolchain environment than whatever
+  built the committed GDS found 8 `sky130_fd_sc_hd__mux4_2` instances (2
+  per `lut4_slice`, all 4 slices) that could not be topologically matched
+  — different environments' synthesis genuinely picked a different (if
+  functionally equivalent) gate-level structure for those instances. So
+  `logic_tile.gds`/`logic_tile.par.json` here are the pair
+  `flow/lvs.sh --update` most recently regenerated together with
+  `logic_tile.lvs.json` from the identical synth + place-and-route run —
+  not independently re-derived artifacts that merely happen to agree.
+- **Escaped-identifier workaround**: this design's `generate`-block RTL
+  (`design/rtl/logic_tile.v`'s `g_slice[N].u_slice`) produces an as-built
+  netlist whose internal names are Verilog *escaped* identifiers
+  (`\g_slice[0].u_slice/_01_`), which `klt lvs`'s
+  `reference.form = "gate-level-verilog"` converter misparses — a real,
+  generically-filed tool gap
+  ([`2AMLogic/klayout-tools#1371`](https://github.com/2AMLogic/klayout-tools/issues/1371)).
+  `flow/lvs_sanitize_verilog.py` works around it with a
+  connectivity-preserving, name-only rewrite before the compare — see that
+  script's own header comment for why the rewrite cannot change the
+  verdict.
 
 ## What this is NOT (non-goals of this issue, #9)
 - **Not a timing claim.** `constraints.clock_period_ns` in
@@ -95,9 +165,10 @@ engine — KLayout's native `Region`-primitive checks, run fully headless
   precedent of klayout-tools' own `sky130_fd_sc_hd` worked example, which
   reaches a clean route without one (unlike some other cell libraries; see
   `docs/cli/place-and-route.md` in `2AMLogic/klayout-tools`). A committed
-  PDN is follow-on work alongside G3's LVS signoff (#12), where it will
-  actually matter (no `power` block routes clean here but is not
-  full-chip-ready).
+  PDN is separate follow-on work, where it will actually matter (no
+  `power` block routes clean here but is not full-chip-ready) — see "LVS
+  scope, concretely" above for why its absence is not a gap for the LVS
+  compare specifically.
 - **Not the tile's switch matrix / inter-tile routing.** Same BEL-level
   scope as `design/rtl/` — see `design/README.md`.
 
