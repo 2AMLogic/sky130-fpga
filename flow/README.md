@@ -1,9 +1,12 @@
 # flow
 
 Synthesis and place-and-route tooling — the `yosys` + `nextpnr` flow
-referenced by `CLAUDE.md`.
+referenced by `CLAUDE.md` for the fabric itself, plus `klayout-tools` (`klt`)
+for sky130 physical design (layout, DRC/LVS, place-and-route).
 
-## Current contents (T1 item 1 follow-up)
+## Current contents
+
+### `flow/synth.sh` — generic-cell netlist (T1 item 1 follow-up)
 
 `flow/synth.sh` derives a **generic-cell** (technology-independent) netlist
 from the committed tile RTL under `design/rtl/` via `yosys`
@@ -20,7 +23,7 @@ invocation and diffs the result against that committed copy
 (**reproducibility**) — mirroring `sim/run.sh`'s "recompile from source every
 run" pattern rather than trusting a one-off hand-run artifact.
 
-## Running
+Running:
 
 ```
 ./flow/synth.sh            # regenerate the netlist, diff against the
@@ -48,16 +51,82 @@ does.
 Exit status is `0` iff synthesis succeeds and (in the default, non-`--update`
 mode) the regenerated netlist matches the committed copy.
 
-## Out of scope here
+**Out of scope here**: sky130 standard-cell mapping / physical design (this
+is a plain generic-cell netlist — `$_MUX_`/`$_SDFFE_PP0P_`-class primitives,
+not liberty-mapped), and the FABulous-style tile/fabric description (switch
+matrix, routing — unconfirmed pending `spec/framework-gaps.md` item G1).
+sky130 mapping and place-and-route are `flow/layout.sh`'s job, below.
 
-- **sky130 standard-cell mapping / physical design** — this is a plain
-  generic-cell netlist (`$_MUX_`/`$_SDFFE_PP0P_`-class primitives), not a
-  liberty-mapped sky130 standard-cell netlist. That mapping, along with
-  place-and-route and DRC/LVS, is separate, already-tracked work (see
-  `design/README.md`'s "Out of scope here" and `spec/framework-gaps.md`
-  items G2+).
-- **FABulous-style tile/fabric description** (switch matrix, routing) — this
-  script synthesizes the BEL-level RTL only; the fabric-description format
-  itself is unconfirmed pending `spec/framework-gaps.md` item G1.
-- **nextpnr place-and-route** — not wired in yet; this is the synthesis half
-  of the "yosys + nextpnr" flow only.
+### `flow/layout.sh` — sky130 GDS layout (T1 item 2)
+
+`flow/layout.sh` takes the same committed RTL under `design/rtl/` through
+klayout-tools' (`klt`) digital flow — `klt synthesize` (Yosys, mapped
+against `sky130_fd_sc_hd`) followed by `klt place-and-route` (OpenROAD:
+floorplan through detailed route, plus the DEF->GDS merge) — producing a
+placed-and-routed sky130 GDS. This is the T1 "Layout" pass condition (item 2
+of `docs/design-evidence-tiers.md` in `2AMLogic/klayout-tools`, per issue
+#9): *"committed layout, reproducible from sources — presence AND
+reproducibility, not a one-off drop."*
+
+The liberty-mapped netlist `klt synthesize` produces here is **not** the
+same artifact as `design/netlist/logic_tile_netlist.v` above (that one stays
+generic-cell only, per its own scope) — it is regenerated fresh into
+`flow/build/` (gitignored scratch) on every `flow/layout.sh` run, never
+committed on its own. The committed deliverables are the GDS and its
+place-and-route report, both under `layout/` — see `layout/README.md` for
+what they contain and what they deliberately do not claim (no DRC/LVS
+signoff, no timing/Fmax claim, no power delivery network — all separate
+follow-on work).
+
+Running:
+
+```
+./flow/layout.sh            # regenerate the GDS + report, diff against the
+                            # committed copies under layout/. Exit 0 if
+                            # identical; non-zero if they differ or the
+                            # flow fails.
+
+./flow/layout.sh --update  # regenerate and overwrite the committed copies
+                            # under layout/. Run this (and commit the
+                            # result) after an intentional design/rtl/
+                            # change.
+```
+
+Requires `klt` (klayout-tools), a native `yosys` build, and `openroad` on
+`PATH`, plus a resolvable sky130A PDK install (`klt pdk find --pdk
+sky130A`). Scratch output (generated request JSON, raw `klt` responses, the
+synthesized netlist, and every P&R stage artifact) lands in `flow/build/`
+(gitignored), same non-committed-scratch shape as `flow/synth.sh`'s own.
+
+Two post-processing steps happen before comparing/committing, mirroring
+`flow/synth.sh`'s own version-header strip:
+
+- `flow/gds_canonicalize.py` zeroes the wall-clock timestamps `klt`'s
+  DEF->GDS merge embeds in every GDSII structure, so two runs of the
+  identical seeded request compare as byte-identical (verified: the
+  underlying DEF is already byte-identical across runs — this is purely a
+  GDS-container-format artifact). See `layout/README.md`'s "Reproducibility
+  note" and the filed tool gap,
+  [`2AMLogic/klayout-tools#1367`](https://github.com/2AMLogic/klayout-tools/issues/1367).
+- `flow/par_report_trim.py` strips local-absolute-path and bare
+  tool-version fields out of `klt place-and-route`'s JSON response before it
+  is committed as `layout/logic_tile.par.json`, so a toolchain upgrade alone
+  does not produce a spurious diff (same rationale as the Yosys-version
+  header strip above).
+
+**Friction encountered**: the default `yosys` this environment resolved on
+`PATH` was a WASI-sandboxed (YoWASP) build, which cannot open a `klt
+synthesize`-generated `.ys` script living outside its sandbox — `klt
+synthesize` fails with a confusing "No such file or directory" for a file
+that plainly exists. `flow/layout.sh` works around this by preferring a
+native `/usr/bin/yosys` when present (mirroring the same workaround already
+used internally by klayout-tools' own `tests/corpus/*/regenerate.sh`
+scripts). Filed generically as
+[`2AMLogic/klayout-tools#1368`](https://github.com/2AMLogic/klayout-tools/issues/1368),
+since neither the CLI nor `docs/cli/synthesize.md` warn about it.
+
+**Out of scope here**: DRC/LVS signoff, corner verification beyond
+`klt place-and-route`'s own built-in multi-corner STA sweep, Monte Carlo,
+and PEX — all `spec/framework-gaps.md` items G3+, separate follow-on issues.
+See `layout/README.md` for the full list of what the committed artifacts do
+and do not claim.

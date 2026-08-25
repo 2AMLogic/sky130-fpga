@@ -41,9 +41,13 @@ implement:
   schema (CSV columns, generator CLI) is unconfirmed pending
   `spec/framework-gaps.md` item G1 (pulling the pinned FABulous
   repository/release), and is a separate, larger follow-on once G1 lands.
-- sky130 standard-cell mapping (liberty-mapped netlist) and downstream
-  place-and-route — `design/netlist/logic_tile_netlist.v` is a generic-cell
-  netlist only; standard-cell mapping is tracked separately
-  (`spec/framework-gaps.md` item G2).
-- Physical design, DRC/LVS, and timing characterization (`layout/`,
-  `measurements/`, and `spec/framework-gaps.md` items G2–G4).
+- sky130 standard-cell mapping (liberty-mapped netlist) —
+  `design/netlist/logic_tile_netlist.v` here is a generic-cell netlist only.
+  A liberty-mapped netlist is now produced (as scratch, not committed under
+  `design/`) by `flow/layout.sh`'s own `klt synthesize` step on the way to
+  the committed GDS under `layout/` — see `flow/README.md` and
+  `layout/README.md` (`spec/framework-gaps.md` item G2).
+- DRC/LVS signoff and timing characterization (`measurements/`,
+  `spec/framework-gaps.md` items G3–G4) — physical design/layout itself
+  (item G2) now has a first pass under `layout/`, with DRC/LVS/timing
+  explicitly deferred to those follow-on items.
