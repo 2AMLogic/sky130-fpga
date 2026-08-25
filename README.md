@@ -81,6 +81,7 @@ not yet started.**
 ```
 spec/          ratified spec + decision records
 design/        fabric definition + RTL (FABulous-style tile/fabric description)
+flow/          yosys + nextpnr synthesis / place-and-route tooling
 sim/           verification evidence — bitstream-level testbenches + results
 layout/        tile physical design — GDS + DRC/LVS reports (klayout-tools driven)
 measurements/  silicon characterization (empty until tape-out)
