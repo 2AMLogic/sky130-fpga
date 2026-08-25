@@ -24,34 +24,19 @@ Usage:
     drc_report_trim.py <response.json> <output.json>
 """
 
-import json
 import sys
+
+from _report_trim import run_cli, strip_nested
 
 _DROP_PROVENANCE = ("klt_version", "klayout_version")
 
 
 def trim(response: dict) -> dict:
-    trimmed = dict(response)
-    if "provenance" in trimmed and isinstance(trimmed["provenance"], dict):
-        provenance = dict(trimmed["provenance"])
-        for key in _DROP_PROVENANCE:
-            provenance.pop(key, None)
-        trimmed["provenance"] = provenance
-    return trimmed
+    return strip_nested(response, "provenance", _DROP_PROVENANCE)
 
 
 def main(argv: list) -> int:
-    if len(argv) != 3:
-        print(f"usage: {argv[0]} <response.json> <output.json>", file=sys.stderr)
-        return 2
-    src, dst = argv[1], argv[2]
-    with open(src, encoding="utf-8") as f:
-        response = json.load(f)
-    trimmed = trim(response)
-    with open(dst, "w", encoding="utf-8") as f:
-        json.dump(trimmed, f, indent=2, sort_keys=True)
-        f.write("\n")
-    return 0
+    return run_cli(argv, trim)
 
 
 if __name__ == "__main__":

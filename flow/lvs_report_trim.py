@@ -33,10 +33,12 @@ Usage:
     lvs_report_trim.py <response.json> <layout_gds_sha256> <rtl_input_sha256> <output.json>
 """
 
-import json
 import sys
 
+from _report_trim import run_cli, strip_nested
+
 _DROP_TOP_LEVEL = ("layout", "reference")
+_DROP_ENVIRONMENT = ("engine_version",)
 _DROP_PROVENANCE = ("klt_version", "klayout_version")
 
 
@@ -44,35 +46,15 @@ def trim(response: dict, layout_gds_sha256: str, rtl_input_sha256: str) -> dict:
     trimmed = dict(response)
     for key in _DROP_TOP_LEVEL:
         trimmed.pop(key, None)
-    if "environment" in trimmed and isinstance(trimmed["environment"], dict):
-        environment = dict(trimmed["environment"])
-        environment.pop("engine_version", None)
-        trimmed["environment"] = environment
-    if "provenance" in trimmed and isinstance(trimmed["provenance"], dict):
-        provenance = dict(trimmed["provenance"])
-        for key in _DROP_PROVENANCE:
-            provenance.pop(key, None)
-        trimmed["provenance"] = provenance
+    trimmed = strip_nested(trimmed, "environment", _DROP_ENVIRONMENT)
+    trimmed = strip_nested(trimmed, "provenance", _DROP_PROVENANCE)
     trimmed["layout_gds_sha256"] = layout_gds_sha256
     trimmed["rtl_input_sha256"] = rtl_input_sha256
     return trimmed
 
 
 def main(argv: list) -> int:
-    if len(argv) != 5:
-        print(
-            f"usage: {argv[0]} <response.json> <layout_gds_sha256> <rtl_input_sha256> <output.json>",
-            file=sys.stderr,
-        )
-        return 2
-    src, layout_gds_sha256, rtl_input_sha256, dst = argv[1], argv[2], argv[3], argv[4]
-    with open(src, encoding="utf-8") as f:
-        response = json.load(f)
-    trimmed = trim(response, layout_gds_sha256, rtl_input_sha256)
-    with open(dst, "w", encoding="utf-8") as f:
-        json.dump(trimmed, f, indent=2, sort_keys=True)
-        f.write("\n")
-    return 0
+    return run_cli(argv, trim, extra_args=("layout_gds_sha256", "rtl_input_sha256"))
 
 
 if __name__ == "__main__":
