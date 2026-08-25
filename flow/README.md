@@ -130,3 +130,57 @@ since neither the CLI nor `docs/cli/synthesize.md` warn about it.
 and PEX — all `spec/framework-gaps.md` items G3+, separate follow-on issues.
 See `layout/README.md` for the full list of what the committed artifacts do
 and do not claim.
+
+### `flow/drc.sh` — DRC clean report (T1 item 3)
+
+`flow/drc.sh` runs a full sky130 foundry-rule-deck DRC check (`klt drc`,
+klayout-tools' headless curated engine) against the committed tile GDS
+(`layout/logic_tile.gds`, from `flow/layout.sh` above) and checks the
+result against the committed report at `layout/logic_tile.drc.json`. This
+is the T1 "DRC clean" pass condition (item 3 of
+`docs/design-evidence-tiers.md` in `2AMLogic/klayout-tools`, per issue
+#11): *"latest `klt drc` JSON report with `status: clean`, fresh
+(provenance matching current sources)."*
+
+Running:
+
+```
+./flow/drc.sh            # rerun DRC against the committed GDS, diff the
+                          # (trimmed) report against the committed copy
+                          # under layout/, and verify provenance freshness
+                          # via `klt drc --check`. Exit 0 iff clean,
+                          # reproducible, and fresh.
+./flow/drc.sh --update   # rerun DRC and overwrite the committed report.
+                          # Run this (and commit the result) after an
+                          # intentional layout change (i.e. after
+                          # `flow/layout.sh --update`).
+```
+
+Requires `klt` (klayout-tools) on `PATH`, plus a resolvable sky130A PDK
+install (`klt pdk find --pdk sky130A`). Scratch output (the raw `klt drc`
+response before trimming) lands in `flow/build/` (gitignored), same
+non-committed-scratch shape as the other flow scripts.
+
+`flow/drc_report_trim.py` strips bare tool-version fields
+(`provenance.klt_version`/`klayout_version`) out of the response before
+committing, mirroring `flow/par_report_trim.py`'s identical rationale — a
+`klt`/KLayout upgrade alone should not produce a spurious diff. The
+content-addressed provenance this issue's "freshness ... verifiable later"
+acceptance criterion relies on (`provenance.input.content_hash`,
+`provenance.deck.content_hash`) is left untouched, and `flow/drc.sh`'s last
+step (`klt drc --check`) re-hashes the committed GDS and deck and confirms
+they still match what the committed report recorded.
+
+**No friction filed**: `klt drc` (curated engine, default) ran cleanly
+end to end against this layout on the first attempt — no missing
+capability, awkward interface, or incorrect result encountered. The one
+alternate path tried, `--engine klayout` (a PDK-native DRC-DSL deck via a
+standalone `klayout` binary), fails with a clear, documented error in this
+environment (no standalone `klayout` binary on `PATH`) rather than a
+confusing one — expected behavior per `klt drc --help`, not a tool gap. See
+`layout/README.md`'s "DRC scope, concretely" section for exactly what the
+curated-engine "clean" verdict does and does not cover.
+
+**Out of scope here**: LVS (`klt lvs`, `spec/framework-gaps.md` item G3's
+other half — a separate follow-on issue, #12) and the PDK-native
+`--engine klayout` DRC-DSL signoff path (not exercised — see above).
