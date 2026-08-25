@@ -22,8 +22,9 @@ Usage:
     par_report_trim.py <response.json> <output.json>
 """
 
-import json
 import sys
+
+from _report_trim import run_cli, strip_nested
 
 _DROP_TOP_LEVEL = ("def_path", "gds_path", "verilog_path", "engine_version")
 _DROP_LAYER_MAP = ("path",)
@@ -34,31 +35,13 @@ def trim(response: dict) -> dict:
     trimmed = dict(response)
     for key in _DROP_TOP_LEVEL:
         trimmed.pop(key, None)
-    if "layer_map" in trimmed and isinstance(trimmed["layer_map"], dict):
-        layer_map = dict(trimmed["layer_map"])
-        for key in _DROP_LAYER_MAP:
-            layer_map.pop(key, None)
-        trimmed["layer_map"] = layer_map
-    if "provenance" in trimmed and isinstance(trimmed["provenance"], dict):
-        provenance = dict(trimmed["provenance"])
-        for key in _DROP_PROVENANCE:
-            provenance.pop(key, None)
-        trimmed["provenance"] = provenance
+    trimmed = strip_nested(trimmed, "layer_map", _DROP_LAYER_MAP)
+    trimmed = strip_nested(trimmed, "provenance", _DROP_PROVENANCE)
     return trimmed
 
 
 def main(argv: list) -> int:
-    if len(argv) != 3:
-        print(f"usage: {argv[0]} <response.json> <output.json>", file=sys.stderr)
-        return 2
-    src, dst = argv[1], argv[2]
-    with open(src, encoding="utf-8") as f:
-        response = json.load(f)
-    trimmed = trim(response)
-    with open(dst, "w", encoding="utf-8") as f:
-        json.dump(trimmed, f, indent=2, sort_keys=True)
-        f.write("\n")
-    return 0
+    return run_cli(argv, trim)
 
 
 if __name__ == "__main__":
