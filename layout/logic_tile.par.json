@@ -1,0 +1,274 @@
+{
+  "antenna_violation_count": 0,
+  "clock_skew_ns": 0,
+  "core_area_um2": 1523.96,
+  "corners": [
+    {
+      "hold_slack_ns": 0.4535,
+      "name": "ff_100C_1v65",
+      "setup_slack_ns": 19.47
+    },
+    {
+      "hold_slack_ns": 0.35807,
+      "name": "ff_100C_1v95",
+      "setup_slack_ns": 19.5835
+    },
+    {
+      "hold_slack_ns": 0.54488,
+      "name": "ff_n40C_1v56",
+      "setup_slack_ns": 19.3388
+    },
+    {
+      "hold_slack_ns": 0.47676,
+      "name": "ff_n40C_1v65",
+      "setup_slack_ns": 19.4242
+    },
+    {
+      "hold_slack_ns": 0.41836,
+      "name": "ff_n40C_1v76",
+      "setup_slack_ns": 19.4993
+    },
+    {
+      "hold_slack_ns": 0.34889,
+      "name": "ff_n40C_1v95",
+      "setup_slack_ns": 19.5845
+    },
+    {
+      "hold_slack_ns": 1.5902,
+      "name": "ss_100C_1v40",
+      "setup_slack_ns": 18.0231
+    },
+    {
+      "hold_slack_ns": 1.12397,
+      "name": "ss_100C_1v60",
+      "setup_slack_ns": 18.6638
+    },
+    {
+      "hold_slack_ns": 3.40584,
+      "name": "ss_n40C_1v28",
+      "setup_slack_ns": 15.0984
+    },
+    {
+      "hold_slack_ns": 2.48187,
+      "name": "ss_n40C_1v35",
+      "setup_slack_ns": 16.5723
+    },
+    {
+      "hold_slack_ns": 2.06192,
+      "name": "ss_n40C_1v40",
+      "setup_slack_ns": 17.2228
+    },
+    {
+      "hold_slack_ns": 1.80667,
+      "name": "ss_n40C_1v44",
+      "setup_slack_ns": 17.6103
+    },
+    {
+      "hold_slack_ns": 1.19698,
+      "name": "ss_n40C_1v60",
+      "setup_slack_ns": 18.4897
+    },
+    {
+      "hold_slack_ns": 0.90224,
+      "name": "ss_n40C_1v76",
+      "setup_slack_ns": 18.9132
+    },
+    {
+      "hold_slack_ns": 0.5746,
+      "name": "tt_025C_1v80",
+      "setup_slack_ns": 19.342
+    },
+    {
+      "hold_slack_ns": 0.57366,
+      "name": "tt_100C_1v80",
+      "setup_slack_ns": 19.3484
+    }
+  ],
+  "die_area_um2": 1965.15,
+  "engine": "openroad",
+  "estimated_power_mw": 0.0312,
+  "fmax_mhz": 1519.79,
+  "hdl_toplevel": "logic_tile",
+  "hold_violation_count": 0,
+  "interconnect_corner": "nom",
+  "layer_map": {
+    "resolution": "exact"
+  },
+  "macros": [],
+  "power": {
+    "connects": [],
+    "endcap_master": null,
+    "filler_masters": [],
+    "global_connect": false,
+    "ground_net": null,
+    "pdn": false,
+    "power_net": null,
+    "straps": [],
+    "tapcell_master": null
+  },
+  "provenance": {
+    "deck": {
+      "content_hash": "sha256:8e78e14442062dba34d414fca6490b2f6b96038d4510d1438ca44fee31487135",
+      "name": "sky130_fd_sc_hd__tt_025C_1v80",
+      "released": false
+    },
+    "input": {
+      "content_hash": "sha256:09777dce0bee9723dbd17f9daaf957b78225403478a519cced947476d0697824"
+    },
+    "pdk": {
+      "name": "sky130A",
+      "source": "search root: ~/.volare",
+      "version": "open_pdks c6d73a35f524070e85faff4a6a9eef49553ebc2b"
+    }
+  },
+  "route_drc_violation_count": 0,
+  "schema_version": 1,
+  "seed": 1,
+  "setup_violation_count": 0,
+  "spef_sta": null,
+  "stage_reached": "route",
+  "stages": [
+    {
+      "core_area_um2": 1523.96,
+      "die_area_um2": 1965.15,
+      "name": "floorplan",
+      "total_negative_slack_ns": 0,
+      "utilization_pct": 42.6929,
+      "worst_slack_ns": 19.3946
+    },
+    {
+      "core_area_um2": 1523.96,
+      "die_area_um2": 1965.15,
+      "estimated_power_mw": 0.0198,
+      "fmax_mhz": 1600.79,
+      "hold_violation_count": 0,
+      "name": "place",
+      "setup_violation_count": 0,
+      "total_negative_slack_ns": 0,
+      "utilization_pct": 42.6929,
+      "wirelength_um": 2520.68,
+      "worst_slack_ns": 19.3753
+    },
+    {
+      "clock_skew_ns": 0,
+      "core_area_um2": 1523.96,
+      "die_area_um2": 1965.15,
+      "estimated_power_mw": 0.0298,
+      "fmax_mhz": 1573.42,
+      "hold_violation_count": 0,
+      "name": "cts",
+      "setup_violation_count": 0,
+      "total_negative_slack_ns": 0,
+      "utilization_pct": 44.1708,
+      "wirelength_um": 2576.02,
+      "worst_slack_ns": 19.3644
+    },
+    {
+      "antenna_violation_count": 0,
+      "clock_skew_ns": 0,
+      "core_area_um2": 1523.96,
+      "corners": [
+        {
+          "hold_slack_ns": 0.4535,
+          "name": "ff_100C_1v65",
+          "setup_slack_ns": 19.47
+        },
+        {
+          "hold_slack_ns": 0.35807,
+          "name": "ff_100C_1v95",
+          "setup_slack_ns": 19.5835
+        },
+        {
+          "hold_slack_ns": 0.54488,
+          "name": "ff_n40C_1v56",
+          "setup_slack_ns": 19.3388
+        },
+        {
+          "hold_slack_ns": 0.47676,
+          "name": "ff_n40C_1v65",
+          "setup_slack_ns": 19.4242
+        },
+        {
+          "hold_slack_ns": 0.41836,
+          "name": "ff_n40C_1v76",
+          "setup_slack_ns": 19.4993
+        },
+        {
+          "hold_slack_ns": 0.34889,
+          "name": "ff_n40C_1v95",
+          "setup_slack_ns": 19.5845
+        },
+        {
+          "hold_slack_ns": 1.5902,
+          "name": "ss_100C_1v40",
+          "setup_slack_ns": 18.0231
+        },
+        {
+          "hold_slack_ns": 1.12397,
+          "name": "ss_100C_1v60",
+          "setup_slack_ns": 18.6638
+        },
+        {
+          "hold_slack_ns": 3.40584,
+          "name": "ss_n40C_1v28",
+          "setup_slack_ns": 15.0984
+        },
+        {
+          "hold_slack_ns": 2.48187,
+          "name": "ss_n40C_1v35",
+          "setup_slack_ns": 16.5723
+        },
+        {
+          "hold_slack_ns": 2.06192,
+          "name": "ss_n40C_1v40",
+          "setup_slack_ns": 17.2228
+        },
+        {
+          "hold_slack_ns": 1.80667,
+          "name": "ss_n40C_1v44",
+          "setup_slack_ns": 17.6103
+        },
+        {
+          "hold_slack_ns": 1.19698,
+          "name": "ss_n40C_1v60",
+          "setup_slack_ns": 18.4897
+        },
+        {
+          "hold_slack_ns": 0.90224,
+          "name": "ss_n40C_1v76",
+          "setup_slack_ns": 18.9132
+        },
+        {
+          "hold_slack_ns": 0.5746,
+          "name": "tt_025C_1v80",
+          "setup_slack_ns": 19.342
+        },
+        {
+          "hold_slack_ns": 0.57366,
+          "name": "tt_100C_1v80",
+          "setup_slack_ns": 19.3484
+        }
+      ],
+      "die_area_um2": 1965.15,
+      "estimated_power_mw": 0.0312,
+      "fmax_mhz": 1519.79,
+      "hold_violation_count": 0,
+      "name": "route",
+      "route_drc_violation_count": 0,
+      "setup_violation_count": 0,
+      "total_negative_slack_ns": 0,
+      "utilization_pct": 44.1708,
+      "wirelength_um": 2664,
+      "worst_hold_slack_ns": 0.34889,
+      "worst_setup_slack_ns": 15.0984,
+      "worst_slack_ns": 19.342
+    }
+  ],
+  "status": "ok",
+  "total_negative_slack_ns": 0,
+  "utilization_pct": 44.1708,
+  "wirelength_um": 2664,
+  "worst_hold_slack_ns": 0.34889,
+  "worst_setup_slack_ns": 15.0984,
+  "worst_slack_ns": 19.342
+}
