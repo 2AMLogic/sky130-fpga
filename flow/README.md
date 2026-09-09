@@ -72,19 +72,20 @@ The liberty-mapped netlist `klt synthesize` produces here is **not** the
 same artifact as `design/netlist/logic_tile_netlist.v` above (that one stays
 generic-cell only, per its own scope) — it is regenerated fresh into
 `flow/build/` (gitignored scratch) on every `flow/layout.sh` run, never
-committed on its own. The committed deliverables are the GDS and its
-place-and-route report, both under `layout/` — see `layout/README.md` for
-what they contain and what they deliberately do not claim (no DRC/LVS
-signoff, no timing/Fmax claim, no power delivery network — all separate
-follow-on work).
+committed on its own. The committed deliverables are the GDS, the routed
+DEF and the place-and-route report, all three under `layout/` and all three
+from the same run — see `layout/README.md` for what they contain and what
+they deliberately do not claim (no DRC/LVS signoff, no timing/Fmax claim,
+no power delivery network — all separate follow-on work; the DEF exists so
+`flow/sta-sweep.sh` below can characterize that exact geometry).
 
 Running:
 
 ```
-./flow/layout.sh            # regenerate the GDS + report, diff against the
-                            # committed copies under layout/. Exit 0 if
-                            # identical; non-zero if they differ or the
-                            # flow fails.
+./flow/layout.sh            # regenerate the GDS + DEF + report, diff
+                            # against the committed copies under layout/.
+                            # Exit 0 if identical; non-zero if they differ
+                            # or the flow fails.
 
 ./flow/layout.sh --update  # regenerate and overwrite the committed copies
                             # under layout/. Run this (and commit the
@@ -125,11 +126,12 @@ scripts). Filed generically as
 [`2AMLogic/klayout-tools#1368`](https://github.com/2AMLogic/klayout-tools/issues/1368),
 since neither the CLI nor `docs/cli/synthesize.md` warn about it.
 
-**Out of scope here**: DRC/LVS signoff, corner verification beyond
-`klt place-and-route`'s own built-in multi-corner STA sweep, Monte Carlo,
-and PEX — all `spec/framework-gaps.md` items G3+, separate follow-on issues.
-See `layout/README.md` for the full list of what the committed artifacts do
-and do not claim.
+**Out of scope here**: DRC/LVS signoff (`flow/drc.sh` / `flow/lvs.sh`
+below), extracted-parasitics timing characterization (`flow/sta-sweep.sh`
+below — `klt place-and-route`'s own built-in multi-corner sweep is a
+pre-signoff *estimate*, not a characterization), and Monte Carlo. See
+`layout/README.md` for the full list of what the committed artifacts do and
+do not claim.
 
 ### `flow/drc.sh` — DRC clean report (T1 item 3)
 
@@ -278,3 +280,116 @@ is verifiable later without re-running the flow.
 (this compare is signal-connectivity only, per `docs/cli/lvs.md` — not a
 gap here, since `layout/README.md`'s "No power delivery network" note
 means there is no power connectivity for this mode to miss).
+
+### `flow/sta-sweep.sh` — multi-corner timing characterization (G4)
+
+`flow/sta-sweep.sh` extracts parasitics once from the committed
+`layout/logic_tile.gds` and then re-times the committed
+`layout/logic_tile.def` with `klt sta` (standalone OpenSTA) at **every**
+`sky130_fd_sc_hd` liberty corner the installed sky130A PDK ships — 18 of
+them — twice per corner: once with LEF-only (unannotated) parasitics and
+once with the extracted SPEF annotated in. The trimmed per-corner reports
+are committed under
+`measurements/timing-characterization/corners/<corner>/{lef-only,spef}.sta.json`
+and diff-checked on every run, with the human-readable account under
+`measurements/timing-characterization/records/` (append-only).
+
+This is `spec/framework-gaps.md` item **G4 — Timing characterization (no
+inherited numbers)**, per issue #20. FABulous marks BEL timing as
+placeholder-constant, so no delay, setup/hold or Fmax number can be
+inherited; G4's verification bar is "a timing report under `measurements/`
+... tracing each published number back to its extraction run".
+
+Running:
+
+```
+./flow/sta-sweep.sh            # re-extract, re-sweep every corner, and
+                                # diff every per-corner report against the
+                                # committed copy. Exit 0 iff every corner
+                                # ran, every SPEF run annotated completely,
+                                # and nothing drifted.
+./flow/sta-sweep.sh --update   # same, but overwrite the committed
+                                # per-corner reports (then add a new record
+                                # under
+                                # measurements/timing-characterization/records/)
+```
+
+Requires `klt` and `openroad` on `PATH` plus a resolvable sky130A PDK.
+Notably it does **not** require `yosys`: unlike `flow/lvs.sh` this script
+never re-runs synthesis or place-and-route. That is the point — `klt sta`
+analyses *one fixed piece of geometry* at N corners, whereas re-running
+`klt place-and-route` per corner would produce N different placements and
+routings (global placement and detailed routing are seeded but not
+corner-invariant), i.e. a sweep of N designs rather than a characterization
+of one. Scratch output lands in `flow/build/sta/` (gitignored).
+
+Why the routed DEF had to be committed for this: a GDS carries geometry but
+no instance/net connectivity for OpenSTA to link against, so `klt sta`
+needs the DEF. `flow/layout.sh` now writes and diff-checks
+`layout/logic_tile.def` alongside the GDS and the P&R report, from the same
+run — no canonicalization needed, since the DEF is already byte-reproducible
+across runs of the identical seeded request (`layout/README.md`'s
+"Reproducibility note").
+
+`flow/sta_report_trim.py` strips local-path and tool-version fields out of
+each `klt sta` response before committing (same rationale as
+`flow/par_report_trim.py`) and injects `layout_def_sha256` / `spef_sha256`,
+content-addressed provenance tying every published number back to the
+git-tracked DEF and to the SPEF it was annotated with (mirroring what
+`flow/lvs_report_trim.py` does for LVS).
+
+**Friction encountered — escaped identifiers, again.** This design's
+`generate`-block RTL (`design/rtl/logic_tile.v`'s `g_slice[N].u_slice`)
+makes the flattened design carry net/instance names that are Verilog
+*escaped* identifiers containing `[`, `]`, `.` and `/`. Four real
+klayout-tools gaps fell out of building this harness, all filed
+generically:
+
+- [`klayout-tools#1623`](https://github.com/2AMLogic/klayout-tools/issues/1623)
+  — `klt extract --def-net-connections` matches the DEF's net names
+  literally, without removing the DEF's own backslash escapes, so every
+  hierarchical net silently gets **no `*CONN` block**: a `*D_NET` whose RC
+  network has no pin node and therefore contributes nothing to any delay.
+  Measured here: 40 of 152 `*D_NET` blocks, including every net on the
+  critical path. Same family as
+  [`#1371`](https://github.com/2AMLogic/klayout-tools/issues/1371), the
+  LVS-side gap `flow/lvs_sanitize_verilog.py` already works around.
+- [`klayout-tools#1624`](https://github.com/2AMLogic/klayout-tools/issues/1624)
+  — `klt sta` reported `spef_annotation.annotation_complete: true` for a
+  SPEF whose annotation OpenSTA's `read_spef` then discarded entirely,
+  leaving every setup/hold number bit-identical to the unannotated run (and
+  `estimated_power_mw` moving, which makes it look even more like a real
+  annotation). The correlation probe uses `get_nets`, which resolves these
+  names; `read_spef` uses a different resolver, which does not.
+- [`klayout-tools#1625`](https://github.com/2AMLogic/klayout-tools/issues/1625)
+  — `klt sta` reports `hold_violation_count` but no hold-side WNS/TNS, so
+  corners cannot be ranked by hold margin in a characterization sweep.
+- [`klayout-tools#1627`](https://github.com/2AMLogic/klayout-tools/issues/1627)
+  — `klt extract --spef` stamps a wall-clock `*DATE` into the SPEF header,
+  so two runs of the identical extraction against the identical GDS produce
+  SPEFs that differ in exactly that one line. Same class of gap as
+  [`#1367`](https://github.com/2AMLogic/klayout-tools/issues/1367) (the
+  DEF->GDS merge timestamps `flow/gds_canonicalize.py` already zeroes).
+
+`flow/sta_sanitize_names.py` works around #1623 and #1624 with
+connectivity-preserving, name-only rewrites of the DEF and the SPEF (see
+that script's header for the exact mapping and why it cannot change a
+timing verdict), and works around #1627 by rewriting the SPEF's `*DATE`
+line to a constant in the same pass. #1625 is not worked around — the
+record simply states what it can and cannot say about hold.
+
+**The workaround is not taken on trust.** `flow/sta-sweep.sh` runs the
+unannotated analysis on the committed DEF *and* on the name-rewritten DEF
+at every corner and refuses to record that corner's SPEF run unless every
+timing and power metric is identical between them. So the rewrite is proven
+timing-neutral in the same run that relies on it, at every corner, rather
+than argued for in a comment.
+
+**Out of scope here**: propagated-clock STA and a bisected (rather than
+`1/(T−WNS)`-extrapolated) Fmax — both listed as tool follow-ups in
+`docs/cli/sta.md`, and deliberately not hand-rolled as local OpenSTA
+scripts; SDF-back-annotated gate-level re-simulation (a separate follow-on
+that can cite this sweep's DEF/SPEF); and the switch matrix / inter-tile
+routing, which has no implementation to characterize yet
+(`spec/framework-gaps.md` G1/G2). See `measurements/README.md` for the full
+list of what the committed numbers do and do not claim.

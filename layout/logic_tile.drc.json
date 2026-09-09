@@ -1,6 +1,7 @@
 {
   "coverage": {
     "deck_layers": [
+      "64/20",
       "65/20",
       "66/20",
       "66/44",
@@ -30,6 +31,7 @@
       "m3",
       "m4",
       "m5",
+      "nwell",
       "poly",
       "via",
       "via2",
@@ -37,6 +39,7 @@
       "via4"
     ],
     "layers_checked": [
+      "64/20",
       "65/20",
       "66/20",
       "66/44",
@@ -53,7 +56,6 @@
     "layers_in_stream_without_rules": [
       "64/5",
       "64/16",
-      "64/20",
       "64/59",
       "67/5",
       "67/16",
@@ -98,12 +100,12 @@
   "file": "layout/logic_tile.gds",
   "provenance": {
     "deck": {
-      "content_hash": "sha256:2e78949d63f03012c505528158948a250e18c2c21c8710c85a23a8243649f4d0",
+      "content_hash": "sha256:5afac7ab8561545859f5e2e74f4621c6ffc052756dc8fe344ea263398e96b240",
       "name": "sky130",
-      "released": true
+      "released": false
     },
     "input": {
-      "content_hash": "sha256:1e05b29f3a97c87aaf1d77a7b18142709ddfb6722ac23284a9f254b3c2f839e1"
+      "content_hash": "sha256:a6dc076c0b8d9d314098755f313d4c30f4f8fc7aa57cd411627e3cdc497be452"
     },
     "pdk": null
   },
