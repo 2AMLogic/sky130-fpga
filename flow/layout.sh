@@ -12,18 +12,30 @@
 # reproducibility, not a one-off drop." Mirrors flow/synth.sh's and
 # sim/run.sh's "regenerate from source every run" pattern.
 #
-# Scope note: this is layout only -- floorplan/place/route to a routed GDS.
-# It does NOT run DRC/LVS signoff, corner verification beyond what OpenROAD's
-# own multi-corner STA reports as part of place-and-route, Monte Carlo, or
-# PEX -- those are separate, already-tracked follow-on work
-# (spec/framework-gaps.md items G3-G4). See layout/README.md for what the
-# committed artifacts do and do not claim.
+# Scope note: this is layout only -- floorplan/place/route to a routed GDS
+# and DEF. It does NOT run DRC/LVS signoff (flow/drc.sh, flow/lvs.sh),
+# extracted-parasitics timing characterization (flow/sta-sweep.sh -- the
+# corner numbers klt place-and-route reports here are OpenROAD's own
+# pre-signoff estimates, not a characterization), or Monte Carlo. See
+# layout/README.md for what the committed artifacts do and do not claim.
+#
+# Committed artifacts: the routed GDS (layout/logic_tile.gds), the routed
+# DEF (layout/logic_tile.def), and the place-and-route report
+# (layout/logic_tile.par.json) -- all three from the same run, so they
+# describe the same circuit. The DEF is committed because a standalone,
+# multi-corner `klt sta` characterization (flow/sta-sweep.sh, issue #20)
+# re-times *one fixed piece of routed geometry* at N corners, and that
+# geometry is the DEF: a GDS alone carries no instance/net connectivity for
+# OpenSTA to link against. Unlike the GDS (whose DEF->GDS merge stamps
+# wall-clock timestamps into every structure -- see flow/gds_canonicalize.py)
+# the DEF is already byte-reproducible across runs of the identical, seeded
+# request, so it is committed verbatim with no canonicalization step.
 #
 # Usage:
-#   ./flow/layout.sh            # regenerate the GDS + report and diff both
-#                               # against the committed copies under
-#                               # layout/. Exit 0 if identical; non-zero if
-#                               # they differ or the flow fails.
+#   ./flow/layout.sh            # regenerate the GDS + DEF + report and diff
+#                               # all three against the committed copies
+#                               # under layout/. Exit 0 if identical;
+#                               # non-zero if they differ or the flow fails.
 #   ./flow/layout.sh --update  # regenerate and overwrite the committed
 #                               # copies under layout/. Run this (and commit
 #                               # the result) after an intentional RTL
@@ -34,10 +46,10 @@
 # install (`klt pdk find --pdk sky130A`; $PDK_ROOT/$PDK, volare, or ciel).
 #
 # Exit status: 0 iff synthesis + place-and-route succeed and (in the
-# default, non-`--update` mode) both the regenerated GDS (after timestamp
-# canonicalization -- see flow/gds_canonicalize.py) and the regenerated
-# report (after volatile-field trimming -- see flow/par_report_trim.py)
-# match their committed copies.
+# default, non-`--update` mode) the regenerated GDS (after timestamp
+# canonicalization -- see flow/gds_canonicalize.py), the regenerated DEF
+# (verbatim), and the regenerated report (after volatile-field trimming --
+# see flow/par_report_trim.py) all match their committed copies.
 
 set -euo pipefail
 
@@ -48,6 +60,7 @@ LAYOUT_DIR="$REPO_ROOT/layout"
 BUILD_DIR="$SCRIPT_DIR/build"
 TOP_MODULE="logic_tile"
 GDS_NAME="logic_tile.gds"
+DEF_NAME="logic_tile.def"
 REPORT_NAME="logic_tile.par.json"
 
 # Nominal placeholder only -- NOT a timing claim. Real timing/Fmax
@@ -112,9 +125,11 @@ SYNTH_RESPONSE="$BUILD_DIR/synth_response.json"
 PAR_RESPONSE="$BUILD_DIR/par_response.json"
 SYNTH_NETLIST="$BUILD_DIR/.klt/synthesize/${TOP_MODULE}_synth.v"
 RAW_GDS="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.gds"
+GENERATED_DEF="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.def"
 GENERATED_GDS="$BUILD_DIR/${GDS_NAME}"
 GENERATED_REPORT="$BUILD_DIR/${REPORT_NAME}"
 COMMITTED_GDS="$LAYOUT_DIR/${GDS_NAME}"
+COMMITTED_DEF="$LAYOUT_DIR/${DEF_NAME}"
 COMMITTED_REPORT="$LAYOUT_DIR/${REPORT_NAME}"
 
 cat > "$SYNTH_REQUEST" <<EOF
@@ -178,6 +193,10 @@ if [[ ! -s "$RAW_GDS" ]]; then
     echo "error: klt place-and-route did not produce a GDS at $RAW_GDS" >&2
     exit 1
 fi
+if [[ ! -s "$GENERATED_DEF" ]]; then
+    echo "error: klt place-and-route did not produce a routed DEF at $GENERATED_DEF" >&2
+    exit 1
+fi
 
 # Canonicalize away the embedded per-structure timestamps klt's DEF->GDS
 # merge stamps with the wall-clock time of the merge -- see
@@ -194,14 +213,20 @@ python3 "$SCRIPT_DIR/par_report_trim.py" "$PAR_RESPONSE" "$GENERATED_REPORT"
 
 if [[ "$MODE" == "update" ]]; then
     cp "$GENERATED_GDS" "$COMMITTED_GDS"
+    cp "$GENERATED_DEF" "$COMMITTED_DEF"
     cp "$GENERATED_REPORT" "$COMMITTED_REPORT"
     echo "=== GDS written to ${COMMITTED_GDS} ==="
+    echo "=== DEF written to ${COMMITTED_DEF} ==="
     echo "=== report written to ${COMMITTED_REPORT} ==="
     exit 0
 fi
 
 if [[ ! -f "$COMMITTED_GDS" ]]; then
     echo "error: no committed GDS at $COMMITTED_GDS -- run '$0 --update' to create it" >&2
+    exit 1
+fi
+if [[ ! -f "$COMMITTED_DEF" ]]; then
+    echo "error: no committed DEF at $COMMITTED_DEF -- run '$0 --update' to create it" >&2
     exit 1
 fi
 if [[ ! -f "$COMMITTED_REPORT" ]]; then
@@ -212,6 +237,10 @@ fi
 status=0
 if ! cmp -s "$COMMITTED_GDS" "$GENERATED_GDS"; then
     echo "error: regenerated GDS (after timestamp canonicalization) differs from the committed copy at $COMMITTED_GDS" >&2
+    status=1
+fi
+if ! cmp -s "$COMMITTED_DEF" "$GENERATED_DEF"; then
+    echo "error: regenerated routed DEF differs from the committed copy at $COMMITTED_DEF" >&2
     status=1
 fi
 if ! diff -u "$COMMITTED_REPORT" "$GENERATED_REPORT"; then

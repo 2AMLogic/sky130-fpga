@@ -1,6 +1,6 @@
 # layout
 
-Tile physical design — GDS + DRC/LVS reports.
+Tile physical design — GDS + routed DEF + DRC/LVS reports.
 
 ## Current contents (T1 items 2-4)
 
@@ -10,6 +10,17 @@ Tile physical design — GDS + DRC/LVS reports.
   (`klt`) digital flow (`klt synthesize` -> `klt place-and-route`, backed by
   Yosys + OpenROAD). Regenerated and diff-checked against `design/rtl/` by
   `flow/layout.sh` on every invocation — see `flow/README.md`.
+- `logic_tile.def` — the routed DEF from the **same** `klt place-and-route`
+  run as `logic_tile.gds` above: the same geometry in the form a
+  connectivity-aware tool can link against. Committed because a standalone,
+  multi-corner `klt sta` characterization (`flow/sta-sweep.sh`,
+  `measurements/timing-characterization/`) re-times one fixed piece of
+  routed geometry at N corners, and a GDS alone carries no instance/net
+  connectivity for OpenSTA to link. Unlike the GDS it needs no
+  canonicalization — the DEF is already byte-reproducible across runs of
+  the identical, seeded request (see "Reproducibility note" below).
+  Regenerated and diff-checked by `flow/layout.sh` alongside the GDS and
+  the P&R report.
 - `logic_tile.par.json` — the place-and-route run's own metrics report
   (die/core area, utilization, wirelength, per-corner setup/hold slack,
   routing DRC/antenna violation counts), trimmed of local-path and
@@ -36,8 +47,8 @@ Tile physical design — GDS + DRC/LVS reports.
 Regenerate + check all with:
 
 ```
-./flow/layout.sh            # regenerate GDS + P&R report, diff against the
-                            # committed copies
+./flow/layout.sh            # regenerate GDS + DEF + P&R report, diff
+                            # against the committed copies
 ./flow/layout.sh --update  # regenerate and overwrite the committed copies
 
 ./flow/drc.sh               # rerun DRC against the committed GDS, diff the
@@ -52,19 +63,31 @@ Regenerate + check all with:
                               # committed copy. Does NOT touch the
                               # committed GDS/P&R report.
 ./flow/lvs.sh --update       # regenerate AND commit a fresh, mutually
-                              # consistent GDS + P&R report + LVS report
-                              # together (see "LVS scope, concretely"
-                              # below for why) -- run ./flow/drc.sh --update
-                              # afterward to keep the DRC report in sync.
+                              # consistent GDS + DEF + P&R report + LVS
+                              # report together (see "LVS scope,
+                              # concretely" below for why) -- run
+                              # ./flow/drc.sh --update afterward to keep
+                              # the DRC report in sync.
+
+./flow/sta-sweep.sh          # re-extract parasitics from the committed GDS
+                              # and re-time the committed DEF at all 18
+                              # liberty corners, diffing every per-corner
+                              # report under measurements/. Does NOT touch
+                              # anything in layout/.
+./flow/sta-sweep.sh --update # same, but overwrite the committed per-corner
+                              # reports (run after any layout change, and
+                              # add a new record under
+                              # measurements/timing-characterization/records/)
 ```
 
 ## What this is, concretely
 
-44.33um x 44.33um die (40% target / 44.17% actual core utilization), 44
-standard-cell instances (`sky130_fd_sc_hd`), 0 routing DRC violations and 0
-antenna violations from OpenROAD's own detailed-route pass, across all 16
-`sky130_fd_sc_hd` PVT corners the flow's default sweep reports. See
-`logic_tile.par.json` for the full per-corner numbers.
+44.33um x 44.33um die (40% target / 44.17% actual core utilization), 47
+logic `sky130_fd_sc_hd` instances plus 138 physical-only `fill_*` cells
+(185 components total — see "Row rail, not a PDN" below), 0 routing DRC
+violations and 0 antenna violations from OpenROAD's own detailed-route
+pass, across all 16 `sky130_fd_sc_hd` PVT corners the flow's default sweep
+reports. See `logic_tile.par.json` for the full per-corner numbers.
 
 ## DRC scope, concretely (issue #11)
 
@@ -150,25 +173,36 @@ topologically match a `sky130_fd_sc_hd`-built layout (see
   verdict.
 
 ## What this is NOT (non-goals of this issue, #9)
-- **Not a timing claim.** `constraints.clock_period_ns` in
-  `flow/layout.sh` (20ns / 50MHz) is a deliberately loose placeholder that
-  exists only because `klt place-and-route` requires *some* target period
-  once routing is reached — it is not a characterized Fmax. Real timing
-  characterization (extracted parasitics + STA against sky130 corners) is
-  `spec/framework-gaps.md` item G4, not yet done. The `fmax_mhz` /
-  `*_slack_ns` fields in `logic_tile.par.json` are OpenROAD's own
-  pre-signoff estimates from this placed-and-routed netlist — evidence the
-  flow ran successfully and met its (loose) placeholder target, not a
-  published performance number.
-- **No power delivery network.** This first pass has no `power` block in
-  the `klt place-and-route` request (no PDN straps/tapcells) — matching the
-  precedent of klayout-tools' own `sky130_fd_sc_hd` worked example, which
-  reaches a clean route without one (unlike some other cell libraries; see
-  `docs/cli/place-and-route.md` in `2AMLogic/klayout-tools`). A committed
-  PDN is separate follow-on work, where it will actually matter (no
-  `power` block routes clean here but is not full-chip-ready) — see "LVS
-  scope, concretely" above for why its absence is not a gap for the LVS
-  compare specifically.
+- **Not a timing claim — the numbers in `logic_tile.par.json` still are
+  not one.** `constraints.clock_period_ns` in `flow/layout.sh` (20ns /
+  50MHz) is a deliberately loose placeholder that exists only because `klt
+  place-and-route` requires *some* target period once routing is reached —
+  it is not a characterized Fmax. The `fmax_mhz` / `*_slack_ns` fields in
+  `logic_tile.par.json` are OpenROAD's own pre-signoff estimates
+  (`estimate_parasitics -global_routing`) from this placed-and-routed
+  netlist — evidence the flow ran successfully and met its (loose)
+  placeholder target, not a published performance number. **The
+  characterized timing lives elsewhere**: `spec/framework-gaps.md` item G4
+  is addressed by `measurements/timing-characterization/`, which re-times
+  the committed `logic_tile.def` with parasitics extracted from
+  `logic_tile.gds` at all 18 `sky130_fd_sc_hd` liberty corners
+  (`flow/sta-sweep.sh`). Read that record — and its own "what these
+  numbers do not claim" list — before citing any timing number from this
+  repo.
+- **Row rail, not a PDN.** The `klt place-and-route` request still has no
+  `power` block (no PDN straps, no tapcells). klt does unconditionally draw
+  a `met1` `-followpins` row rail over the standard-cell VPWR/VGND pins
+  before global routing, and place `fill_*` cells to close row gaps, as a
+  routing *obstruction* — without it the router may legally route a signal
+  across an unfilled gap on the same `met1` the row rail occupies, a
+  `klt drc`-invisible short once a filler's PG strap lands there
+  (klayout-tools#1442). That is a correctness guard, not electrical
+  completeness: there is no strap grid, no tapcell, and no IR-drop
+  analysis, so no timing or reliability number here accounts for supply
+  droop. A committed PDN is separate follow-on work — see "LVS scope,
+  concretely" above for why its absence is not a gap for the LVS compare
+  specifically, and note that the `fill_*` cells it inserts are why
+  `flow/lvs.sh` abstracts `sky130_fd_sc_hd__[!f]*` rather than `__*`.
 - **Not the tile's switch matrix / inter-tile routing.** Same BEL-level
   scope as `design/rtl/` — see `design/README.md`.
 

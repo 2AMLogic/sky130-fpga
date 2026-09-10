@@ -8,7 +8,7 @@
       "reference": 0
     },
     "nets": {
-      "layout": 170,
+      "layout": 163,
       "matched": 183,
       "reference": 137
     },
@@ -23,11 +23,11 @@
   "environment": {
     "engine": "klayout",
     "extracted_netlist": null,
-    "layout_sha256": "31921ed2769355e6a984d740c858e8387664ed5da66c6516e56c5d2abda004a5",
-    "reference_sha256": "67d8d87880e3a0c96ac064c1dc30c894c21d98a29541535c1060fd85a78b8050"
+    "layout_sha256": "fc748a457281aa567c5b0fddcc02d89529f26f9243e6c50fdb80bb41a6bfc1ca",
+    "reference_sha256": "6adeaf429c1aabb9702b11ca7d4835a77e12d2a97a1079f897f9778db50e47ec"
   },
   "error_count": 0,
-  "layout_gds_sha256": "sha256:1e05b29f3a97c87aaf1d77a7b18142709ddfb6722ac23284a9f254b3c2f839e1",
+  "layout_gds_sha256": "sha256:a6dc076c0b8d9d314098755f313d4c30f4f8fc7aa57cd411627e3cdc497be452",
   "mismatch_count": 0,
   "mismatches": [],
   "net_correspondence": [

@@ -12,7 +12,7 @@
 # topologically match a sky130_fd_sc_hd-built layout, so this uses `klt
 # lvs`'s documented "Digital gate-level LVS" path instead
 # (`reference.form = "gate-level-verilog"`, docs/cli/lvs.md): the layout
-# side is `klt extract --abstract-cells 'sky130_fd_sc_hd__*' --def-net-names`
+# side is `klt extract --abstract-cells 'sky130_fd_sc_hd__[!f]*' --def-net-names`
 # against `layout/logic_tile.gds`, and the reference side is `klt
 # place-and-route`'s own as-built `verilog_path` netlist from the *same*
 # synthesize + place-and-route run (flow/layout.sh).
@@ -207,9 +207,22 @@ DECLARED_PINS="$(python3 "$SCRIPT_DIR/lvs_declared_pins.py" "$AS_BUILT_NETLIST")
 GATE_SPICE="$LVS_BUILD_DIR/${TOP_MODULE}.gate.spice"
 EXTRACT_RESPONSE="$LVS_BUILD_DIR/extract_response.json"
 
-echo "=== klt extract ${GDS_NAME} (abstracted ${STD_CELL_LIBRARY} cells) ==="
+# The `[!f]*` (rather than `*`) abstraction pattern excludes
+# `sky130_fd_sc_hd__fill_*`, the physical-only filler cells klt's row-rail
+# fix (klayout-tools#1442) now inserts unconditionally at the start of the
+# "route" stage even when `request.power` is omitted, to give the router a
+# real met1 obstruction over the standard-cell power rail. Filler cells
+# carry no logical function, so `klt place-and-route`'s own as-built
+# `write_verilog` netlist correctly never emits them -- abstracting them on
+# the layout side with no reference-side counterpart is a `topology`
+# mismatch ("circuit could not be matched to a counterpart"), not a
+# connectivity defect. This is exactly the pattern docs/cli/lvs.md's own
+# worked "Digital gate-level LVS" sequence prescribes. Safe here: this
+# design instantiates no `sky130_fd_sc_hd__f*` logic cell (buf_4, dfxtp_1,
+# inv_1, mux2_2, mux4_2, nor2_1, o21a_1 only).
+echo "=== klt extract ${GDS_NAME} (abstracted non-filler ${STD_CELL_LIBRARY} cells) ==="
 if ! klt extract "$COMMITTED_GDS" --deck sky130 \
-    --abstract-cells "${STD_CELL_LIBRARY}__*" --def-net-names \
+    --abstract-cells "${STD_CELL_LIBRARY}__[!f]*" --def-net-names \
     --pins "$DECLARED_PINS" \
     -o "$GATE_SPICE" --format json | tee "$EXTRACT_RESPONSE"; then
     echo "error: klt extract failed (see $EXTRACT_RESPONSE)" >&2

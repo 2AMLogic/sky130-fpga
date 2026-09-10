@@ -1,0 +1,38 @@
+{
+  "clock_skew_ns": 0,
+  "engine": "openroad",
+  "estimated_power_mw": 0.0223,
+  "fmax_mhz": 1531.37,
+  "hdl_toplevel": "logic_tile",
+  "hold_violation_count": 0,
+  "layout_def_sha256": "sha256:de91eee953e09601f47248a4c52fc6f01f2227f4a06ea09c42af854a6075e512",
+  "provenance": {
+    "deck": {
+      "content_hash": "sha256:d64f38f3e67f8adab818531901385dbd29c6a4805e6166f7166bcc3e9370ef88",
+      "name": "sky130_fd_sc_hd__ff_n40C_1v56",
+      "released": false
+    },
+    "input": {
+      "content_hash": "sha256:86d2dfb7492ce85ba51c53af70b133f6efc78b68ba7cc4e5afdc5235a3d8da24"
+    },
+    "pdk": {
+      "name": "sky130A",
+      "version": "open_pdks c6d73a35f524070e85faff4a6a9eef49553ebc2b"
+    }
+  },
+  "schema_version": 1,
+  "setup_violation_count": 0,
+  "spef_annotation": {
+    "annotation_complete": true,
+    "annotation_warning": null,
+    "design_nets_annotated": 139,
+    "design_nets_missing_sample": [],
+    "design_nets_total": 139,
+    "nets_annotated": 139,
+    "nets_total": 152
+  },
+  "spef_sha256": "sha256:647a03c3c274f7a74b563dc8d448ddee66cf8c2a392cbeb0bb29bcac2745befb",
+  "status": "ok",
+  "total_negative_slack_ns": 0,
+  "worst_slack_ns": 19.347
+}
