@@ -4,6 +4,52 @@ Synthesis and place-and-route tooling — the `yosys` + `nextpnr` flow
 referenced by `CLAUDE.md` for the fabric itself, plus `klayout-tools` (`klt`)
 for sky130 physical design (layout, DRC/LVS, place-and-route).
 
+## Toolchain versions
+
+`flow/layout.sh`'s and `flow/sta-sweep.sh`'s check mode (the `./flow/*.sh`
+default, no-argument invocation) diffs freshly regenerated output against
+the artifacts committed under `layout/` and
+`measurements/timing-characterization/`. That diff is only a meaningful
+reproducibility check against the **same** `klt` (klayout-tools) and
+OpenROAD versions that produced the committed copies — `klt`/OpenROAD make
+no output-format stability guarantee across releases, and neither this repo
+nor klayout-tools currently pins one.
+
+**Recorded toolchain** (produced the artifacts currently committed under
+`layout/` and `measurements/timing-characterization/`, per
+`layout/logic_tile.par.json`'s own provenance block and
+`measurements/timing-characterization/records/20260909-225431-86f71d2.md`):
+
+| Tool | Version |
+|------|---------|
+| `klt` (klayout-tools) | `0.3.0+gc6dbf66c53c6` |
+| OpenROAD | `26Q3-1278-g4421880472` |
+| KLayout (via `klt`) | `0.30.12` |
+
+`flow/layout.sh` and `flow/sta-sweep.sh` both source `flow/tool_versions.sh`
+and print the installed `klt`/OpenROAD versions at the top of every run,
+with a warning if they differ from the table above (`RECORDED_KLT_VERSION` /
+`RECORDED_OPENROAD_VERSION` in that file). This is **informational, not
+enforced** — this repo has no CI and no pinned container image (a possible
+follow-up, out of scope here), so a mismatch does not abort the script.
+
+**Known drift (issue #23, unverified byte-level root cause):** running
+check mode against `klt 0.4.0` instead of the recorded toolchain has been
+observed to report `flow/layout.sh` non-reproducibility (differing
+`wirelength_um`, plus a fill-cell placement diff) and `flow/sta-sweep.sh`
+`spef.sta.json` diffs confined to the `spef_sha256` provenance field —
+while every *numeric* field in both reports (worst-case slack, total
+negative slack, nets-annotated counts, status) reproduced exactly at every
+corner. This looks like a `klt place-and-route` / `klt extract --spef`
+output-formatting change between those two `klt` releases, not a
+correctness regression, but that has not been confirmed by a byte-level
+diff against an archived `0.3.0` run. **If your check-mode run fails and
+the toolchain-version warning above fired, rule out toolchain drift before
+treating the failure as a design regression** — re-run against the recorded
+toolchain if available, or inspect whether the diff is confined to
+provenance/byte-format fields (as in the known case above) versus an actual
+numeric/status change.
+
 ## Current contents
 
 ### `flow/synth.sh` — generic-cell netlist (T1 item 1 follow-up)
