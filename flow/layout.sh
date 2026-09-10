@@ -95,6 +95,10 @@ for tool in klt openroad; do
     fi
 done
 
+# shellcheck source=./tool_versions.sh
+source "$SCRIPT_DIR/tool_versions.sh"
+print_tool_version_banner
+
 # Prefer a native yosys build over any WASI-sandboxed (YoWASP) one earlier
 # on $PATH -- a YoWASP yosys cannot open a `klt synthesize`-generated .ys
 # script living outside its sandbox's preopened directories, and fails with
@@ -250,6 +254,7 @@ fi
 
 if [[ "$status" -ne 0 ]]; then
     echo "       RTL changed (or the flow is non-reproducible) without regenerating the layout -- run '$0 --update' and commit the result" >&2
+    echo "       if the toolchain-version warning printed above fired, rule out toolchain drift (see flow/README.md's 'Toolchain versions' section) before assuming a design regression" >&2
     exit 1
 fi
 

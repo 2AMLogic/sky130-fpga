@@ -145,6 +145,10 @@ for tool in klt openroad; do
     fi
 done
 
+# shellcheck source=./tool_versions.sh
+source "$SCRIPT_DIR/tool_versions.sh"
+print_tool_version_banner
+
 # Same rationale as flow/lvs.sh's own copy of this block: some local
 # `openroad` installs are thin Docker wrappers that only mount $PDK_ROOT
 # into the container when that variable is set in the invoking shell, even
@@ -376,6 +380,7 @@ fi
 
 if [[ "$status" -ne 0 ]]; then
     echo "       run '$0 --update' and commit the result (plus a new record under measurements/timing-characterization/records/)" >&2
+    echo "       if the toolchain-version warning printed above fired, rule out toolchain drift (see flow/README.md's 'Toolchain versions' section) before assuming a design regression" >&2
     exit 1
 fi
 
