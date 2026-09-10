@@ -72,9 +72,20 @@ what FABulous provides are tracked in
 Maturity ladder: framework evaluated → tile spec ratified → tile RTL +
 fabric description passing bitstream-level tests → tile layout
 DRC/LVS-clean → tile timing characterized → demonstration fabric assembled
-and re-verified → shuttle seat → measured silicon. **Current position:
-framework evaluated, draft tile spec recorded — RTL/tile-description work
-not yet started.**
+and re-verified → shuttle seat → measured silicon. **Current position:**
+framework evaluated and tile spec ratified; tile RTL is implemented
+(`design/rtl/lut4_slice.v`, `design/rtl/logic_tile.v`) and the tile layout is
+DRC/LVS-clean (`layout/logic_tile.drc.json`: `status: "clean"`;
+`layout/logic_tile.lvs.json`: `status: "match"`). **Timing characterization
+is in progress** (open PR, tracking issue #20) and not yet landed on `main`
+— once merged it will be evidenced under
+`measurements/timing-characterization/`. The
+**bitstream-level-tests rung has not been started**: it is gated on
+`spec/framework-gaps.md` items
+[G1](spec/framework-gaps.md#g1--pin-down-the-exact-fabulous-tilefabric-description-schema)
+(bitstream/tile-description schema, unconfirmed) and
+[G5](spec/framework-gaps.md#g5--bitstream-level-functional-verification-rtltile-description-correctness)
+(bitstream-level functional verification), neither of which is closed yet.
 
 ## Repo layout
 
