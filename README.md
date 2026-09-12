@@ -77,10 +77,10 @@ framework evaluated and tile spec ratified; tile RTL is implemented
 (`design/rtl/lut4_slice.v`, `design/rtl/logic_tile.v`) and the tile layout is
 DRC/LVS-clean (`layout/logic_tile.drc.json`: `status: "clean"`;
 `layout/logic_tile.lvs.json`: `status: "match"`). **Timing characterization
-is in progress** (open PR, tracking issue #20) and not yet landed on `main`
-— once merged it will be evidenced under
-`measurements/timing-characterization/`. The
-**bitstream-level-tests rung has not been started**: it is gated on
+has landed on `main`** — evidence is recorded under
+`measurements/timing-characterization/records/20260909-225431-86f71d2.md` and
+corner-specific STA reports under `measurements/timing-characterization/corners/`.
+The **bitstream-level-tests rung has not been started**: it is gated on
 `spec/framework-gaps.md` items
 [G1](spec/framework-gaps.md#g1--pin-down-the-exact-fabulous-tilefabric-description-schema)
 (bitstream/tile-description schema, unconfirmed) and
