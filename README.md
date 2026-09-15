@@ -6,7 +6,20 @@ PDK — designed by AI agents driving
 [klayout-tools](https://github.com/2AMLogic/klayout-tools) and the
 open-source yosys + nextpnr flow.
 
-**Status: just opened.** Nothing is designed yet.
+**Status: tile design and physical implementation landed; bitstream-level
+fabric verification not yet started.** The logic tile's RTL is implemented
+and BEL-level tested, its routed layout is DRC/LVS-clean, and its timing has
+been characterized across all 18 `sky130_fd_sc_hd` PVT corners with a
+ratified spec row ([ADR-0002](spec/decisions/0002-tile-timing-spec-ratification.md)).
+A gate-level, SDF-annotated re-simulation of the routed tile was attempted:
+the zero-delay leg passes, but the SDF-annotated leg is blocked on a real
+upstream defect filed as
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890).
+See [`measurements/characterization-summary.md`](measurements/characterization-summary.md)
+for the current aggregated snapshot of this evidence, and "Current position"
+below for the full maturity-ladder detail. This is still a tile-scoped
+canary, not a fabric: bitstream-level verification of the demonstration
+fabric has not started.
 
 **Built agent-native.** Every specification, decision record, testbench, and
 line of documentation here is produced by AI agents working from a ratified
