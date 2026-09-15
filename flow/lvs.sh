@@ -153,6 +153,16 @@ if ! klt pdk find --pdk "$PDK_VARIANT" >/dev/null 2>&1; then
     exit 1
 fi
 
+# Pin the PDK revision this run resolves against -- `klt lvs` writes
+# `provenance.pdk: null` (klayout-tools#1901, same gap as flow/drc.sh), so
+# the committed layout/logic_tile.lvs.json records no PDK revision of its
+# own. See flow/tool_versions.sh (issue #34, T1 checklist item 9). Only the
+# PDK half of the banner is printed here; the klt/OpenROAD half comes from
+# the flow/layout.sh invocation below, which prints the full banner.
+# shellcheck source=./tool_versions.sh
+source "$SCRIPT_DIR/tool_versions.sh"
+print_pdk_version_banner "$PDK_VARIANT"
+
 mkdir -p "$LVS_BUILD_DIR"
 
 # --- 1. Regenerate the layout + as-built reference netlist (same run) ---
