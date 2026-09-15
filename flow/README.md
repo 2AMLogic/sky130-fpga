@@ -26,12 +26,37 @@ nor klayout-tools currently pins one.
 | OpenROAD | `26Q3-1278-g4421880472` |
 | KLayout (via `klt`) | `0.30.12` |
 
-`flow/layout.sh` and `flow/sta-sweep.sh` both source `flow/tool_versions.sh`
-and print the installed `klt`/OpenROAD versions at the top of every run,
-with a warning if they differ from the table above (`RECORDED_KLT_VERSION` /
-`RECORDED_OPENROAD_VERSION` in that file). This is **informational, not
-enforced** — this repo has no CI and no pinned container image (a possible
-follow-up, out of scope here), so a mismatch does not abort the script.
+`flow/layout.sh`, `flow/sta-sweep.sh` and `flow/sdf-resim.sh` all source
+`flow/tool_versions.sh` and print the installed `klt`/OpenROAD versions at
+the top of every run, with a warning if they differ from the table above
+(`RECORDED_KLT_VERSION` / `RECORDED_OPENROAD_VERSION` in that file). This is
+**informational, not enforced** — this repo has no CI and no pinned
+container image (a possible follow-up, out of scope here), so a mismatch
+does not abort the script.
+
+### Recorded PDK revision
+
+The same file also pins the **PDK** revision the committed artifacts were
+produced against (`RECORDED_PDK_VERSION`, issue #34):
+
+| | Revision |
+|---|---|
+| sky130A | `open_pdks c6d73a35f524070e85faff4a6a9eef49553ebc2b` |
+
+Unlike the tool versions, this one is mostly redundant — `klt
+place-and-route` and `klt sta` write `provenance.pdk.{name,version}` into
+their own reports, so `layout/logic_tile.par.json` and all 36 per-corner
+reports under `measurements/timing-characterization/corners/` already carry
+it, and check mode's diff fails if the installed PDK differs. **`klt drc`
+and `klt lvs` do not**: both emit `provenance.pdk: null` even when invoked
+with `--pdk sky130A` (filed upstream as klayout-tools#1901), so
+`layout/logic_tile.drc.json` and `layout/logic_tile.lvs.json` record no PDK
+revision and their diffs cannot notice a PDK swap. `flow/drc.sh` and
+`flow/lvs.sh` therefore print `print_pdk_version_banner` — the same
+warn-on-mismatch shape, and for those two claims the only place a PDK swap
+becomes visible at all. T1 checklist item 9 ("every claimed measurement has
+a committed testbench and a pinned PDK version") is what this is for; the
+full claim-by-claim walk is `measurements/claim-traceability.md`.
 
 **Known drift (issue #23, unverified byte-level root cause):** running
 check mode against `klt 0.4.0` instead of the recorded toolchain has been
@@ -506,3 +531,35 @@ here; see `spec/framework-gaps.md` G4 and `sim/README.md`.
 
 Full method, provenance and result:
 `measurements/timing-characterization/records/20260915-133517-234b13b.md`.
+
+### `flow/audit-evidence.sh` — claim → harness → pinned-PDK audit (T1 item 9, issue #34)
+
+T1 checklist item 9 requires that **every claimed measurement** has a
+committed testbench/harness and a pinned PDK version. The claim-by-claim
+walk is published as `measurements/claim-traceability.md`; this script is
+the part that does not go stale. It re-derives that audit from the committed
+tree:
+
+1. every record under `measurements/*/records/*.md` names a `harness` that
+   exists, and pins `provenance.pdk.version` equal to
+   `RECORDED_PDK_VERSION`;
+2. every `content_hash` a record pins still describes the committed file
+   (a mismatch fails unless it is an explicit, commit-cited entry in
+   `flow/audit_evidence.py`'s `ALLOWED_INPUT_DRIFT`);
+3. every committed report JSON under `layout/`/`measurements/` pins that
+   same PDK revision — or is one of the two `klt drc`/`klt lvs` reports
+   whose `provenance.pdk` is null for the filed upstream reason
+   (klayout-tools#1901), listed explicitly so a *new* PDK-less report type
+   cannot quietly join them.
+
+```
+./flow/audit-evidence.sh   # exit 0 iff every claim is traceable and PDK-pinned
+```
+
+**Needs no toolchain at all** — no `klt`, no `openroad`, no `yosys`, no PDK
+install, no network; it reads committed files plus
+`flow/tool_versions.sh`'s `RECORDED_PDK_VERSION`. There is no `--update`
+mode: `measurements/*/records/` is append-only, so a failure is fixed by
+correcting the tree, by adding a new record, or — for a deliberate,
+method-neutral change — by adding a cited allowance, never by rewriting a
+published record.

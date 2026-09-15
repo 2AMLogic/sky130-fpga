@@ -120,6 +120,14 @@ engine — KLayout's native `Region`-primitive checks, run fully headless
 - **LVS is separate.** `klt lvs` (netlist-vs-layout comparison) is
   `spec/framework-gaps.md` item G3's other half — see "LVS scope,
   concretely" below (issue #12).
+- **Which PDK revision this was run against** is *not* in the report:
+  `klt drc` writes `provenance.pdk: null` even though `flow/drc.sh` invokes
+  it with `--pdk sky130A` (filed upstream as klayout-tools#1901). The PDK
+  revision for this claim — and for the LVS claim below, same gap — is
+  pinned in `flow/tool_versions.sh` (`RECORDED_PDK_VERSION`) and printed,
+  with a warning on mismatch, at the top of every `flow/drc.sh` /
+  `flow/lvs.sh` run. See `measurements/claim-traceability.md` (T1 item 9)
+  and `./flow/audit-evidence.sh`.
 
 ## LVS scope, concretely (issue #12)
 

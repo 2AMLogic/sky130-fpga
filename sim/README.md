@@ -38,6 +38,15 @@ Build outputs land in `sim/build/` (gitignored).
 
 Exit status is `0` iff every testbench reports `PASS` with zero failures.
 
+**No PDK is read by this run, and none needs pinning.** `sim/run.sh`
+compiles behavioral RTL only — no `sky130_fd_sc_hd` cell model, no liberty,
+no LEF/GDS — so no PDK revision can change its result. That is why the
+claim-traceability audit (`measurements/claim-traceability.md`, T1 item 9)
+marks these two testbenches "n/a by construction" rather than unpinned. The
+*gate-level* re-run of `tb_logic_tile.v` below is a different claim
+precisely because it does read the PDK's cell models, and is PDK-pinned in
+its own record.
+
 Toolchain choice: Icarus Verilog was chosen over Verilator for these
 testbenches because they are pure behavioral/event-driven checks (delays,
 `@(posedge clk)`, self-checking `initial` blocks) with no need for a C++

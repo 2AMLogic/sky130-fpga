@@ -76,6 +76,17 @@ if ! klt pdk find --pdk "$PDK_VARIANT" >/dev/null 2>&1; then
     exit 1
 fi
 
+# Pin the PDK revision this run resolves against. `klt drc` writes
+# `provenance.pdk: null` into its own report even when given `--pdk`
+# (klayout-tools#1901), so the committed layout/logic_tile.drc.json records
+# no PDK revision and its check-mode diff cannot notice a PDK swap -- this
+# banner is where a swap becomes visible. See flow/tool_versions.sh
+# (issue #34, T1 checklist item 9). Only the PDK half of the banner is
+# printed: this script needs no `openroad`.
+# shellcheck source=./tool_versions.sh
+source "$SCRIPT_DIR/tool_versions.sh"
+print_pdk_version_banner "$PDK_VARIANT"
+
 mkdir -p "$BUILD_DIR"
 
 COMMITTED_GDS="$LAYOUT_DIR/${GDS_NAME}"

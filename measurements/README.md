@@ -33,6 +33,21 @@ python3 measurements/generate-characterization-summary.py
 from its sources.) See `measurements/generate-characterization-summary.py`
 for exactly what each section cross-checks.
 
+### `claim-traceability.md` — claim → harness → pinned-PDK audit (T1 item 9, issue #34)
+
+Every result this repo publishes as evidence, traced to the committed
+testbench or flow script that produces it and to the sky130A PDK revision it
+was produced against — including the claims in `layout/` and `sim/`, not
+just this directory's. The repo's single pinned PDK source is
+`RECORDED_PDK_VERSION` in `flow/tool_versions.sh`; most artifacts carry that
+revision in their own `provenance.pdk` block, and the audit names the ones
+that inherit it instead (and why).
+
+`./flow/audit-evidence.sh` re-derives the whole audit from the committed
+tree — no `klt`, no PDK install, no network — so a new record, a new report
+type, an edited harness a record already pins by hash, or a PDK swap fails
+the check instead of quietly invalidating the published table.
+
 ### `timing-characterization/` — multi-corner extracted-parasitics STA
 
 The `logic_tile` block's timing, characterized from the committed layout.
@@ -144,6 +159,10 @@ resolvable sky130A PDK (`klt pdk find --pdk sky130A`) available:
 ./flow/sta-sweep.sh   # re-extract parasitics, re-sweep all 18 corners, diff every committed report
 ./flow/sdf-resim.sh   # regenerate the post-route SDF + gate-level re-simulation (needs Icarus 13.0+)
 ```
+
+`./flow/audit-evidence.sh` needs none of that — it re-checks every claim's
+harness and PDK pin (`claim-traceability.md` above) from committed files
+alone, so it runs in any clean checkout.
 
 `./flow/sta-sweep.sh` exits 0 only if every corner ran, every SPEF run
 annotated completely, the harness's own name-rewrite timing-neutrality
