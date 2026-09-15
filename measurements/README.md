@@ -15,6 +15,24 @@ is.
 
 ## Contents
 
+### `characterization-summary.md` — one aggregated, current artifact (T1 item 8)
+
+[`characterization-summary.md`](characterization-summary.md) pulls DRC, LVS,
+the 18-corner STA sweep, the ratified `spec/tile-spec.md` timing row (ADR-0002)
+and the SDF-generation/gate-level re-simulation result into a single current
+snapshot, each entry naming its status, its source record/report path, and
+the commit/run it was derived from. It is **generated**, not hand-typed: every
+number in it is read from, or cross-checked against, the JSON/markdown
+sources it cites — regenerate it after any of those sources changes with:
+
+```
+python3 measurements/generate-characterization-summary.py
+```
+
+(`--check` fails non-zero without writing if the committed file has drifted
+from its sources.) See `measurements/generate-characterization-summary.py`
+for exactly what each section cross-checks.
+
 ### `timing-characterization/` — multi-corner extracted-parasitics STA
 
 The `logic_tile` block's timing, characterized from the committed layout.
