@@ -25,7 +25,7 @@
 | Tile I/O | BEL pins (4× LUT4 in, 4× LUT4/FF out) + 4 edges × 4 tracks of general routing + tile config/bitstream port | Standard FABulous tile boundary shape: BEL-level ports plus routing-track ports per edge. |
 | Fabric size (demonstration) | 2×2 to 4×4 tile grid, single tile type, bitstream-programmable | Matches README's "Target specification" table; smallest grid that exercises inter-tile routing without growing scope. |
 | Bitstream | Fully documented, open format, generated via the FABulous flow | No proprietary or undocumented bitstream fields — verification (`sim/`) depends on being able to construct and inspect bitstreams directly. |
-| Timing | No numbers in this spec | FABulous's own docs mark BEL timing as placeholder-constant; this repo publishes no timing claim until it is backed by characterized sky130 data (`spec/framework-gaps.md` item G4). |
+| Timing | **RATIFIED 2026-09-15 (ADR-0002, #28)** — tile BEL logic only (no switch matrix): setup- and hold-clean (0 violations, 0 TNS) at all 18 `sky130_fd_sc_hd` PVT corners, LEF-only and SPEF-annotated, against a 20 ns non-propagated-clock SDC period on `clk`; binding setup corner `ss_n40C_1v28`, SPEF WNS 15.1760 ns. **No Fmax/MHz number ratified** — see `spec/decisions/0002-tile-timing-spec-ratification.md`. | Derived from the PR #22 18-corner `klt sta` sweep (`measurements/timing-characterization/records/20260909-225431-86f71d2.md`), per `spec/framework-gaps.md` item G4; ratification rationale, alternatives, and scope carve-outs in `spec/decisions/0002-tile-timing-spec-ratification.md`. |
 
 ## LUT count per tile: 4× LUT4
 
