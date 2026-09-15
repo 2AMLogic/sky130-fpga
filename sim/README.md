@@ -45,6 +45,41 @@ test harness. `verilator --lint-only` is also clean against the RTL (no
 warnings) and is a reasonable choice for future, larger fabric-level
 testbenches that want a compiled/cycle-accurate model.
 
+## Gate-level / SDF-annotated coverage (T1 item 7, issue #29)
+
+`./flow/sdf-resim.sh` re-runs `tb_logic_tile.v` **unmodified**, gate-level,
+against the as-built `sky130_fd_sc_hd` netlist from a fresh `klt
+place-and-route` run whose regenerated DEF is verified byte-identical to
+the committed, PR #22-characterized `layout/logic_tile.def` — so this is
+the same characterized geometry, not a different one. Two legs:
+
+| Leg | Result |
+|---|---|
+| Zero-delay gate-level | **PASS** — `tb_logic_tile -- 4 checks, 0 failures`, against real `sky130_fd_sc_hd` standard cells. Functional-only; no timing claim. |
+| SDF-annotated (real post-route SDF, `klt place-and-route --post_route_sdf`) | **Blocked.** `$sdf_annotate` crashes `vvp` (`NULL handle passed to vpi_scan`) on this design's `generate`-block-flattened escaped identifiers — a generic, non-design-specific Icarus/`klt` defect, bisected to a minimal 15-line reproduction and filed as [klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890). Not worked around with a fabricated SDF or a fake result. |
+
+Full method, provenance and the crash bisection:
+[`measurements/timing-characterization/records/20260915-133517-234b13b.md`](../measurements/timing-characterization/records/20260915-133517-234b13b.md).
+The committed SDF itself:
+[`measurements/timing-characterization/logic_tile_route.sdf`](../measurements/timing-characterization/logic_tile_route.sdf).
+
+**`tb_lut4_slice.v` is not covered here.** `lut4_slice` has no
+independently placed-and-routed layout of its own — only as a
+`g_slice[N].u_slice` sub-instance flattened inside the routed `logic_tile`
+— so its SDF/IOPATH delays are relative to the whole tile instance, not to
+a standalone `lut4_slice` root. A literal gate-level (let alone
+SDF-annotated) re-run of `tb_lut4_slice.v` against *characterized* geometry
+would need a new, independently placed-and-routed sub-block layout — a new
+physical-design artifact, out of scope for issue #29. See
+`spec/framework-gaps.md` G4.
+
+Requires Icarus Verilog **13.0+** (`-ginterconnect`, `options.sdf`'s own
+documented minimum) — a separate, newer toolchain requirement than the
+plain `./sim/run.sh` RTL-level regression above, which has no such need.
+Regenerating the gate-level netlist and SDF also requires `klt`, `openroad`,
+`yosys` and a resolvable sky130A PDK (same requirements as
+`flow/layout.sh`).
+
 ## Out of scope here
 
 Bitstream-level fabric verification (a simulated fabric model driven by a

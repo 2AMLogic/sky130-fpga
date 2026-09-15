@@ -36,6 +36,25 @@ layout, and `flow/sta-sweep.sh` diff-checks it on every run.
 
 The current record is
 [`records/20260909-225431-86f71d2.md`](timing-characterization/records/20260909-225431-86f71d2.md).
+A second record,
+[`records/20260915-133517-234b13b.md`](timing-characterization/records/20260915-133517-234b13b.md),
+covers the separate SDF-generation + gate-level-resimulation experiment
+below — it does not supersede this one.
+
+### `timing-characterization/logic_tile_route.sdf` — SDF-annotated gate-level re-simulation (T1 item 7, issue #29)
+
+A real post-route SDF (`klt place-and-route --post_route_sdf`), regenerated
+and diff-checked by `flow/sdf-resim.sh` against the exact geometry this
+directory's own 18-corner sweep already characterized (byte-identical DEF).
+`sim/tb_logic_tile.v` re-runs unmodified, gate-level, against the as-built
+netlist from that same run: zero delay **passes**; the SDF-annotated leg is
+**blocked** by a real, generically-reproducible upstream defect in
+`$sdf_annotate`'s handling of this design's `generate`-block-flattened
+escaped identifiers, filed as
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890)
+rather than worked around with a fabricated result. Full method and the
+crash bisection:
+[`records/20260915-133517-234b13b.md`](timing-characterization/records/20260915-133517-234b13b.md).
 
 **What was measured.** One fixed piece of routed geometry — the committed
 `layout/logic_tile.def`, byte-identical across every run — re-timed in a
@@ -84,9 +103,11 @@ set" triple sits in one place.
   the switch matrix and inter-tile routing (`spec/framework-gaps.md`
   G1/G2) have not landed, so no fabric routing delay is characterized
   anywhere here.
-- **Not post-layout functional verification.** SDF-back-annotated
-  gate-level re-simulation is separate follow-on work; `sim/` holds the
-  functional evidence and is unaffected by this directory.
+- **Not a full post-layout functional verification.** SDF-back-annotated
+  gate-level re-simulation (issue #29) has a real SDF and a zero-delay
+  gate-level PASS, but no SDF-annotated pass/fail result — blocked on
+  [klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890),
+  see `logic_tile_route.sdf` above. `sim/` holds the functional evidence.
 - **Not silicon.** Nothing here is measured on a fabricated part.
 
 ### Silicon characterization
@@ -103,6 +124,7 @@ resolvable sky130A PDK (`klt pdk find --pdk sky130A`) available:
 ```
 ./flow/layout.sh      # verify the committed GDS + DEF + P&R report regenerate byte-identically
 ./flow/sta-sweep.sh   # re-extract parasitics, re-sweep all 18 corners, diff every committed report
+./flow/sdf-resim.sh   # regenerate the post-route SDF + gate-level re-simulation (needs Icarus 13.0+)
 ```
 
 `./flow/sta-sweep.sh` exits 0 only if every corner ran, every SPEF run

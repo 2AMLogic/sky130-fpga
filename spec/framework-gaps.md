@@ -95,6 +95,26 @@ Still open under this gap: the switch matrix (no implementation yet, G1/G2),
 propagated-clock and bisected-Fmax analysis, and replacing FABulous's
 placeholder BEL timing model with these values.
 
+**SDF-annotated gate-level re-simulation (T1 item 7, issue #29): partially
+closed.** `klt place-and-route --post_route_sdf` writes a real, real-parasitics
+SDF from the same routed geometry PR #22 already characterized (verified
+byte-identical DEF); `sim/tb_logic_tile.v` re-runs unmodified, gate-level,
+against the as-built netlist and PASSES zero-delay. The SDF-**annotated**
+leg is blocked by a real, generically-reproducible upstream defect —
+`$sdf_annotate` crashes `vvp` (`NULL handle passed to vpi_scan`) on any
+escaped identifier containing `.`/`[]`, which is exactly what this design's
+`generate`-block RTL produces once flattened — filed as
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890)
+and cited, not worked around with a fabricated substitute. `sim/
+tb_lut4_slice.v` was not attempted: `lut4_slice` has no independently
+placed-and-routed layout of its own (only as a sub-instance flattened
+inside the routed `logic_tile`), so a literal SDF-annotated re-run of that
+testbench would need a new physical-design artifact, out of scope here. See
+`measurements/timing-characterization/records/20260915-133517-234b13b.md`
+and `sim/README.md` for the full accounting. Still open under this item:
+the SDF-annotated pass/fail result itself (blocked on klayout-tools#1890)
+and `tb_lut4_slice.v`'s own gate-level coverage.
+
 ## G5 — Bitstream-level functional verification (RTL/tile-description correctness)
 
 **Gap**: FABulous generates a bitstream format and a fabric description, but

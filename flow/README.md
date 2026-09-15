@@ -439,3 +439,70 @@ that can cite this sweep's DEF/SPEF); and the switch matrix / inter-tile
 routing, which has no implementation to characterize yet
 (`spec/framework-gaps.md` G1/G2). See `measurements/README.md` for the full
 list of what the committed numbers do and do not claim.
+
+### `flow/sdf-resim.sh` — SDF-annotated gate-level re-simulation (T1 item 7, issue #29)
+
+The follow-on named above. `flow/sdf-resim.sh` re-runs the same synthesize +
+place-and-route request `flow/layout.sh` uses, adding `post_route_spef` +
+`post_route_sdf` (klayout-tools issue #1002) so that run's own post-route
+`read_spef` OpenSTA session also writes a real IEEE-1497 SDF —
+`measurements/timing-characterization/logic_tile_route.sdf` (canonicalized:
+`flow/sdf_canonicalize.py` strips the volatile `(DATE ...)` header line, the
+SDF sibling of `flow/sta_sanitize_names.py`'s SPEF `*DATE` rewrite). The
+regenerated DEF is diffed **byte-identical** against the committed
+`layout/logic_tile.def` before the SDF is trusted — same geometry
+`flow/sta-sweep.sh` already characterized, not a different run.
+
+`sim/tb_logic_tile.v` then runs gate-level, unmodified, against the as-built
+netlist from that same run: zero delay (**passes**), and SDF-annotated via a
+generated `$sdf_annotate`-carrying elaboration root
+(`flow/sdf_annotate_shim.py`, mirroring `klt functional-verification`'s own
+`_write_sdf_annotate_shim` idiom — used directly rather than through that
+verb's CLI because `sim/tb_logic_tile.v` is a plain Verilog testbench, not
+cocotb, and converting it is out of this issue's scope).
+
+**Friction encountered — a crash, not a silent gap.** The SDF-annotated leg
+deterministically crashes `vvp` (`ERROR: NULL handle passed to vpi_scan.` /
+an assertion failure, SIGABRT) on this design's `generate`-block-flattened
+escaped identifiers — the same `[`, `]`, `.`, `/` family as the
+`flow/sta_sanitize_names.py` friction above, but hitting Icarus's
+`$sdf_annotate`/`vvp` this time rather than OpenSTA's SPEF reader. Bisected
+to a minimal, from-scratch, non-sky130 15-line reproduction (any
+`INTERCONNECT` entry whose escaped identifier contains a literal `.` or
+`[`/`]`, independent of file size) and confirmed reproducing identically
+through `klt functional-verification`'s own `options.sdf` path, not just
+this repo's hand-wired mechanism — filed generically as
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890).
+Not worked around with a fabricated SDF or a faked result:
+`flow/sdf-resim.sh` re-attempts this leg every run and treats *reproducing
+the cited crash* as the expected, checked-in outcome — a clean pass, a
+different failure, or no crash at all is a script failure, since it would
+mean the upstream issue's status changed and this evidence needs a fresh
+look.
+
+Running:
+
+```
+./flow/sdf-resim.sh            # regenerate, verify the DEF/SDF/record, and
+                                # confirm both legs reproduce their recorded
+                                # outcome. Exit 0 iff the zero-delay leg
+                                # PASSes and the SDF-annotated leg reproduces
+                                # the exact cited crash.
+./flow/sdf-resim.sh --update   # same, but overwrite the committed SDF
+                                # (then add a new record under
+                                # measurements/timing-characterization/records/)
+```
+
+Requires `klt`, `openroad`, a native `yosys` build, a resolvable sky130A PDK,
+**and Icarus Verilog 13.0+** for the gate-level legs (`options.sdf`'s own
+documented minimum, for `-ginterconnect`) — a separate, newer requirement
+than `sim/run.sh`'s plain RTL-level regression. See `resolve_icarus13()` in
+the script for how a non-default install location (`$ICARUS13_BIN_DIR`) is
+resolved. `sim/tb_lut4_slice.v` is not attempted: `lut4_slice` has no
+independently placed-and-routed layout of its own (only as a sub-instance
+flattened inside the routed `logic_tile`), so a literal gate-level re-run of
+that testbench would need a new physical-design artifact — out of scope
+here; see `spec/framework-gaps.md` G4 and `sim/README.md`.
+
+Full method, provenance and result:
+`measurements/timing-characterization/records/20260915-133517-234b13b.md`.
