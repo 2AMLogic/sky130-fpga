@@ -82,17 +82,9 @@
 #
 # Local-environment robustness: if $PDK_ROOT is unset, this script exports
 # it (and $PDK) from `klt pdk find`'s own resolved root before delegating
-# to flow/layout.sh. This is not a klt/klayout-tools gap -- it accommodates
-# a machine-local detail this issue's evidence-gathering ran into: some
-# local `openroad` installs are thin Docker wrappers (see e.g.
-# `~/.local/bin/openroad`, "Local dev wrapper (not repo-managed)") that
-# only mount $PDK_ROOT into the container when that variable is set in the
-# invoking shell, even though `klt pdk find` itself resolves the PDK fine
-# via a different search path (e.g. a default volare root) with no
-# $PDK_ROOT set at all. Exporting it here (only when not already set, so an
-# operator's explicit configuration is never overridden) makes this flow
-# robust to that without requiring every invoking environment to know about
-# it up front.
+# to flow/layout.sh. See flow/pdk_root.sh's own header comment for the full
+# rationale (a machine-local Docker-wrapper `openroad` detail, not a
+# klt/klayout-tools gap).
 #
 # Exit status: 0 iff LVS reports status "match" and (in the default,
 # non-`--update` mode) the trimmed report matches the committed copy;
@@ -139,19 +131,10 @@ if [[ "$MODE" != "update" && ! -f "$COMMITTED_GDS" ]]; then
 fi
 
 # See "Local-environment robustness" above.
-if [[ -z "${PDK_ROOT:-}" ]]; then
-    RESOLVED_ROOT="$(klt pdk find --pdk "$PDK_VARIANT" --format json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('root',''))" 2>/dev/null || true)"
-    if [[ -n "$RESOLVED_ROOT" ]]; then
-        export PDK_ROOT="$RESOLVED_ROOT"
-        export PDK="$PDK_VARIANT"
-    fi
-fi
-
-if ! klt pdk find --pdk "$PDK_VARIANT" >/dev/null 2>&1; then
-    echo "error: no $PDK_VARIANT PDK install resolvable (klt pdk find --pdk $PDK_VARIANT failed)" >&2
-    echo "       set \$PDK_ROOT/\$PDK, or install via volare/ciel" >&2
-    exit 1
-fi
+# shellcheck source=./pdk_root.sh
+source "$SCRIPT_DIR/pdk_root.sh"
+export_pdk_root_if_unset "$PDK_VARIANT"
+require_pdk_resolvable "$PDK_VARIANT"
 
 # Pin the PDK revision this run resolves against -- `klt lvs` writes
 # `provenance.pdk: null` (klayout-tools#1901, same gap as flow/drc.sh), so
