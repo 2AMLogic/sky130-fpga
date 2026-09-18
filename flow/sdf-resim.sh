@@ -156,12 +156,13 @@ fi
 # $PATH (sim/run.sh's RTL-level regression has no such requirement and
 # uses the distro default). Override with $ICARUS13_BIN_DIR if your 13+
 # build lives somewhere other than the two locations checked here.
-# Prints the resolved prefix on success: a directory path, or the literal
-# sentinel "PATH" when the match came from $PATH with no prefix needed (an
-# empty string is never printed, so callers don't have to distinguish a
-# legitimate "found on PATH" result from "not found" via string emptiness --
-# issue #43). Returns non-zero (nothing printed) when no candidate has a
-# 13.0+ iverilog.
+# Found vs. not-found is carried entirely by the exit status, never by the
+# printed string (issue #43): on success it prints the matching candidate
+# verbatim -- a directory path, or the empty string when the match came from
+# $PATH and needs no prefix -- and returns 0; on failure it prints nothing and
+# returns non-zero. Callers must therefore branch on the exit status, not on
+# string emptiness. No sentinel value is used, so no legal directory name can
+# ever be confused with the $PATH case.
 resolve_icarus13() {
     local candidate
     local -a candidates=()
@@ -178,11 +179,7 @@ resolve_icarus13() {
             local ver
             ver="$("$iv" -V 2>&1 | head -1 | grep -oE '[0-9]+' | head -1 || true)"
             if [[ -n "$ver" && "$ver" -ge 13 ]]; then
-                if [[ -n "$candidate" ]]; then
-                    echo "$candidate"
-                else
-                    echo "PATH"
-                fi
+                echo "$candidate"
                 return 0
             fi
         fi
@@ -190,13 +187,10 @@ resolve_icarus13() {
     return 1
 }
 
-if ICARUS13_RESULT="$(resolve_icarus13)"; then
-    if [[ "$ICARUS13_RESULT" == "PATH" ]]; then
-        ICARUS13_DIR=""
-    else
-        ICARUS13_DIR="$ICARUS13_RESULT"
-    fi
-else
+# Branch on resolve_icarus13()'s exit status, never on the emptiness of what it
+# printed: an empty ICARUS13_DIR is the legitimate "found on $PATH, no prefix
+# needed" result (issue #43).
+if ! ICARUS13_DIR="$(resolve_icarus13)"; then
     echo "error: no Icarus Verilog 13.0+ build found (checked \$ICARUS13_BIN_DIR, /opt/iverilog-13/bin, \$PATH)" >&2
     echo "       options.sdf-equivalent gate-level runs require -ginterconnect, which needs Icarus 13+" >&2
     exit 1
