@@ -115,11 +115,9 @@ if ! command -v yosys >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! klt pdk find --pdk sky130A >/dev/null 2>&1; then
-    echo "error: no sky130A PDK install resolvable (klt pdk find --pdk sky130A failed)" >&2
-    echo "       set \$PDK_ROOT/\$PDK, or install via volare/ciel" >&2
-    exit 1
-fi
+# shellcheck source=./pdk_root.sh
+source "$SCRIPT_DIR/pdk_root.sh"
+require_pdk_resolvable "sky130A"
 
 mkdir -p "$BUILD_DIR" "$LAYOUT_DIR"
 
@@ -162,35 +160,14 @@ if [[ ! -s "$SYNTH_NETLIST" ]]; then
     exit 1
 fi
 
-cat > "$PAR_REQUEST" <<EOF
-{
-  "schema": "klt.place_and_route.request/1",
-  "engine": "openroad",
-  "netlist": "${SYNTH_NETLIST}",
-  "hdl_toplevel": "${TOP_MODULE}",
-  "pdk": { "cell_library": "sky130_fd_sc_hd", "corner": "tt_025C_1v80" },
-  "floorplan": {
-    "method": "utilization",
-    "utilization_pct": 40,
-    "aspect_ratio": 1.0,
-    "core_margin_um": 2.0,
-    "site": "unithd"
-  },
-  "io": { "layer_h": "met3", "layer_v": "met2" },
-  "power": {
-    "power_net": "VPWR",
-    "ground_net": "VGND",
-    "straps": [
-      { "layer": "met1", "width_um": 0.48, "pitch_um": 5.44, "offset_um": 0.0, "followpins": true },
-      { "layer": "met4", "width_um": 1.6, "pitch_um": 27.14, "offset_um": 13.57 },
-      { "layer": "met5", "width_um": 1.6, "pitch_um": 27.2, "offset_um": 13.6 }
-    ]
-  },
-  "constraints": { "clock_port": "${CLOCK_PORT}", "clock_period_ns": ${CLOCK_PERIOD_NS} },
-  "seed": 1,
-  "target_stage": "route"
-}
-EOF
+# Shared with flow/sdf-resim.sh -- see flow/par_request.py's own header
+# comment (issue #44) for why the place-and-route request body is
+# single-sourced there instead of a second hand-written heredoc here.
+python3 "$SCRIPT_DIR/par_request.py" \
+    "$SYNTH_NETLIST" "$PAR_REQUEST" \
+    --hdl-toplevel "$TOP_MODULE" \
+    --clock-port "$CLOCK_PORT" \
+    --clock-period-ns "$CLOCK_PERIOD_NS"
 
 echo "=== klt place-and-route ${TOP_MODULE} (sky130_fd_sc_hd, OpenROAD) ==="
 if ! klt place-and-route "$PAR_REQUEST" --pdk sky130A --format json | tee "$PAR_RESPONSE"; then

@@ -88,11 +88,14 @@ if ! command -v klt >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! klt pdk find --pdk "$PDK_VARIANT" >/dev/null 2>&1; then
-    echo "error: no $PDK_VARIANT PDK install resolvable (klt pdk find --pdk $PDK_VARIANT failed)" >&2
-    echo "       set \$PDK_ROOT/\$PDK, or install via volare/ciel" >&2
-    exit 1
-fi
+# Shared with flow/drc.sh, flow/layout.sh, flow/lvs.sh and
+# flow/sta-sweep.sh (issue #45). Only `require_pdk_resolvable` is used here:
+# this script's connectivity model is pure geometry and never shells out to
+# `openroad`, so it has no need for `export_pdk_root_if_unset`'s Docker-
+# wrapper accommodation.
+# shellcheck source=./pdk_root.sh
+source "$SCRIPT_DIR/pdk_root.sh"
+require_pdk_resolvable "$PDK_VARIANT"
 
 # `klt erc` writes no provenance block at all (klayout-tools#2036, fixed
 # upstream after the klt build this repo pins), so -- exactly as for
@@ -189,6 +192,11 @@ fi
 if ! diff -u "$COMMITTED_REPORT" "$GENERATED_REPORT"; then
     echo "error: regenerated report differs from the committed copy at $COMMITTED_REPORT" >&2
     echo "       layout changed (or the flow is non-reproducible) without regenerating the report -- run '$0 --update' and commit the result" >&2
+    echo "       if the klt-version banner above fired, rule out toolchain drift before assuming a design regression:" >&2
+    echo "       this report pins provenance.klt_version, and the verdict fields themselves ('erc_finding_count'," >&2
+    echo "       antenna 'violate' counts) are what a regression would move -- a diff confined to provenance.klt_version" >&2
+    echo "       or to how a passing antenna verdict is *labelled* is a different klt build, not a different layout." >&2
+    echo "       See flow/README.md's 'Toolchain versions' section (issue #23)." >&2
     exit 1
 fi
 

@@ -156,9 +156,24 @@ fi
 # $PATH (sim/run.sh's RTL-level regression has no such requirement and
 # uses the distro default). Override with $ICARUS13_BIN_DIR if your 13+
 # build lives somewhere other than the two locations checked here.
+# Found vs. not-found is carried entirely by the exit status, never by the
+# printed string (issue #43): on success it prints the matching candidate
+# verbatim -- a directory path, or the empty string when the match came from
+# $PATH and needs no prefix -- and returns 0; on failure it prints nothing and
+# returns non-zero. Callers must therefore branch on the exit status, not on
+# string emptiness. No sentinel value is used, so no legal directory name can
+# ever be confused with the $PATH case.
 resolve_icarus13() {
     local candidate
-    for candidate in "${ICARUS13_BIN_DIR:-}" "/opt/iverilog-13/bin" ""; do
+    local -a candidates=()
+    # Only consider $ICARUS13_BIN_DIR when it's actually set/non-empty --
+    # otherwise it collides with the explicit "" ($PATH) candidate below and
+    # silently reorders precedence, checking $PATH before /opt/iverilog-13/bin.
+    if [[ -n "${ICARUS13_BIN_DIR:-}" ]]; then
+        candidates+=("$ICARUS13_BIN_DIR")
+    fi
+    candidates+=("/opt/iverilog-13/bin" "")
+    for candidate in "${candidates[@]}"; do
         local iv="${candidate:+$candidate/}iverilog"
         if command -v "$iv" >/dev/null 2>&1; then
             local ver
@@ -172,8 +187,10 @@ resolve_icarus13() {
     return 1
 }
 
-ICARUS13_DIR="$(resolve_icarus13 || true)"
-if [[ -z "$ICARUS13_DIR" ]]; then
+# Branch on resolve_icarus13()'s exit status, never on the emptiness of what it
+# printed: an empty ICARUS13_DIR is the legitimate "found on $PATH, no prefix
+# needed" result (issue #43).
+if ! ICARUS13_DIR="$(resolve_icarus13)"; then
     echo "error: no Icarus Verilog 13.0+ build found (checked \$ICARUS13_BIN_DIR, /opt/iverilog-13/bin, \$PATH)" >&2
     echo "       options.sdf-equivalent gate-level runs require -ginterconnect, which needs Icarus 13+" >&2
     exit 1
@@ -204,16 +221,6 @@ fi
 # Same request shape as flow/layout.sh's SYNTH_REQUEST/PAR_REQUEST -- this
 # is the *same design run through the same flow*, opting in to two extra
 # fields, not a different characterization.
-#
-# That "same request" is load-bearing, not stylistic: the DEF this run
-# produces is diffed byte-for-byte against the committed
-# layout/logic_tile.def below, so ANY field that differs from
-# flow/layout.sh's request makes this script fail. The `power` block in
-# particular must stay identical to flow/layout.sh's (issue #41 added it in
-# both places at once) -- a PDN here and no PDN there, or two different
-# strap pitches, produces a different floorplan and the diff catches it.
-# So the duplication is checked, not merely hoped for: if you edit one
-# request, the other's next run tells you.
 # ---------------------------------------------------------------------- #
 
 SYNTH_REQUEST="$BUILD_DIR/synth_request.json"
@@ -246,37 +253,19 @@ if [[ ! -s "$SYNTH_NETLIST" ]]; then
     exit 1
 fi
 
-cat >"$PAR_REQUEST" <<EOF
-{
-  "schema": "klt.place_and_route.request/1",
-  "engine": "openroad",
-  "netlist": "${SYNTH_NETLIST}",
-  "hdl_toplevel": "${TOP_MODULE}",
-  "pdk": { "cell_library": "sky130_fd_sc_hd", "corner": "tt_025C_1v80" },
-  "floorplan": {
-    "method": "utilization",
-    "utilization_pct": 40,
-    "aspect_ratio": 1.0,
-    "core_margin_um": 2.0,
-    "site": "unithd"
-  },
-  "io": { "layer_h": "met3", "layer_v": "met2" },
-  "power": {
-    "power_net": "VPWR",
-    "ground_net": "VGND",
-    "straps": [
-      { "layer": "met1", "width_um": 0.48, "pitch_um": 5.44, "offset_um": 0.0, "followpins": true },
-      { "layer": "met4", "width_um": 1.6, "pitch_um": 27.14, "offset_um": 13.57 },
-      { "layer": "met5", "width_um": 1.6, "pitch_um": 27.2, "offset_um": 13.6 }
-    ]
-  },
-  "constraints": { "clock_port": "${CLOCK_PORT}", "clock_period_ns": ${CLOCK_PERIOD_NS} },
-  "seed": 1,
-  "target_stage": "route",
-  "post_route_spef": true,
-  "post_route_sdf": true
-}
-EOF
+# Same request shape as flow/layout.sh -- single-sourced in
+# flow/par_request.py (issue #44) so the two scripts cannot silently
+# diverge on the fields they share. This is the *same design run through
+# the same flow*, opting in to the two extra post_route_spef/
+# post_route_sdf fields via CLI flags rather than a second hand-written
+# heredoc.
+python3 "$SCRIPT_DIR/par_request.py" \
+    "$SYNTH_NETLIST" "$PAR_REQUEST" \
+    --hdl-toplevel "$TOP_MODULE" \
+    --clock-port "$CLOCK_PORT" \
+    --clock-period-ns "$CLOCK_PERIOD_NS" \
+    --post-route-spef \
+    --post-route-sdf
 
 echo "=== klt place-and-route ${TOP_MODULE} (sky130_fd_sc_hd, OpenROAD, +post_route_sdf) ==="
 if ! klt place-and-route "$PAR_REQUEST" --pdk sky130A --format json | tee "$PAR_RESPONSE"; then
