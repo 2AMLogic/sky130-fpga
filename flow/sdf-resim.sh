@@ -236,28 +236,19 @@ if [[ ! -s "$SYNTH_NETLIST" ]]; then
     exit 1
 fi
 
-cat >"$PAR_REQUEST" <<EOF
-{
-  "schema": "klt.place_and_route.request/1",
-  "engine": "openroad",
-  "netlist": "${SYNTH_NETLIST}",
-  "hdl_toplevel": "${TOP_MODULE}",
-  "pdk": { "cell_library": "sky130_fd_sc_hd", "corner": "tt_025C_1v80" },
-  "floorplan": {
-    "method": "utilization",
-    "utilization_pct": 40,
-    "aspect_ratio": 1.0,
-    "core_margin_um": 2.0,
-    "site": "unithd"
-  },
-  "io": { "layer_h": "met3", "layer_v": "met2" },
-  "constraints": { "clock_port": "${CLOCK_PORT}", "clock_period_ns": ${CLOCK_PERIOD_NS} },
-  "seed": 1,
-  "target_stage": "route",
-  "post_route_spef": true,
-  "post_route_sdf": true
-}
-EOF
+# Same request shape as flow/layout.sh -- single-sourced in
+# flow/par_request.py (issue #44) so the two scripts cannot silently
+# diverge on the fields they share. This is the *same design run through
+# the same flow*, opting in to the two extra post_route_spef/
+# post_route_sdf fields via CLI flags rather than a second hand-written
+# heredoc.
+python3 "$SCRIPT_DIR/par_request.py" \
+    "$SYNTH_NETLIST" "$PAR_REQUEST" \
+    --hdl-toplevel "$TOP_MODULE" \
+    --clock-port "$CLOCK_PORT" \
+    --clock-period-ns "$CLOCK_PERIOD_NS" \
+    --post-route-spef \
+    --post-route-sdf
 
 echo "=== klt place-and-route ${TOP_MODULE} (sky130_fd_sc_hd, OpenROAD, +post_route_sdf) ==="
 if ! klt place-and-route "$PAR_REQUEST" --pdk sky130A --format json | tee "$PAR_RESPONSE"; then
