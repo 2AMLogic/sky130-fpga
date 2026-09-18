@@ -156,15 +156,33 @@ fi
 # $PATH (sim/run.sh's RTL-level regression has no such requirement and
 # uses the distro default). Override with $ICARUS13_BIN_DIR if your 13+
 # build lives somewhere other than the two locations checked here.
+# Prints the resolved prefix on success: a directory path, or the literal
+# sentinel "PATH" when the match came from $PATH with no prefix needed (an
+# empty string is never printed, so callers don't have to distinguish a
+# legitimate "found on PATH" result from "not found" via string emptiness --
+# issue #43). Returns non-zero (nothing printed) when no candidate has a
+# 13.0+ iverilog.
 resolve_icarus13() {
     local candidate
-    for candidate in "${ICARUS13_BIN_DIR:-}" "/opt/iverilog-13/bin" ""; do
+    local -a candidates=()
+    # Only consider $ICARUS13_BIN_DIR when it's actually set/non-empty --
+    # otherwise it collides with the explicit "" ($PATH) candidate below and
+    # silently reorders precedence, checking $PATH before /opt/iverilog-13/bin.
+    if [[ -n "${ICARUS13_BIN_DIR:-}" ]]; then
+        candidates+=("$ICARUS13_BIN_DIR")
+    fi
+    candidates+=("/opt/iverilog-13/bin" "")
+    for candidate in "${candidates[@]}"; do
         local iv="${candidate:+$candidate/}iverilog"
         if command -v "$iv" >/dev/null 2>&1; then
             local ver
             ver="$("$iv" -V 2>&1 | head -1 | grep -oE '[0-9]+' | head -1 || true)"
             if [[ -n "$ver" && "$ver" -ge 13 ]]; then
-                echo "$candidate"
+                if [[ -n "$candidate" ]]; then
+                    echo "$candidate"
+                else
+                    echo "PATH"
+                fi
                 return 0
             fi
         fi
@@ -172,8 +190,13 @@ resolve_icarus13() {
     return 1
 }
 
-ICARUS13_DIR="$(resolve_icarus13 || true)"
-if [[ -z "$ICARUS13_DIR" ]]; then
+if ICARUS13_RESULT="$(resolve_icarus13)"; then
+    if [[ "$ICARUS13_RESULT" == "PATH" ]]; then
+        ICARUS13_DIR=""
+    else
+        ICARUS13_DIR="$ICARUS13_RESULT"
+    fi
+else
     echo "error: no Icarus Verilog 13.0+ build found (checked \$ICARUS13_BIN_DIR, /opt/iverilog-13/bin, \$PATH)" >&2
     echo "       options.sdf-equivalent gate-level runs require -ginterconnect, which needs Icarus 13+" >&2
     exit 1
