@@ -156,9 +156,24 @@ fi
 # $PATH (sim/run.sh's RTL-level regression has no such requirement and
 # uses the distro default). Override with $ICARUS13_BIN_DIR if your 13+
 # build lives somewhere other than the two locations checked here.
+# Found vs. not-found is carried entirely by the exit status, never by the
+# printed string (issue #43): on success it prints the matching candidate
+# verbatim -- a directory path, or the empty string when the match came from
+# $PATH and needs no prefix -- and returns 0; on failure it prints nothing and
+# returns non-zero. Callers must therefore branch on the exit status, not on
+# string emptiness. No sentinel value is used, so no legal directory name can
+# ever be confused with the $PATH case.
 resolve_icarus13() {
     local candidate
-    for candidate in "${ICARUS13_BIN_DIR:-}" "/opt/iverilog-13/bin" ""; do
+    local -a candidates=()
+    # Only consider $ICARUS13_BIN_DIR when it's actually set/non-empty --
+    # otherwise it collides with the explicit "" ($PATH) candidate below and
+    # silently reorders precedence, checking $PATH before /opt/iverilog-13/bin.
+    if [[ -n "${ICARUS13_BIN_DIR:-}" ]]; then
+        candidates+=("$ICARUS13_BIN_DIR")
+    fi
+    candidates+=("/opt/iverilog-13/bin" "")
+    for candidate in "${candidates[@]}"; do
         local iv="${candidate:+$candidate/}iverilog"
         if command -v "$iv" >/dev/null 2>&1; then
             local ver
@@ -172,8 +187,10 @@ resolve_icarus13() {
     return 1
 }
 
-ICARUS13_DIR="$(resolve_icarus13 || true)"
-if [[ -z "$ICARUS13_DIR" ]]; then
+# Branch on resolve_icarus13()'s exit status, never on the emptiness of what it
+# printed: an empty ICARUS13_DIR is the legitimate "found on $PATH, no prefix
+# needed" result (issue #43).
+if ! ICARUS13_DIR="$(resolve_icarus13)"; then
     echo "error: no Icarus Verilog 13.0+ build found (checked \$ICARUS13_BIN_DIR, /opt/iverilog-13/bin, \$PATH)" >&2
     echo "       options.sdf-equivalent gate-level runs require -ginterconnect, which needs Icarus 13+" >&2
     exit 1
