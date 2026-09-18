@@ -51,12 +51,15 @@
       "69/44",
       "70/20",
       "70/44",
-      "71/20"
+      "71/20",
+      "71/44",
+      "72/20"
     ],
     "layers_in_stream_without_rules": [
       "64/5",
       "64/16",
       "64/59",
+      "65/44",
       "67/5",
       "67/16",
       "68/5",
@@ -65,6 +68,8 @@
       "69/16",
       "70/5",
       "70/16",
+      "72/5",
+      "72/16",
       "78/44",
       "81/4",
       "83/44",
@@ -85,28 +90,26 @@
       "capm2.space.1",
       "capm2.width.1",
       "met3.enclosing.capm.1",
-      "met4.enclosing.capm2.1",
-      "met4.enclosing.via4.1",
-      "met5.enclosing.via4.1",
-      "met5.space.1",
-      "met5.width.1",
-      "via4.space.1",
-      "via4.width.1"
+      "met4.enclosing.capm2.1"
     ],
     "voltage_domain_warnings": []
   },
   "dbu_um": 0.001,
   "deck": "sky130",
   "file": "layout/logic_tile.gds",
+  "metrics": {
+    "drc__error__count": 0
+  },
   "provenance": {
     "deck": {
-      "content_hash": "sha256:5afac7ab8561545859f5e2e74f4621c6ffc052756dc8fe344ea263398e96b240",
+      "content_hash": "sha256:a903acb18b47d47e73460b10e9c80edd3466193ffc9da0c01c2103f7fdfcf36f",
       "name": "sky130",
-      "released": false
+      "released": true
     },
     "input": {
-      "content_hash": "sha256:a6dc076c0b8d9d314098755f313d4c30f4f8fc7aa57cd411627e3cdc497be452"
+      "content_hash": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f"
     },
+    "klayout_version_mismatch": true,
     "pdk": null
   },
   "rule_counts": {},

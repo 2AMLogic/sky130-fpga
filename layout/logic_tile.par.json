@@ -4,90 +4,126 @@
   "core_area_um2": 1523.96,
   "corners": [
     {
-      "hold_slack_ns": 0.4535,
+      "hold_slack_ns": 0.44914,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ff_100C_1v65",
-      "setup_slack_ns": 19.47
+      "setup_slack_ns": 19.4748
     },
     {
-      "hold_slack_ns": 0.35807,
+      "hold_slack_ns": 0.35534,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ff_100C_1v95",
-      "setup_slack_ns": 19.5835
+      "setup_slack_ns": 19.5854
     },
     {
-      "hold_slack_ns": 0.54488,
+      "hold_slack_ns": 0.53877,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ff_n40C_1v56",
-      "setup_slack_ns": 19.3388
+      "setup_slack_ns": 19.3477
     },
     {
-      "hold_slack_ns": 0.47676,
+      "hold_slack_ns": 0.47158,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ff_n40C_1v65",
-      "setup_slack_ns": 19.4242
+      "setup_slack_ns": 19.4316
     },
     {
-      "hold_slack_ns": 0.41836,
+      "hold_slack_ns": 0.41388,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ff_n40C_1v76",
-      "setup_slack_ns": 19.4993
+      "setup_slack_ns": 19.5056
     },
     {
-      "hold_slack_ns": 0.34889,
+      "hold_slack_ns": 0.34611,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ff_n40C_1v95",
-      "setup_slack_ns": 19.5845
+      "setup_slack_ns": 19.5888
     },
     {
-      "hold_slack_ns": 1.5902,
+      "hold_slack_ns": 1.57068,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ss_100C_1v40",
-      "setup_slack_ns": 18.0231
+      "setup_slack_ns": 18.0432
     },
     {
-      "hold_slack_ns": 1.12397,
+      "hold_slack_ns": 1.11046,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ss_100C_1v60",
-      "setup_slack_ns": 18.6638
+      "setup_slack_ns": 18.6776
     },
     {
-      "hold_slack_ns": 3.40584,
+      "hold_slack_ns": 3.34616,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ss_n40C_1v28",
-      "setup_slack_ns": 15.0984
+      "setup_slack_ns": 15.1628
     },
     {
-      "hold_slack_ns": 2.48187,
+      "hold_slack_ns": 2.44083,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ss_n40C_1v35",
-      "setup_slack_ns": 16.5723
+      "setup_slack_ns": 16.621
     },
     {
-      "hold_slack_ns": 2.06192,
+      "hold_slack_ns": 2.0263,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ss_n40C_1v40",
-      "setup_slack_ns": 17.2228
+      "setup_slack_ns": 17.2543
     },
     {
-      "hold_slack_ns": 1.80667,
+      "hold_slack_ns": 1.77897,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ss_n40C_1v44",
-      "setup_slack_ns": 17.6103
+      "setup_slack_ns": 17.636
     },
     {
-      "hold_slack_ns": 1.19698,
+      "hold_slack_ns": 1.17851,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ss_n40C_1v60",
-      "setup_slack_ns": 18.4897
+      "setup_slack_ns": 18.5111
     },
     {
-      "hold_slack_ns": 0.90224,
+      "hold_slack_ns": 0.88992,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "ss_n40C_1v76",
-      "setup_slack_ns": 18.9132
+      "setup_slack_ns": 18.9244
     },
     {
-      "hold_slack_ns": 0.5746,
+      "hold_slack_ns": 0.5679,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "tt_025C_1v80",
-      "setup_slack_ns": 19.342
+      "setup_slack_ns": 19.3486
     },
     {
-      "hold_slack_ns": 0.57366,
+      "hold_slack_ns": 0.56733,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "tt_100C_1v80",
-      "setup_slack_ns": 19.3484
+      "setup_slack_ns": 19.3532
     }
   ],
+  "def_net_names": {
+    "single_pin_markers": 0,
+    "unresolved_single_pin_nets": []
+  },
   "die_area_um2": 1965.15,
   "engine": "openroad",
-  "estimated_power_mw": 0.0312,
-  "fmax_mhz": 1519.79,
+  "estimated_power_mw": 0.0308,
+  "fmax_mhz": 1535.08,
   "hdl_toplevel": "logic_tile",
   "hold_violation_count": 0,
   "interconnect_corner": "nom",
@@ -95,28 +131,63 @@
     "resolution": "exact"
   },
   "macros": [],
+  "max_capacitance_violation_count": 0,
+  "max_transition_violation_count": 0,
+  "nominal_hold_slack_ns": 0.56744,
   "power": {
-    "connects": [],
+    "connects": [
+      {
+        "layers": [
+          "met1",
+          "met4"
+        ],
+        "max_columns": null,
+        "ongrid": null,
+        "split_cuts": null
+      },
+      {
+        "layers": [
+          "met4",
+          "met5"
+        ],
+        "max_columns": null,
+        "ongrid": null,
+        "split_cuts": null
+      }
+    ],
     "endcap_master": null,
-    "filler_masters": [],
-    "global_connect": false,
-    "ground_net": null,
-    "pdn": false,
-    "power_net": null,
+    "filler_masters": [
+      "sky130_fd_sc_hd__fill_1",
+      "sky130_fd_sc_hd__fill_2",
+      "sky130_fd_sc_hd__fill_4",
+      "sky130_fd_sc_hd__fill_8"
+    ],
+    "global_connect": true,
+    "ground_net": "VGND",
+    "pdn": true,
+    "power_net": "VPWR",
     "row_rail": {
-      "emitted": true,
-      "filler_masters": [
-        "sky130_fd_sc_hd__fill_1",
-        "sky130_fd_sc_hd__fill_2",
-        "sky130_fd_sc_hd__fill_4",
-        "sky130_fd_sc_hd__fill_8"
-      ],
-      "ground_net": "VGND",
-      "layer": "met1",
-      "power_net": "VPWR"
+      "emitted": false,
+      "filler_masters": [],
+      "ground_net": null,
+      "layer": null,
+      "power_net": null
     },
-    "straps": [],
-    "tapcell_master": null
+    "straps": [
+      {
+        "layer": "met1",
+        "spacing_um": null
+      },
+      {
+        "layer": "met4",
+        "spacing_um": null
+      },
+      {
+        "layer": "met5",
+        "spacing_um": null
+      }
+    ],
+    "tapcell_master": "sky130_fd_sc_hd__tapvpwrvgnd_1"
   },
   "provenance": {
     "deck": {
@@ -125,7 +196,7 @@
       "released": false
     },
     "input": {
-      "content_hash": "sha256:09777dce0bee9723dbd17f9daaf957b78225403478a519cced947476d0697824"
+      "content_hash": "sha256:220840d26409c3572a50156fb29b2f3e2ee8c9e8b26d94550546f397e667dbb9"
     },
     "pdk": {
       "name": "sky130A",
@@ -144,35 +215,37 @@
       "die_area_um2": 1965.15,
       "name": "floorplan",
       "total_negative_slack_ns": 0,
-      "utilization_pct": 42.6929,
+      "utilization_pct": 44.0066,
       "worst_slack_ns": 19.3946
     },
     {
       "core_area_um2": 1523.96,
       "die_area_um2": 1965.15,
       "estimated_power_mw": 0.0198,
-      "fmax_mhz": 1600.79,
+      "fmax_mhz": 1613.37,
       "hold_violation_count": 0,
       "name": "place",
+      "nominal_hold_slack_ns": 0.54823,
       "setup_violation_count": 0,
       "total_negative_slack_ns": 0,
-      "utilization_pct": 42.6929,
-      "wirelength_um": 2520.68,
-      "worst_slack_ns": 19.3753
+      "utilization_pct": 44.0066,
+      "wirelength_um": 2440.98,
+      "worst_slack_ns": 19.3802
     },
     {
       "clock_skew_ns": 0,
       "core_area_um2": 1523.96,
       "die_area_um2": 1965.15,
       "estimated_power_mw": 0.0298,
-      "fmax_mhz": 1573.42,
+      "fmax_mhz": 1582.72,
       "hold_violation_count": 0,
       "name": "cts",
+      "nominal_hold_slack_ns": 0.55923,
       "setup_violation_count": 0,
       "total_negative_slack_ns": 0,
-      "utilization_pct": 44.1708,
-      "wirelength_um": 2576.02,
-      "worst_slack_ns": 19.3644
+      "utilization_pct": 45.4844,
+      "wirelength_um": 2491.71,
+      "worst_slack_ns": 19.3682
     },
     {
       "antenna_violation_count": 0,
@@ -180,106 +253,142 @@
       "core_area_um2": 1523.96,
       "corners": [
         {
-          "hold_slack_ns": 0.4535,
+          "hold_slack_ns": 0.44914,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ff_100C_1v65",
-          "setup_slack_ns": 19.47
+          "setup_slack_ns": 19.4748
         },
         {
-          "hold_slack_ns": 0.35807,
+          "hold_slack_ns": 0.35534,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ff_100C_1v95",
-          "setup_slack_ns": 19.5835
+          "setup_slack_ns": 19.5854
         },
         {
-          "hold_slack_ns": 0.54488,
+          "hold_slack_ns": 0.53877,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ff_n40C_1v56",
-          "setup_slack_ns": 19.3388
+          "setup_slack_ns": 19.3477
         },
         {
-          "hold_slack_ns": 0.47676,
+          "hold_slack_ns": 0.47158,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ff_n40C_1v65",
-          "setup_slack_ns": 19.4242
+          "setup_slack_ns": 19.4316
         },
         {
-          "hold_slack_ns": 0.41836,
+          "hold_slack_ns": 0.41388,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ff_n40C_1v76",
-          "setup_slack_ns": 19.4993
+          "setup_slack_ns": 19.5056
         },
         {
-          "hold_slack_ns": 0.34889,
+          "hold_slack_ns": 0.34611,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ff_n40C_1v95",
-          "setup_slack_ns": 19.5845
+          "setup_slack_ns": 19.5888
         },
         {
-          "hold_slack_ns": 1.5902,
+          "hold_slack_ns": 1.57068,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ss_100C_1v40",
-          "setup_slack_ns": 18.0231
+          "setup_slack_ns": 18.0432
         },
         {
-          "hold_slack_ns": 1.12397,
+          "hold_slack_ns": 1.11046,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ss_100C_1v60",
-          "setup_slack_ns": 18.6638
+          "setup_slack_ns": 18.6776
         },
         {
-          "hold_slack_ns": 3.40584,
+          "hold_slack_ns": 3.34616,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ss_n40C_1v28",
-          "setup_slack_ns": 15.0984
+          "setup_slack_ns": 15.1628
         },
         {
-          "hold_slack_ns": 2.48187,
+          "hold_slack_ns": 2.44083,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ss_n40C_1v35",
-          "setup_slack_ns": 16.5723
+          "setup_slack_ns": 16.621
         },
         {
-          "hold_slack_ns": 2.06192,
+          "hold_slack_ns": 2.0263,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ss_n40C_1v40",
-          "setup_slack_ns": 17.2228
+          "setup_slack_ns": 17.2543
         },
         {
-          "hold_slack_ns": 1.80667,
+          "hold_slack_ns": 1.77897,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ss_n40C_1v44",
-          "setup_slack_ns": 17.6103
+          "setup_slack_ns": 17.636
         },
         {
-          "hold_slack_ns": 1.19698,
+          "hold_slack_ns": 1.17851,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ss_n40C_1v60",
-          "setup_slack_ns": 18.4897
+          "setup_slack_ns": 18.5111
         },
         {
-          "hold_slack_ns": 0.90224,
+          "hold_slack_ns": 0.88992,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "ss_n40C_1v76",
-          "setup_slack_ns": 18.9132
+          "setup_slack_ns": 18.9244
         },
         {
-          "hold_slack_ns": 0.5746,
+          "hold_slack_ns": 0.5679,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "tt_025C_1v80",
-          "setup_slack_ns": 19.342
+          "setup_slack_ns": 19.3486
         },
         {
-          "hold_slack_ns": 0.57366,
+          "hold_slack_ns": 0.56733,
+          "max_capacitance_violation_count": 0,
+          "max_transition_violation_count": 0,
           "name": "tt_100C_1v80",
-          "setup_slack_ns": 19.3484
+          "setup_slack_ns": 19.3532
         }
       ],
       "die_area_um2": 1965.15,
-      "estimated_power_mw": 0.0312,
-      "fmax_mhz": 1519.79,
+      "estimated_power_mw": 0.0308,
+      "fmax_mhz": 1535.08,
       "hold_violation_count": 0,
+      "max_capacitance_violation_count": 0,
+      "max_transition_violation_count": 0,
       "name": "route",
+      "nominal_hold_slack_ns": 0.56744,
       "route_drc_violation_count": 0,
       "setup_violation_count": 0,
       "total_negative_slack_ns": 0,
-      "utilization_pct": 44.1708,
-      "wirelength_um": 2665,
-      "worst_hold_slack_ns": 0.34889,
-      "worst_setup_slack_ns": 15.0984,
-      "worst_slack_ns": 19.342
+      "utilization_pct": 45.4844,
+      "wirelength_um": 2557,
+      "worst_hold_slack_ns": 0.34611,
+      "worst_setup_slack_ns": 15.1628,
+      "worst_slack_ns": 19.3486
     }
   ],
   "status": "ok",
   "total_negative_slack_ns": 0,
-  "utilization_pct": 44.1708,
-  "wirelength_um": 2665,
-  "worst_hold_slack_ns": 0.34889,
-  "worst_setup_slack_ns": 15.0984,
-  "worst_slack_ns": 19.342
+  "unrouted_def_path": null,
+  "utilization_pct": 45.4844,
+  "wirelength_um": 2557,
+  "worst_hold_slack_ns": 0.34611,
+  "worst_setup_slack_ns": 15.1628,
+  "worst_slack_ns": 19.3486
 }

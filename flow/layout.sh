@@ -177,6 +177,15 @@ cat > "$PAR_REQUEST" <<EOF
     "site": "unithd"
   },
   "io": { "layer_h": "met3", "layer_v": "met2" },
+  "power": {
+    "power_net": "VPWR",
+    "ground_net": "VGND",
+    "straps": [
+      { "layer": "met1", "width_um": 0.48, "pitch_um": 5.44, "offset_um": 0.0, "followpins": true },
+      { "layer": "met4", "width_um": 1.6, "pitch_um": 27.14, "offset_um": 13.57 },
+      { "layer": "met5", "width_um": 1.6, "pitch_um": 27.2, "offset_um": 13.6 }
+    ]
+  },
   "constraints": { "clock_port": "${CLOCK_PORT}", "clock_period_ns": ${CLOCK_PERIOD_NS} },
   "seed": 1,
   "target_stage": "route"

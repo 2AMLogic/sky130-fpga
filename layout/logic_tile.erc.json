@@ -1,0 +1,32 @@
+{
+  "antenna_gate_verdict_counts": {
+    "pass": 0,
+    "pass_partial": 232,
+    "unchecked": 0,
+    "violate": 0
+  },
+  "antenna_verdict_counts": {
+    "pass": 696,
+    "unchecked": 928,
+    "violate": 0
+  },
+  "erc_finding_count": 0,
+  "erc_findings": [],
+  "file": "layout/logic_tile.gds",
+  "gate_count": 232,
+  "gate_role": "poly",
+  "pdk": "sky130",
+  "provenance": {
+    "input": {
+      "content_hash": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f"
+    },
+    "klt_version": "0.5.0+g2b7caa9939af",
+    "pdk": null,
+    "spec": {
+      "content_hash": "sha256:5fe879f3967047ad05c8576eb6e0390d850989ae5df2bfb1a0f4781a35503af4"
+    }
+  },
+  "schema_version": 1,
+  "spec": "flow/erc_supply_spec.json",
+  "status": "clean"
+}

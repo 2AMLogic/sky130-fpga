@@ -90,6 +90,35 @@ print_pdk_version_banner() {
     fi
 }
 
+# Prints the installed klt version and, if it differs from
+# RECORDED_KLT_VERSION above, a warning. Split out from
+# print_tool_version_banner for the same reason print_pdk_version_banner
+# was: a klt-only flow (flow/erc.sh -- which needs neither `openroad` nor
+# the PDK for its connectivity model, only for the antenna-limit table)
+# can pin klt without emitting a spurious "OpenROAD unknown" warning.
+#
+# This matters more for ERC than for the other PDK-only flows: `klt erc`
+# postdates RECORDED_KLT_VERSION entirely, so layout/logic_tile.erc.json
+# cannot have been produced by the pinned klt and this banner is where
+# that says so out loud. Safe to call once `klt` is confirmed on $PATH.
+#
+# Usage: print_klt_version_banner
+print_klt_version_banner() {
+    local installed_klt
+    installed_klt="$(klt --version 2>/dev/null | awk '{print $2}')"
+
+    echo "=== toolchain: klt ${installed_klt:-unknown} ==="
+    if [[ "$installed_klt" != "$RECORDED_KLT_VERSION" ]]; then
+        {
+            echo "warning: installed klt (${installed_klt:-unknown}) differs from the klt that produced the"
+            echo "         currently committed layout artifacts (${RECORDED_KLT_VERSION}). The report this run"
+            echo "         writes pins its own klt version in provenance.klt_version, so the committed evidence"
+            echo "         records which klt actually produced it -- see flow/README.md's 'Toolchain versions'"
+            echo "         section before treating any diff below as a design regression."
+        } >&2
+    fi
+}
+
 # Prints the installed klt/OpenROAD versions and the resolved PDK revision
 # and, if any differs from RECORDED_KLT_VERSION/RECORDED_OPENROAD_VERSION/
 # RECORDED_PDK_VERSION above, a warning pointing back to this file and

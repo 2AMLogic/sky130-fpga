@@ -204,6 +204,16 @@ fi
 # Same request shape as flow/layout.sh's SYNTH_REQUEST/PAR_REQUEST -- this
 # is the *same design run through the same flow*, opting in to two extra
 # fields, not a different characterization.
+#
+# That "same request" is load-bearing, not stylistic: the DEF this run
+# produces is diffed byte-for-byte against the committed
+# layout/logic_tile.def below, so ANY field that differs from
+# flow/layout.sh's request makes this script fail. The `power` block in
+# particular must stay identical to flow/layout.sh's (issue #41 added it in
+# both places at once) -- a PDN here and no PDN there, or two different
+# strap pitches, produces a different floorplan and the diff catches it.
+# So the duplication is checked, not merely hoped for: if you edit one
+# request, the other's next run tells you.
 # ---------------------------------------------------------------------- #
 
 SYNTH_REQUEST="$BUILD_DIR/synth_request.json"
@@ -251,6 +261,15 @@ cat >"$PAR_REQUEST" <<EOF
     "site": "unithd"
   },
   "io": { "layer_h": "met3", "layer_v": "met2" },
+  "power": {
+    "power_net": "VPWR",
+    "ground_net": "VGND",
+    "straps": [
+      { "layer": "met1", "width_um": 0.48, "pitch_um": 5.44, "offset_um": 0.0, "followpins": true },
+      { "layer": "met4", "width_um": 1.6, "pitch_um": 27.14, "offset_um": 13.57 },
+      { "layer": "met5", "width_um": 1.6, "pitch_um": 27.2, "offset_um": 13.6 }
+    ]
+  },
   "constraints": { "clock_port": "${CLOCK_PORT}", "clock_period_ns": ${CLOCK_PERIOD_NS} },
   "seed": 1,
   "target_stage": "route",

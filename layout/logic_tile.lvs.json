@@ -1,5 +1,7 @@
 {
-  "category_counts": {},
+  "category_counts": {
+    "topology.power_only_pruned": 1
+  },
   "category_error_counts": {},
   "counts": {
     "devices": {
@@ -8,7 +10,7 @@
       "reference": 0
     },
     "nets": {
-      "layout": 163,
+      "layout": 150,
       "matched": 183,
       "reference": 137
     },
@@ -23,13 +25,27 @@
   "environment": {
     "engine": "klayout",
     "extracted_netlist": null,
-    "layout_sha256": "fc748a457281aa567c5b0fddcc02d89529f26f9243e6c50fdb80bb41a6bfc1ca",
-    "reference_sha256": "6adeaf429c1aabb9702b11ca7d4835a77e12d2a97a1079f897f9778db50e47ec"
+    "layout_sha256": "bcfe34cbe10f10173db6e5ff5ccc8b635c7129d4b5e025c3415034ac779abf2f",
+    "reference_sha256": "f7fe4339211a9a9a871c96faed3ac7b1b051d98aad28e0fdeec3910ef59dc2e3"
   },
   "error_count": 0,
-  "layout_gds_sha256": "sha256:a6dc076c0b8d9d314098755f313d4c30f4f8fc7aa57cd411627e3cdc497be452",
-  "mismatch_count": 0,
-  "mismatches": [],
+  "layout_gds_sha256": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f",
+  "mismatch_count": 1,
+  "mismatches": [
+    {
+      "category": "topology.power_only_pruned",
+      "circuit": null,
+      "description": "removed layout-side circuit(s) whose every declared pin is a power/ground pin of the reference library (a pin the library declares but the gate-level-Verilog reference never carries), and every instance of them, before comparing -- 1 circuit(s): SKY130_FD_SC_HD__TAPVPWRVGND_1 (see docs/cli/lvs.md, \"topology.power_only_pruned\")",
+      "details": null,
+      "device": null,
+      "instance": null,
+      "net": null,
+      "property": null,
+      "severity": "warning",
+      "side": "layout",
+      "subcircuit": null
+    }
+  ],
   "net_correspondence": [
     {
       "layout": "VGND",
@@ -949,6 +965,7 @@
   ],
   "options": {
     "combine_devices": false,
+    "combine_devices_per_circuit": null,
     "flatten_layout": false,
     "flatten_reference": false,
     "netgen_setup": null,
@@ -958,6 +975,7 @@
   "provenance": {
     "deck": null,
     "input": null,
+    "klayout_version_mismatch": true,
     "pdk": null
   },
   "reference_top": "LOGIC_TILE",

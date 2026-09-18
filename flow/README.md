@@ -347,10 +347,53 @@ scratch netlists `klt lvs`'s own `environment.*_sha256` hash) so freshness
 is verifiable later without re-running the flow.
 
 **Out of scope here**: the `netgen` LVS engine (not exercised — this uses
-`klt lvs`'s default `"klayout"` engine) and a power-connectivity check
-(this compare is signal-connectivity only, per `docs/cli/lvs.md` — not a
-gap here, since `layout/README.md`'s "No power delivery network" note
-means there is no power connectivity for this mode to miss).
+`klt lvs`'s default `"klayout"` engine) and a power-connectivity check.
+This compare is **signal-connectivity only**, per `docs/cli/lvs.md`: the
+`gate-level-verilog` reference is written without `-include_pwr_gnd`, so it
+carries no supply pins and the comparer *drops* the layout's `VPWR`/`VGND`/
+`VPB` nets rather than failing on them — 21 of the committed report's
+`net_correspondence` entries have `reference: null` for exactly that
+reason. This README previously called that "not a gap here, since there is
+no power connectivity for this mode to miss", which stopped being true the
+moment a PDN existed and was never a safe thing to assert anyway: a
+signal-only `match` reads identically whether the layout is fully strapped
+or has fifteen mutually isolated rails (issue #41). The power half of the
+claim is `flow/erc.sh`, below.
+
+### `flow/erc.sh` — supply connectivity + antenna (the power half of T1 item 4)
+
+`flow/erc.sh` runs `klt erc` over the committed `layout/logic_tile.gds`
+with `flow/erc_supply_spec.json` and commits the verdict as
+`layout/logic_tile.erc.json`. It rebuilds the layer-by-layer connectivity
+model from the GDS geometry alone — no reference netlist — so a supply net
+that is drawn but not joined surfaces as `erc.unconnected_net` and a well
+with no tap contact inside it surfaces as `erc.missing_tie`. Against the
+committed layout it reports **0 findings** and 0 antenna `violate` verdicts
+across 232 gates; against the pre-PDN layout (GDS `sha256:a6dc076c…`) the
+identical invocation reported **9 findings** — 7 `erc.missing_tie` plus 2
+`erc.unconnected_net`. That gap is the whole reason this script exists.
+
+Two things about the spec are load-bearing:
+
+- **It must cover li1 through met5.** A spec that stops at met3 reports
+  false islands on a correctly strapped layout, because the straps joining
+  the met1 followpin rails live on met4/met5.
+- **`VPB` is checked as a tie rule, not as a net.** The n-well body is not
+  a drawn conductor on any routing layer, so it is covered by the
+  `nwell_tap` entry (every `nwell` region must contain a `tap` contact
+  reaching `li1` on `VPWR`) rather than by island analysis.
+
+**Toolchain note**: `klt erc` postdates `RECORDED_KLT_VERSION`, so this
+report cannot have been produced by the same klt as the committed GDS. The
+script prints a klt-version banner and records the producing build in the
+report's own `provenance.klt_version` rather than leaving the discrepancy
+implicit. The verdict is a pure-geometry statement about the GDS whose hash
+the same block pins, so it stays checkable independently of that.
+
+**Out of scope here**: IR drop, electromigration and current density —
+nothing in this repo computes them. `klt erc` answers "is every supply
+shape actually joined, and is every well tapped", a topology question, not
+"is the grid wide enough".
 
 ### `flow/sta-sweep.sh` — multi-corner timing characterization (G4)
 
