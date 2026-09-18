@@ -149,23 +149,12 @@ done
 source "$SCRIPT_DIR/tool_versions.sh"
 print_tool_version_banner
 
-# Same rationale as flow/lvs.sh's own copy of this block: some local
-# `openroad` installs are thin Docker wrappers that only mount $PDK_ROOT
-# into the container when that variable is set in the invoking shell, even
-# though `klt pdk find` resolves the PDK fine without it.
-if [[ -z "${PDK_ROOT:-}" ]]; then
-    RESOLVED_ROOT="$(klt pdk find --pdk "$PDK_VARIANT" --format json 2>/dev/null | python3 -c "import json,sys; print(json.load(sys.stdin).get('root',''))" 2>/dev/null || true)"
-    if [[ -n "$RESOLVED_ROOT" ]]; then
-        export PDK_ROOT="$RESOLVED_ROOT"
-        export PDK="$PDK_VARIANT"
-    fi
-fi
-
-if ! klt pdk find --pdk "$PDK_VARIANT" >/dev/null 2>&1; then
-    echo "error: no $PDK_VARIANT PDK install resolvable (klt pdk find --pdk $PDK_VARIANT failed)" >&2
-    echo "       set \$PDK_ROOT/\$PDK, or install via volare/ciel" >&2
-    exit 1
-fi
+# Same rationale as flow/lvs.sh's own copy of this block -- see
+# flow/pdk_root.sh's own header comment for the full writeup.
+# shellcheck source=./pdk_root.sh
+source "$SCRIPT_DIR/pdk_root.sh"
+export_pdk_root_if_unset "$PDK_VARIANT"
+require_pdk_resolvable "$PDK_VARIANT"
 
 COMMITTED_GDS="$LAYOUT_DIR/${TOP_MODULE}.gds"
 COMMITTED_DEF="$LAYOUT_DIR/${TOP_MODULE}.def"

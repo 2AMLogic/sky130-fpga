@@ -70,11 +70,9 @@ if ! command -v klt >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! klt pdk find --pdk "$PDK_VARIANT" >/dev/null 2>&1; then
-    echo "error: no $PDK_VARIANT PDK install resolvable (klt pdk find --pdk $PDK_VARIANT failed)" >&2
-    echo "       set \$PDK_ROOT/\$PDK, or install via volare/ciel" >&2
-    exit 1
-fi
+# shellcheck source=./pdk_root.sh
+source "$SCRIPT_DIR/pdk_root.sh"
+require_pdk_resolvable "$PDK_VARIANT"
 
 # Pin the PDK revision this run resolves against. `klt drc` writes
 # `provenance.pdk: null` into its own report even when given `--pdk`

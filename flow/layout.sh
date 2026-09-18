@@ -115,11 +115,9 @@ if ! command -v yosys >/dev/null 2>&1; then
     exit 1
 fi
 
-if ! klt pdk find --pdk sky130A >/dev/null 2>&1; then
-    echo "error: no sky130A PDK install resolvable (klt pdk find --pdk sky130A failed)" >&2
-    echo "       set \$PDK_ROOT/\$PDK, or install via volare/ciel" >&2
-    exit 1
-fi
+# shellcheck source=./pdk_root.sh
+source "$SCRIPT_DIR/pdk_root.sh"
+require_pdk_resolvable "sky130A"
 
 mkdir -p "$BUILD_DIR" "$LAYOUT_DIR"
 
