@@ -47,11 +47,17 @@
 
 # The klt / OpenROAD versions that produced the artifacts CURRENTLY
 # committed under layout/ and measurements/timing-characterization/ (per
-# layout/logic_tile.par.json's own provenance and this record:
-# measurements/timing-characterization/records/20260909-225431-86f71d2.md).
-# Update these two values (and this comment's record reference) whenever
-# `--update` is run with a different toolchain.
-RECORDED_KLT_VERSION="0.3.0+gc6dbf66c53c6"
+# layout/logic_tile.erc.json's provenance.klt_version pin and the successor
+# records:
+# measurements/timing-characterization/records/20260921-062500-e8a37ad.md
+# and 20260921-062530-e8a37ad.md, superseders of the 20260909/20260915
+# pre-PDN pair). Updated for issue #41's PDN regeneration: the post-PDN
+# GDS/DEF/SPEF/SDF lineage was produced under 0.5.0+g2b7caa9939af, and
+# check-mode diffs were re-verified 2026-09-21 on this tree under
+# 0.5.0+g2b1e55e51bb8.dirty -- byte-identical GDS/DEF, identical verdict
+# fields in every re-stamped report. See flow/README.md's "Known drift"
+# for the OpenROAD-image annotation regression the SPEF legs hit.
+RECORDED_KLT_VERSION="0.5.0+g2b7caa9939af"
 RECORDED_OPENROAD_VERSION="26Q3-1278-g4421880472"
 
 # The sky130A PDK revision those same committed artifacts were produced
@@ -86,6 +92,35 @@ print_pdk_version_banner() {
             echo "         layout/logic_tile.drc.json / layout/logic_tile.lvs.json this banner is the ONLY place a"
             echo "         PDK swap shows up at all, since klt drc/lvs write provenance.pdk: null"
             echo "         (klayout-tools#1901). See flow/README.md's 'Toolchain versions' section (issue #34)."
+        } >&2
+    fi
+}
+
+# Prints the installed klt version and, if it differs from
+# RECORDED_KLT_VERSION above, a warning. Split out from
+# print_tool_version_banner for the same reason print_pdk_version_banner
+# was: a klt-only flow (flow/erc.sh -- which needs neither `openroad` nor
+# the PDK for its connectivity model, only for the antenna-limit table)
+# can pin klt without emitting a spurious "OpenROAD unknown" warning.
+#
+# This matters more for ERC than for the other PDK-only flows: `klt erc`
+# postdates RECORDED_KLT_VERSION entirely, so layout/logic_tile.erc.json
+# cannot have been produced by the pinned klt and this banner is where
+# that says so out loud. Safe to call once `klt` is confirmed on $PATH.
+#
+# Usage: print_klt_version_banner
+print_klt_version_banner() {
+    local installed_klt
+    installed_klt="$(klt --version 2>/dev/null | awk '{print $2}')"
+
+    echo "=== toolchain: klt ${installed_klt:-unknown} ==="
+    if [[ "$installed_klt" != "$RECORDED_KLT_VERSION" ]]; then
+        {
+            echo "warning: installed klt (${installed_klt:-unknown}) differs from the klt that produced the"
+            echo "         currently committed layout artifacts (${RECORDED_KLT_VERSION}). The report this run"
+            echo "         writes pins its own klt version in provenance.klt_version, so the committed evidence"
+            echo "         records which klt actually produced it -- see flow/README.md's 'Toolchain versions'"
+            echo "         section before treating any diff below as a design regression."
         } >&2
     fi
 }

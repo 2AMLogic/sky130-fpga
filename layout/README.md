@@ -38,31 +38,51 @@ Tile physical design — GDS + routed DEF + DRC/LVS/ERC reports.
 - `logic_tile.lvs.json` — a `klt lvs` (klayout-tools, `"klayout"` engine)
   LVS report comparing `logic_tile.gds` against its own as-built
   gate-level reference netlist (`reference.form = "gate-level-verilog"`,
-  from the same `klt place-and-route` run): `status: "match"`, 0
-  mismatches. Regenerated and checked by `flow/lvs.sh` on every invocation.
-  This is T1 item 4 (LVS clean) of `docs/design-evidence-tiers.md` in
-  `2AMLogic/klayout-tools`, per issue #12 — see "LVS scope, concretely"
-  below for exactly what this claim does and does not cover.
-- `erc-supply-spec.json` — the T1 checklist item 11 (power delivery,
-  structural, klayout-tools#2025) `klt erc` **supply spec**: `VPWR`/`VGND`
-  declared as `nets[]` entries with `"kind": "supply"`, a `stackup` over
-  the routing levels this block actually uses (poly/li1/met1–met4, with
-  `active_layer` on the gate role), the licon1/mcon/via1–via3 via stack,
-  and `label_layer`s only where the merged GDS carries supply pin text.
-  It deliberately declares **no `ties[]`** — klayout-tools#2169 — so
-  `erc.missing_tie` is *not computed* by any run of it; see the file's
-  own comment block (which documents every entry's derivation, per issue
-  #51) and "ERC scope, concretely" below.
-- `logic_tile.erc.json` — the committed `klt erc --format json` report of
-  that spec against `logic_tile.gds`, its `provenance.input.content_hash`
-  pinning the committed GDS (the same `sha256:a6dc076c…` the DRC/LVS
-  reports cite). Its current verdict is the honest, recorded state of
-  this block's power delivery: **not one island per supply** — `VPWR`
-  resolves to 7 disconnected electrical islands, `VGND` to 8 (the 15
-  isolated met1 rails issue #41 names) — which is why T1 item 11 is
-  **unmet** here, not a harness failure. Regenerated and diff-checked by
-  `flow/erc.sh` on every invocation. See "ERC scope, concretely" (issue
-  #51) for exactly what this claim does and does not cover.
+  from the same `klt place-and-route` run): `status: "match"`,
+  `error_count: 0`, and one `severity: "warning"` entry recording that the
+  PDN's tapcells were pruned before the compare (see "LVS scope,
+  concretely"). Regenerated and checked by `flow/lvs.sh` on every invocation.
+  This is the **signal-connectivity** half of T1 item 4 (LVS clean) of
+  `docs/design-evidence-tiers.md` in `2AMLogic/klayout-tools`, per issue
+  #12 — the compare does not look at power/ground at all, so it is only
+  half the claim. See "LVS scope, concretely" below for exactly what it
+  does and does not cover, and `logic_tile.erc.json` immediately below for
+  the other half.
+- `flow/erc_supply_spec.json` — the `klt erc` **supply spec** for both the
+  T1 checklist **item 11** (power delivery, structural —
+  klayout-tools#2025, tracked by issues #51 and #4) and the
+  **power-connectivity half of T1 item 4** (issue #41): `VPWR`/`VGND`
+  declared as `nets[]` entries with `"kind": "supply"`, a stackup over
+  **li1 through met5** (the layers that join the row rails to each other
+  live on met4/met5 — a spec that stops lower reports false islands), the
+  full via stack through via4, and an `nwell_tap` entry under `ties[]`
+  (every `nwell` region must contain a 65/44 tap contact reaching li1 on
+  `VPWR`), which is what checks `VPB` and produces the `erc.missing_tie`
+  verdict. `ties[]` is safe to declare on the post-#2169 klt builds:
+  that issue (well+tie collapse, false `erc.supply_short`) was filed,
+  fixed and closed upstream on 2026-09-20, and the committed
+  `logic_tile.erc.json` pins the producing klt build in its own
+  provenance. See "ERC scope, concretely" below.
+- `logic_tile.erc.json` — a `klt erc` supply-connectivity + antenna report
+  against `logic_tile.gds`: `erc_finding_count: 0` (no floating supply
+  island, no `erc.missing_tie`), 0 antenna `violate` verdicts across 232
+  gates. Regenerated and checked by `flow/erc.sh` on every invocation.
+  This is the **power-connectivity** half of T1 item 4 and it exists
+  because the LVS compare above structurally cannot supply it (issue #41):
+  `klt place-and-route`'s as-built `verilog_path` reference netlist carries
+  no supply pins, so `klt lvs` drops the layout's VPWR/VGND/VPB nets rather
+  than failing on them. Its `provenance.klt_version` records the klt build
+  that produced it, which is **not** `flow/tool_versions.sh`'s
+  `RECORDED_KLT_VERSION` — `klt erc` postdates that pin, so this report
+  necessarily comes from a newer klt than the committed GDS did. The
+  verdict is a pure-geometry statement about the GDS whose hash the same
+  provenance block pins, so it stays checkable regardless.
+  Before the PDN landed, the `klt erc` runs of both specs reported the
+  baseline honestly — this spec's invocation gave **7 `erc.missing_tie`**
+  plus **2 `erc.unconnected_net`** findings (GDS `sha256:a6dc076c…`), and
+  the spec PR #54 shipped for the pre-PDN tree
+  measured the same layout at VPWR 7 / VGND 8 islands — against a layout
+  whose LVS report nonetheless said `match`.
 
 Regenerate + check all with:
 
@@ -86,8 +106,16 @@ Regenerate + check all with:
                               # consistent GDS + DEF + P&R report + LVS
                               # report together (see "LVS scope,
                               # concretely" below for why) -- run
-                              # ./flow/drc.sh --update afterward to keep
-                              # the DRC report in sync.
+                              # ./flow/drc.sh --update and
+                              # ./flow/erc.sh --update afterward to keep
+                              # those two reports in sync.
+
+./flow/erc.sh                # rerun the supply-connectivity + antenna ERC
+                              # against the committed GDS and diff the
+                              # report against the committed copy. Exit 0
+                              # iff 0 findings and reproducible.
+./flow/erc.sh --update       # rerun ERC and overwrite the committed report
+                              # (run after ./flow/lvs.sh --update)
 
 ./flow/erc.sh                # rerun klt erc (spec: layout/erc-supply-spec.json)
                               # against the committed GDS, diff the report
@@ -111,12 +139,13 @@ Regenerate + check all with:
 
 ## What this is, concretely
 
-44.33um x 44.33um die (40% target / 44.17% actual core utilization), 47
-logic `sky130_fd_sc_hd` instances plus 138 physical-only `fill_*` cells
-(185 components total — see "Row rail, not a PDN" below), 0 routing DRC
-violations and 0 antenna violations from OpenROAD's own detailed-route
-pass, across all 16 `sky130_fd_sc_hd` PVT corners the flow's default sweep
-reports. See `logic_tile.par.json` for the full per-corner numbers.
+44.33um x 44.33um die (40% target / 45.48% actual core utilization), 47
+logic `sky130_fd_sc_hd` instances plus 149 physical-only `fill_*` cells and
+16 `tapvpwrvgnd_1` tapcells (212 components total — see "Power delivery
+network" below), 0 routing DRC violations and 0 antenna violations from
+OpenROAD's own detailed-route pass, across all 16 `sky130_fd_sc_hd` PVT
+corners the flow's default sweep reports. See `logic_tile.par.json` for the
+full per-corner numbers.
 
 ## DRC scope, concretely (issue #11)
 
@@ -131,10 +160,16 @@ engine — KLayout's native `Region`-primitive checks, run fully headless
   `resistor`; the report's own `coverage` block records exactly which
   layers were checked (`layers_checked`), which layers present in the
   stream have no deck rule (`layers_in_stream_without_rules`), and which
-  deck rules were skipped because their layers (met4/met5/capm/capm2/via4
-  — this tile's I/O only routes up to met3, per `flow/layout.sh`'s
-  `io.layer_h`/`layer_v`) are absent from the stream (`rules_skipped`) —
-  so "clean" is scoped to what was actually checked, not asserted blind.
+  deck rules were skipped because their layers are absent from the stream
+  (`rules_skipped`) — so "clean" is scoped to what was actually checked,
+  not asserted blind. **Since the PDN landed (issue #41) that scope is
+  wider**: met4, met5 and via4 now carry real geometry (the power straps
+  and their via stack), so the met5 width/space, via4 width/space and
+  met4/met5 via4-enclosure rules that used to sit in `rules_skipped` are
+  now actually checked. What remains skipped is the MiM-capacitor family
+  (`capm`/`capm2`, plus `met4.enclosing.capm2.1`), which this digital tile
+  has no instance of. *Signal* routing is still met1-met3 only, per
+  `flow/layout.sh`'s `io.layer_h`/`layer_v` — met4/met5 carry supply only.
 - **What it is not**: klt's own `klt deck info` reports this build's
   `sky130` deck as `"released": false` (a klt-internal maturity flag, not a
   correctness claim about this run), and this is the **curated** engine's
@@ -149,14 +184,17 @@ engine — KLayout's native `Region`-primitive checks, run fully headless
 - **LVS is separate.** `klt lvs` (netlist-vs-layout comparison) is
   `spec/framework-gaps.md` item G3's other half — see "LVS scope,
   concretely" below (issue #12).
-- **Which PDK revision this was run against** is *not* in the report:
-  `klt drc` writes `provenance.pdk: null` even though `flow/drc.sh` invokes
-  it with `--pdk sky130A` (filed upstream as klayout-tools#1901). The PDK
-  revision for this claim — and for the LVS claim below, same gap — is
-  pinned in `flow/tool_versions.sh` (`RECORDED_PDK_VERSION`) and printed,
-  with a warning on mismatch, at the top of every `flow/drc.sh` /
-  `flow/lvs.sh` run. See `measurements/claim-traceability.md` (T1 item 9)
-  and `./flow/audit-evidence.sh`.
+- **Which PDK revision this was run against**: as of the klt build carrying
+  the klayout-tools#1901 fix, `layout/logic_tile.drc.json` pins it
+  in-artifact (`provenance.pdk.{name,version}`; `flow/drc.sh` resolves the
+  PDK itself so the resolution-path `source` field stays deterministic).
+  On pre-fix klt builds the same report wrote `provenance.pdk: null` and
+  the pin was inherited instead from `flow/tool_versions.sh`
+  (`RECORDED_PDK_VERSION`), printed with a warning on mismatch at the top
+  of every `flow/drc.sh` / `flow/lvs.sh` run — which remains the fallback
+  path, and the LVS claim below carries its pin the same way. See
+  `measurements/claim-traceability.md` (T1 item 9) and
+  `./flow/audit-evidence.sh`.
 
 ## LVS scope, concretely (issue #12)
 
@@ -178,12 +216,36 @@ topologically match a `sky130_fd_sc_hd`-built layout (see
   pins via `--pins` (see `flow/README.md`'s `flow/lvs.sh` section).
 - **What it is not**: this compare is **signal-connectivity only** — no
   power/ground pins are compared (`docs/cli/lvs.md`'s "No power/ground
-  pins" note: `verilog_path` is written without `-include_pwr_gnd`). This
-  is not a gap for this tile specifically: per "No power delivery network"
-  below, this layout has no PDN to begin with, so there is no power
-  connectivity for this mode to miss. It is also not a device-parameter
-  (transistor-level) check — the abstracted black-box cells carry no
-  device geometry to compare.
+  pins" note: `verilog_path` is written without `-include_pwr_gnd`). The
+  tell is visible in the committed report itself: `net_correspondence`
+  carries 21 entries with `reference: null` — 7 `VGND`, 7 `VPWR`, 7 `VPB`
+  — layout supply nets the comparer *dropped* rather than failed on,
+  because the reference netlist has nothing to match them against.
+  **Reading `status: "match"` as a statement about power is therefore a
+  category error**, and this README used to make it (issue #41): it cited
+  this report for T1 item 4 while, three sections down, describing a layout
+  with no power grid at all. A signal-only match is silent about power
+  whether the layout is fully strapped or has 15 mutually isolated rails.
+  The power half of the claim is `logic_tile.erc.json` / `flow/erc.sh`,
+  which works from the GDS geometry and needs no reference netlist. This is
+  also not a device-parameter (transistor-level) check — the abstracted
+  black-box cells carry no device geometry to compare.
+- **The PDN's tapcells are invisible to this compare, by construction.**
+  The committed report carries one `severity: "warning"` mismatch entry,
+  `topology.power_only_pruned`: `klt lvs` removed
+  `SKY130_FD_SC_HD__TAPVPWRVGND_1` and all 16 of its instances from the
+  layout side before comparing, because every pin that cell declares is a
+  power/ground pin the gate-level-Verilog reference never carries. That is
+  correct behavior for a physical-only cell — dropping it is what keeps
+  `status: "match"` honest rather than reporting 16 spurious extra
+  instances — but it means **LVS says nothing about whether the tapcells
+  are there or where they are**. `flow/erc.sh`'s `erc.missing_tie` check
+  is what covers that: it is well-region-driven, so a missing or
+  mis-placed tap is a finding regardless of what the netlist declares.
+  (Relatedly: the `fill_*` cells the flow inserts to close row gaps are why
+  `flow/lvs.sh` abstracts `sky130_fd_sc_hd__[!f]*` rather than `__*`;
+  `tapvpwrvgnd_1` does not start with `f`, so it *is* abstracted — and then
+  pruned, as above.)
 - **Why the layout and reference netlist must come from the same run**:
   verified live while building this evidence — two independent
   `klt place-and-route` runs in the *same* environment (same seed, same
@@ -209,74 +271,117 @@ topologically match a `sky130_fd_sc_hd`-built layout (see
   script's own header comment for why the rewrite cannot change the
   verdict.
 
-## ERC scope, concretely (issue #51)
+## Power delivery network (issue #41)
 
-`logic_tile.erc.json` + `erc-supply-spec.json` are the **T1 checklist item
-11 (power delivery, structural)** evidence — `klt erc`'s supply-spec run,
-approved as
+`flow/layout.sh`'s `klt place-and-route` request carries a `power` block,
+so the committed layout has an actual, connected power grid rather than the
+disconnected row rails it carried until issue #41. As built:
+
+| | |
+|---|---|
+| Nets | `VPWR` / `VGND`, `global_connect` on |
+| Row rail | `met1` followpins, 0.48um wide on the 5.44um row pitch — 15 stripes (8 VGND, 7 VPWR) over the standard-cell PG pins |
+| Straps | `met4` 1.6um / 27.14um pitch / 13.57um offset, `met5` 1.6um / 27.2um pitch / 13.6um offset |
+| Connects | met1-met4 and met4-met5, i.e. a full via stack (via1/2/3/4) from the row rail to the top strap |
+| Tapcells | 16 x `sky130_fd_sc_hd__tapvpwrvgnd_1`, one per well region |
+| Special nets | 15 `FOLLOWPIN` + 51 `STRIPE` segments in `logic_tile.def` |
+
+The strap geometry follows the pattern already in production on this PDK in
+sibling repos (`sky130-modexp`, `sky130-sar-adc`) rather than being tuned
+here; nothing in this repo sizes it against a current budget (see "What this
+is NOT" below).
+
+**What proves it is connected.** Not the LVS report — see "LVS scope,
+concretely" above for why `status: "match"` is structurally silent about
+power. `flow/erc.sh` runs `klt erc` over the GDS geometry with a supply
+spec (`flow/erc_supply_spec.json`) covering li1 through met5, rebuilding
+the layer-by-layer connectivity model from shapes alone, and commits the
+verdict as `logic_tile.erc.json`. Against the committed layout it reports
+**0 findings**; against the pre-PDN layout (GDS `sha256:a6dc076c…`) the
+identical invocation reported **7 `erc.missing_tie`** (nwell regions with
+no tap contact inside them) **and 2 `erc.unconnected_net`** (VPWR and VGND
+each resolving to multiple mutually isolated islands).
+
+**Where `VPB` is covered.** The LVS report drops three supply nets, not two
+— 7 `VGND`, 7 `VPWR` *and* 7 `VPB` (see "LVS scope, concretely" above) —
+but `flow/erc_supply_spec.json` declares only `VPWR` and `VGND` under
+`nets`. That is not an omission: `VPB` is the n-well body net, which is not
+a drawn conductor on any routing layer but the `nwell` (64/20) region
+itself. The spec covers it as a **tie rule** rather than a net — the
+`nwell_tap` entry requires every `nwell` region to contain a `tap` (65/44)
+contact joining it to `li1` on net `VPWR`. So "is VPB connected" is asked
+and answered as `erc.missing_tie`, which is exactly the check that had 7
+findings before the PDN landed and has 0 now. Checking it as an ordinary
+supply net instead would be wrong: the well is a diffusion region, so it
+has no met1–met5 geometry for an island analysis to walk.
+
+**What the antenna half says.** The same report carries `klt erc`'s
+per-gate antenna verdicts: 0 `violate` across all 232 gates. Every gate
+rolls up to `pass_partial` rather than `pass`, which is the expected
+verdict on this PDK and not a violation — sky130's antenna-ratio limit
+table has no met3/met4/met5 entries, so some graded level of every gate is
+necessarily `unchecked` (klayout-tools#1997). `flow/erc_report_trim.py`
+summarizes the ~600 KB per-gate array into the two histograms the report
+commits, and spills any `violate` or `unchecked` gate in full, so the
+summary cannot hide a violation.
+
+**The supply spec must reach met5.** A spec that stops at met3 reports
+false islands on a correctly strapped layout: the straps that join the met1
+followpin rails to each other live on met4/met5, so a stackup that omits
+those layers cannot see the join and reports every rail as its own island.
+
+## ERC scope, concretely (issues #41 + #51)
+
+`layout/logic_tile.erc.json` + `flow/erc_supply_spec.json` are the **T1
+checklist item 11 (power delivery, structural)** evidence — `klt erc`'s
+supply-spec run, approved as
 [klayout-tools#2025](https://github.com/2AMLogic/klayout-tools/pull/2025)
-on 2026-09-17 and tracked by issues #51 and #4. Precisely:
+(2026-09-17), tracked by issues #51 and #4 — and, with the LVS report
+above carrying item 4's signal half, also the **power-connectivity half of
+T1 item 4** (issue #41). The item landed in two recorded steps: the honest
+no-PDN baseline first (PR #54: spec + harness + the committed
+`erc_finding_count: 2` report — VPWR 7 islands, VGND 8, `missing_tie` not
+computed), and the PDN + clean verdict second (issue #41, this PR).
 
-- **What it checks**: every declared supply net resolving to exactly **one**
-  electrical island. The spec declares `VPWR`/`VGND` (`kind: "supply"`, the
-  row-rail pair `logic_tile.par.json`'s `power.row_rail` names), a
-  poly→li1→met1→met2→met3→met4 stackup with `active_layer` on the gate
-  role (`poly ∩ diff` gate identification excludes the fill cells' oxide-
-  free poly), the licon1/mcon/via1–via3 via stack, and `label_layer`s only
-  on li1.label (67/5) and met1.label (68/5) — the only two layers the merged
-  GDS carries supply pin text on. A `klt erc` run over this model is a pure
+- **What it checks**: every declared supply net resolving to exactly one
+  electrical island, and — through the `nwell_tap` tie rule — every
+  `nwell` region containing a tap contact reaching `li1` on `VPWR`
+  (the `VPB` question, answered as `erc.missing_tie`). The stackup covers
+  li1 through met5 with the full via stack; `klt erc` is a pure
   geometry/connectivity extraction (a `klayout.db.LayoutToNetlist` wire
-  graph, no device recognition): no PDK install is read and no netlist
-  input exists — this is the
-  *structural* question ("is the supply connected to what it powers"), not
-  the *analysis* one (IR-drop/EM, `klt power`, deliberately outside item 11).
-- **What the committed report says, honestly**: `erc_finding_count: 2` —
-  `VPWR` resolves to **7** disconnected electrical islands and `VGND` to
-  **8** (`erc.unconnected_net`, zero `erc.supply_short`, zero
-  `erc.floating_gate` over all 232 extracted gate nets). This is not a
-  harness failure or a spec tuned to fail: it is the electrical
-  confirmation of what "Row rail, not a PDN" below has said all along —
-  the 15 per-row met1 rails never bridge vertically (8 + 7 = 15, the rail
-  count issue #41 derives independently from the DEF's `SPECIALNETS`).
-  **T1 item 11 is therefore unmet in this repo**, exactly as the gap-to-T1
-  tracker's eleventh row records; closing it requires the PDN work tracked
-  in #41 (and, per #42, a timing re-ratification against the PDN-bearing
-  layout once it exists).
-- **What it does not cover, per the item's own text**: the antenna verdicts
-  in the report are all `unchecked` — `--pdk` (klt's built-in
-  antenna-ratio table) is deliberately not passed, because an antenna or
-  floating-gate finding is a real defect but is *not* item 11's subject and
-  does not block it
-  ([klayout-tools#1994](https://github.com/2AMLogic/klayout-tools/issues/1994)).
-  `erc.missing_tie` is **not computed** — the spec declares no `ties[]`
-  (a real routed standard-cell design under `klt erc`'s current `ties[]`
-  collapses into one island and reports a FALSE `erc.supply_short` —
-  [klayout-tools#2169](https://github.com/2AMLogic/klayout-tools/issues/2169),
-  reproduced four ways in gf180-drone-fc's FRICTION F-034), so the check is
-  absent from the run's scope entirely: an **absence of evidence, not
-  evidence of absence** — `klt signoff`'s tier-verdict renders a no-ties
-  spec `supply_spec_incomplete` for exactly this reason
-  (klayout-tools#2199). The well-tie evidence that does stand in: the
-  merged GDS carries the standard cells' own well/bulk PG pin text (201
-  `VPB` labels on nwell.label 64/5, 201 `VNB` on pwell.label 64/59) plus
-  the supply pin labels above — but the layout has **no drawn ties at all**
-  (zero 65/44 tap geometry, `power.tapcell_master: null`), which is part
-  of the same #41 gap. For completeness, the item's digital-column extras
-  are also unmet here: the place-and-route request has no `power` block
-  (`power.pdn: false`, `straps: []`), and the LVS compare is
-  signal-connectivity-only (see "LVS scope, concretely" above), so there is
-  no `power_connectivity: "match"` to cite — those land with the PDN work
-  too.
+  graph, no device recognition), so the connectivity half reads no PDK
+  install. This is the *structural* question ("is the supply connected to
+  what it powers"), not the *analysis* one (IR-drop/EM, `klt power`,
+  deliberately outside item 11).
+- **What the committed report says**: `erc_finding_count: 0` — every
+  supply one island, `missing_tie: 0`, zero `supply_short`, zero
+  `floating_gate`, over all 232 extracted gate nets, plus the antenna
+  half above. **T1 item 11 is met for this tile**, and item 4's power
+  half with it; the gap-to-T1 tracker (#4) can record both.
+- **The `ties[]` history** ([klayout-tools#2169](https://github.com/2AMLogic/klayout-tools/issues/2169)):
+  PR #54's spec deliberately declared **no `ties[]`** — the interim the
+  upstream issue prescribed while a real routed well+tie spec collapsed
+  `klt erc`'s connectivity model into one island with a **false**
+  `erc.supply_short` (reproduced four ways in gf180-drone-fc F-034);
+  `klt signoff` grades a no-ties spec `supply_spec_incomplete`
+  (klayout-tools#2199) for exactly that reason. #2169 was fixed and
+  closed upstream on 2026-09-20, after which the tie rule is sound:
+  this spec carries it, and the committed report — gate count intact
+  (232), no short, honest `missing_tie: 0` — pins the producing klt
+  build in `provenance.klt_version`, so the claim is checkable against
+  exactly the build class that computes it. A *pre*-fix klt running
+  check mode against this spec+report fails visibly (verdict fields
+  move), which is the reproducibility layer working, not a harness
+  defect.
 - **Freshness/reproducibility**: `flow/erc.sh` re-runs
-  `klt erc layout/logic_tile.gds layout/erc-supply-spec.json --top
-  logic_tile --format json` from the repo root on every invocation, trims
-  the tool-version fields (`flow/erc_report_trim.py`, same convention as
-  the DRC/LVS reports), byte-diffs against the committed report, and
-  re-verifies both of the report's content-hash pins
-  (`provenance.input.content_hash` = the committed GDS — the same
-  `sha256:a6dc076c…` the DRC and LVS reports cite — and
-  `provenance.spec.content_hash` = the committed supply spec). No PDK
-  install is involved anywhere in the check.
+  `klt erc layout/logic_tile.gds flow/erc_supply_spec.json --top
+  logic_tile --pdk sky130 --format json` from the repo root on every
+  invocation (the `--pdk` switch selects only klt's built-in
+  antenna-ratio table — the connectivity model opens no PDK path),
+  summarizes the per-gate antenna array (`flow/erc_report_trim.py`),
+  re-verifies both of the report's content-hash pins (the committed
+  GDS and the committed spec), gates on a clean verdict *before* any
+  diff is trusted, and byte-diffs against the committed report.
 
 ## What this is NOT (non-goals of this issue, #9)
 - **Not a timing claim — the numbers in `logic_tile.par.json` still are
@@ -295,20 +400,14 @@ on 2026-09-17 and tracked by issues #51 and #4. Precisely:
   (`flow/sta-sweep.sh`). Read that record — and its own "what these
   numbers do not claim" list — before citing any timing number from this
   repo.
-- **Row rail, not a PDN.** The `klt place-and-route` request still has no
-  `power` block (no PDN straps, no tapcells). klt does unconditionally draw
-  a `met1` `-followpins` row rail over the standard-cell VPWR/VGND pins
-  before global routing, and place `fill_*` cells to close row gaps, as a
-  routing *obstruction* — without it the router may legally route a signal
-  across an unfilled gap on the same `met1` the row rail occupies, a
-  `klt drc`-invisible short once a filler's PG strap lands there
-  (klayout-tools#1442). That is a correctness guard, not electrical
-  completeness: there is no strap grid, no tapcell, and no IR-drop
-  analysis, so no timing or reliability number here accounts for supply
-  droop. A committed PDN is separate follow-on work — see "LVS scope,
-  concretely" above for why its absence is not a gap for the LVS compare
-  specifically, and note that the `fill_*` cells it inserts are why
-  `flow/lvs.sh` abstracts `sky130_fd_sc_hd__[!f]*` rather than `__*`.
+- **A connected PDN, but not an IR-drop sign-off.** See "Power delivery
+  network" above for what the grid is and what it is checked against. What
+  it is *not* is an electrical-margin claim: nothing in this repo computes
+  current density, IR drop or electromigration, so no timing or
+  reliability number here accounts for supply droop. `klt erc` answers
+  "is every supply shape actually joined, and is every well tapped" — a
+  topology question — not "is the grid wide enough". Sizing the grid
+  against a real current budget is separate follow-on work.
 - **Not the tile's switch matrix / inter-tile routing.** Same BEL-level
   scope as `design/rtl/` — see `design/README.md`.
 

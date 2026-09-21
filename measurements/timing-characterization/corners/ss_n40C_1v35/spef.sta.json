@@ -1,11 +1,12 @@
 {
   "clock_skew_ns": 0,
   "engine": "openroad",
-  "estimated_power_mw": 0.0151,
-  "fmax_mhz": 296.221,
+  "estimated_power_mw": 0.015,
+  "fmax_mhz": 298.777,
+  "geometry_source": "routed",
   "hdl_toplevel": "logic_tile",
   "hold_violation_count": 0,
-  "layout_def_sha256": "sha256:de91eee953e09601f47248a4c52fc6f01f2227f4a06ea09c42af854a6075e512",
+  "layout_def_sha256": "sha256:2979e7fb3e292e20e31c85e642687b4cacdc7ff9f7d72c7bc2b526bb793badaf",
   "provenance": {
     "deck": {
       "content_hash": "sha256:8fd5aefd2053feef0a9bd3a5a972680dd77ddb8dda744836611656f37f969855",
@@ -13,7 +14,7 @@
       "released": false
     },
     "input": {
-      "content_hash": "sha256:86d2dfb7492ce85ba51c53af70b133f6efc78b68ba7cc4e5afdc5235a3d8da24"
+      "content_hash": "sha256:6e1bb79d924d42cd4debc48df534e7dabe20b0c0b46efbc7944c96d5b4f33be5"
     },
     "pdk": {
       "name": "sky130A",
@@ -25,14 +26,24 @@
   "spef_annotation": {
     "annotation_complete": true,
     "annotation_warning": null,
+    "delay_changed": true,
     "design_nets_annotated": 139,
     "design_nets_missing_sample": [],
     "design_nets_total": 139,
     "nets_annotated": 139,
-    "nets_total": 152
+    "nets_total": 139,
+    "partially_unannotated_driver_count": 0,
+    "reader_warning_count": 0,
+    "reader_warning_sample": [],
+    "unannotated_driver_count": 0
   },
-  "spef_sha256": "sha256:647a03c3c274f7a74b563dc8d448ddee66cf8c2a392cbeb0bb29bcac2745befb",
+  "spef_sha256": "sha256:4986d8339d8d2b4d1b809d21feeb04855a00c50de85dcc7e9f124dc3420a9b2d",
   "status": "ok",
+  "total_negative_hold_slack_ns": 0,
   "total_negative_slack_ns": 0,
-  "worst_slack_ns": 16.6241
+  "verilog_path": null,
+  "wire_load_mode": null,
+  "wire_load_model": null,
+  "worst_hold_slack_ns": 2.45777,
+  "worst_slack_ns": 16.653
 }

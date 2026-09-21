@@ -1,6 +1,11 @@
 # Claim traceability audit (T1 checklist item 9)
 
 **Audited**: 2026-09-15, against `c3c6757` (issue #34, Epic #4 Phase 4).
+**Re-audited**: 2026-09-21, for the post-PDN tree — rows 5–13 gained the
+ERC claim and the successor records (issue #41), then were merged with PR
+#54's item-11 registration (issues #41 + #51) into the single row 13 and
+gap G-4 below. `./flow/audit-evidence.sh` re-derives this walk's machine
+half on every run.
 **Re-derive with**: `./flow/audit-evidence.sh` — no toolchain, no PDK
 install and no network needed; it reads only committed files.
 
@@ -38,15 +43,15 @@ intention or a spec target.
 | 2 | `PASS: tb_logic_tile -- 4 checks, 0 failures` — per-slice LUT config, per-slice clock-enable, shared reset (`sim/README.md`) | `sim/tb_logic_tile.v`, run by `sim/run.sh` against `design/rtl/logic_tile.v` | **n/a by construction** — same as #1. |
 | 3 | Derived generic-cell netlist reproduces from RTL (`design/netlist/logic_tile_netlist.v`, `flow/README.md`) | `flow/synth.sh` (yosys, no liberty mapping) | **n/a by construction** — technology-independent synthesis; no PDK input. |
 | 4 | Die/core area, utilization, wirelength, component counts; GDS+DEF+report regenerate byte-identically (`layout/README.md`, `layout/logic_tile.par.json`) | `flow/layout.sh` (+ `flow/gds_canonicalize.py`, `flow/par_report_trim.py`) | **In-artifact** — `layout/logic_tile.par.json` → `provenance.pdk.{name,version}`. |
-| 5 | DRC `status: "clean"`, 0 violations, full-deck (`layout/README.md`, `layout/logic_tile.drc.json`) | `flow/drc.sh` (+ `flow/drc_report_trim.py`) | **Inherited** — `klt drc` writes `provenance.pdk: null`, so pinned by `flow/tool_versions.sh` via the banner `flow/drc.sh` now prints. Gap G-1 below. |
-| 6 | LVS `status: "match"`, 0 mismatches (`layout/README.md`, `layout/logic_tile.lvs.json`) | `flow/lvs.sh` (+ `flow/lvs_sanitize_verilog.py`, `flow/lvs_declared_pins.py`, `flow/lvs_report_trim.py`) | **Inherited** — same upstream gap as #5; banner now printed by `flow/lvs.sh`. Gap G-1 below. |
-| 7 | 18-corner STA: per-corner setup WNS/TNS, violation counts, `fmax_mhz`, power, LEF-only vs. SPEF-annotated; binding setup corner `ss_n40C_1v28`, SPEF WNS 15.1760 ns (`measurements/timing-characterization/records/20260909-225431-86f71d2.md`) | `flow/sta-sweep.sh` (+ `flow/sta_sanitize_names.py`, `flow/sta_report_trim.py`), named as `harness` in the record's own `record-meta` | **In-artifact, twice** — the record's `record-meta.provenance.pdk.version`, and `provenance.pdk` in each of the 36 per-corner reports. Gap G-2 below. |
+| 5 | DRC `status: "clean"`, 0 violations, full-deck (`layout/README.md`, `layout/logic_tile.drc.json`) | `flow/drc.sh` (+ `flow/drc_report_trim.py`) | **In-artifact (since the klt build carrying the klayout-tools#1901 fix)** — `layout/logic_tile.drc.json` → `provenance.pdk.{name,version}`; `flow/drc.sh` resolves the PDK itself so the resolution-path `source` string stays deterministic. On pre-fix klt builds the report wrote `provenance.pdk: null` and inherited from the banner — the historic state G-1 below documents. |
+| 6 | LVS `status: "match"` (signal-connectivity compare; the PDN's tapcells pruned as a single `topology.power_only_pruned` warning — 0 errors) (`layout/README.md`, `layout/logic_tile.lvs.json`) | `flow/lvs.sh` (+ `flow/lvs_sanitize_verilog.py`, `flow/lvs_declared_pins.py`, `flow/lvs_report_trim.py`) | **In-artifact (same klt #1901-fix state as #5)** — `layout/logic_tile.lvs.json` → `provenance.pdk.{name,version}`, deterministic for the same reason (`flow/lvs.sh` resolves the PDK). The power-connectivity half of this item is claim #13. |
+| 7 | 18-corner STA: per-corner setup WNS/TNS, violation counts, `fmax_mhz`, power, LEF-only vs. SPEF-annotated; binding setup corner `ss_n40C_1v28`, SPEF WNS 15.2146 ns (post-PDN; was 15.1760 ns pre-PDN) (`measurements/timing-characterization/records/20260921-062500-e8a37ad.md`) | `flow/sta-sweep.sh` (+ `flow/sta_sanitize_names.py`, `flow/sta_report_trim.py`), named as `harness` in the record's own `record-meta` | **In-artifact, twice** — the record's `record-meta.provenance.pdk.version`, and `provenance.pdk` in each of the 36 per-corner reports. Gap G-2 below. |
 | 8 | Per-corner report set: 36 files (18 corners × LEF-only/SPEF) (`measurements/timing-characterization/corners/`) | `flow/sta-sweep.sh` regenerates and diffs all 36 on every run | **In-artifact** — all 36 carry the identical pinned revision (asserted by `flow/audit-evidence.sh`). |
-| 9 | Post-route SDF is real `klt place-and-route --post_route_sdf` output for the byte-identical committed DEF (`measurements/timing-characterization/logic_tile_route.sdf`) | `flow/sdf-resim.sh` (+ `flow/sdf_canonicalize.py`) | **Inherited** — SDF headers carry PVT but no PDK revision; pinned by record `20260915-133517-234b13b`'s `record-meta`, which also content-hashes this exact file. |
-| 10 | Zero-delay gate-level `PASS: tb_logic_tile -- 4 checks, 0 failures` against the as-built `sky130_fd_sc_hd` netlist (`measurements/.../records/20260915-133517-234b13b.md`, `sim/README.md`) | `flow/sdf-resim.sh` re-running `sim/tb_logic_tile.v` **unmodified** (+ `flow/sdf_annotate_shim.py`) | **In-artifact** — record `record-meta.provenance.pdk.version`. Reads the PDK's `sky130_fd_sc_hd` behavioral models, so the pin is load-bearing here. |
+| 9 | Post-route SDF is real `klt place-and-route --post_route_sdf` output for the byte-identical committed DEF (`measurements/timing-characterization/logic_tile_route.sdf`) | `flow/sdf-resim.sh` (+ `flow/sdf_canonicalize.py`) | **Inherited** — SDF headers carry PVT but no PDK revision; pinned by record `20260921-062530-e8a37ad`'s `record-meta`, which also content-hashes this exact file. |
+| 10 | Zero-delay gate-level `PASS: tb_logic_tile -- 4 checks, 0 failures` against the as-built `sky130_fd_sc_hd` netlist (`measurements/.../records/20260921-062530-e8a37ad.md`, `sim/README.md`) | `flow/sdf-resim.sh` re-running `sim/tb_logic_tile.v` **unmodified** (+ `flow/sdf_annotate_shim.py`) | **In-artifact** — record `record-meta.provenance.pdk.version`. Reads the PDK's `sky130_fd_sc_hd` behavioral models, so the pin is load-bearing here. |
 | 11 | SDF-annotated leg **blocked** by klayout-tools#1890, reproduced on every run (same record) | `flow/sdf-resim.sh`, which treats a *changed* crash signature as a failure | **In-artifact** — same record. |
-| 12 | Ratified timing row: setup/hold-clean at all 18 corners, binding corner `ss_n40C_1v28`, SPEF WNS 15.1760 ns, **no Fmax ratified** (`spec/decisions/0002-tile-timing-spec-ratification.md`, `spec/tile-spec.md`) | No harness of its own — a ruling **on** claim #7, citing it by path. Regenerate the underlying evidence with `./flow/sta-sweep.sh`. | **Inherited** — from claim #7's record, which ADR-0002 cites as its sole evidentiary source. |
-| 13 | T1 item 11 evidence: `klt erc` supply report — `VPWR` resolves to 7 electrical islands, `VGND` to 8 (real no-PDN finding, issue #41), zero `erc.supply_short`, zero `erc.floating_gate`, `erc.missing_tie` not computed (no `ties[]`, klayout-tools#2169) (`layout/README.md` "ERC scope, concretely", `layout/logic_tile.erc.json`) | `flow/erc.sh` (+ `flow/erc_report_trim.py`, against `layout/erc-supply-spec.json` and the committed GDS) | **n/a by construction** — `klt erc` reads no PDK install at all (pure geometry + spec JSON; its `--pdk` only selects a built-in antenna table, which `flow/erc.sh` does not pass). The report content-hash-pins its two actual inputs — the GDS (whose PDK pin claim #4 carries) and the spec — and `flow/erc.sh` re-verifies both on every run; see the `layout/logic_tile.erc.json` entry in `flow/audit_evidence.py`'s `PDK_NULL_UPSTREAM_GAP`. |
+| 12 | Ratified timing row: setup/hold-clean at all 18 corners, binding corner `ss_n40C_1v28`, SPEF WNS 15.1760 ns, **no Fmax ratified** (`spec/decisions/0002-tile-timing-spec-ratification.md`, `spec/tile-spec.md`) | No harness of its own — a ruling **on** claim #7, citing it by path. Regenerate the underlying evidence with `./flow/sta-sweep.sh`. | **Inherited** — via the claim-#7 record lineage: ADR-0002 cites the 20260909 original, which remains committed; the post-PDN successor record `20260921-062500-e8a37ad` re-meets the ruling's criteria (WNS 15.2146 ns), the re-ratification issue #42 tracks. |
+| 13 | ERC supply-connectivity + antenna (T1 item 11, issues #51 + #4, **and the power half of T1 item 4**, issue #41): `erc_finding_count: 0` post-PDN — every supply one island, `missing_tie: 0` via the `nwell_tap` tie rule, 0 antenna `violate` across 232 gates; the pre-PDN baselines were 7 `missing_tie` + 2 `unconnected_net` findings under this spec and VPWR 7 / VGND 8 islands under PR #54's tie-less interim spec (`layout/README.md` "ERC scope, concretely", `layout/logic_tile.erc.json`) | `flow/erc.sh` (+ `flow/erc_report_trim.py`, against `flow/erc_supply_spec.json` and the committed GDS) | **Inherited, content-addressed** — `klt erc` opens no PDK install for the connectivity model (`flow/erc.sh` passes `--pdk sky130` only to select klt's built-in antenna-ratio table) and writes no provenance block (klayout-tools#2036); the trimmed report pins its analysed GDS and supply spec by content hash plus the producing klt build, and the PDK revision is pinned by `flow/erc.sh`'s banner plus the explicit `PDK_NULL_UPSTREAM_GAP` entry in `flow/audit_evidence.py`. Gap G-4 below. |
 
 `spec/decisions/0001-fabric-framework-choice.md` publishes no measurement —
 it is a framework-selection decision — so it has no row.
@@ -85,6 +90,12 @@ all**, and their check-mode diffs could not notice a PDK swap.
   `klt place-and-route`. When that lands, these two reports will pin the PDK
   in-artifact like every other report and the allowance in
   `flow/audit_evidence.py`'s `PDK_NULL_UPSTREAM_GAP` can be dropped.
+- **Landed for the current tree**: issue #41's 2026-09-21 re-stamps under
+  the newer klt carry the fix — both `layout/logic_tile.drc.json` and
+  `layout/logic_tile.lvs.json` now pin `provenance.pdk.{name,version}`
+  in-artifact (rows 5–6). The `PDK_NULL_UPSTREAM_GAP` entries for those
+  two files stay for as long as a null-era report could be re-stamped by a
+  pre-fix klt build; the only live entry is now the ERC one (G-4 below).
 
 ### G-2 — a pinned harness hash had drifted (accounted for, not papered over)
 
@@ -116,6 +127,21 @@ scope for this audit — it would need its own record. Item 9 asks whether a
 claim's harness and PDK are pinned and committed; it does not ask whether
 the *tool* is pinned, which this repo explicitly does not do (see
 `flow/README.md`, "Toolchain versions").
+
+### G-4 — `klt erc` records no provenance block (filed upstream)
+
+`klt erc` (which postdates every klt version this repo has recorded)
+writes no provenance block at all — no PDK revision, no analysed-input
+hash. `flow/erc_report_trim.py` synthesizes the drc-shaped provenance
+block the committed `layout/logic_tile.erc.json` carries, content-hashing
+the exact GDS it analysed and the exact supply spec it resolved nets
+against, and `flow/erc.sh` prints the PDK banner so a swap is visible at
+run time. Filed upstream (per the friction protocol, described generically)
+as klayout-tools#2036; the `PDK_NULL_UPSTREAM_GAP` entry in
+`flow/audit_evidence.py` is the audit's half of the accommodation until
+it lands. This is the power half of T1 item 4 — the half `klt lvs`
+structurally cannot check — so the pin discipline here is load-bearing
+for the claim issue #41 re-substantiated.
 
 ## What this audit does not cover
 

@@ -1,5 +1,15 @@
 {
-  "category_counts": {},
+  "body_verification": {
+    "device_classes": [],
+    "device_count": 0,
+    "finding_count": 0,
+    "findings": [],
+    "reason": "no request.layout.deck was given (the pre-extracted request.layout.netlist form), so nothing establishes this layout's substrate/well-tap convention and no synthesized body net can be told apart from a real one -- this run verified nothing about the device bodies either way",
+    "status": "unchecked"
+  },
+  "category_counts": {
+    "topology.power_only_pruned": 1
+  },
   "category_error_counts": {},
   "counts": {
     "devices": {
@@ -8,7 +18,7 @@
       "reference": 0
     },
     "nets": {
-      "layout": 163,
+      "layout": 146,
       "matched": 183,
       "reference": 137
     },
@@ -23,925 +33,1123 @@
   "environment": {
     "engine": "klayout",
     "extracted_netlist": null,
-    "layout_sha256": "fc748a457281aa567c5b0fddcc02d89529f26f9243e6c50fdb80bb41a6bfc1ca",
-    "reference_sha256": "6adeaf429c1aabb9702b11ca7d4835a77e12d2a97a1079f897f9778db50e47ec"
+    "layout_sha256": "1eff80b2834a6c1b84375036f41792afdd3020716c0b07fbaf9106f1038c5626",
+    "reference_sha256": "f7fe4339211a9a9a871c96faed3ac7b1b051d98aad28e0fdeec3910ef59dc2e3"
   },
   "error_count": 0,
-  "layout_gds_sha256": "sha256:a6dc076c0b8d9d314098755f313d4c30f4f8fc7aa57cd411627e3cdc497be452",
-  "mismatch_count": 0,
-  "mismatches": [],
+  "hints_applied": null,
+  "layout_gds_sha256": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f",
+  "mismatch_count": 1,
+  "mismatches": [
+    {
+      "category": "topology.power_only_pruned",
+      "circuit": null,
+      "description": "removed layout-side circuit(s) whose every declared pin is a power/ground pin of the reference library (a pin the library declares but the gate-level-Verilog reference never carries), and every instance of them, before comparing -- 1 circuit(s): SKY130_FD_SC_HD__TAPVPWRVGND_1 (see docs/cli/lvs.md, \"topology.power_only_pruned\")",
+      "details": null,
+      "device": null,
+      "instance": null,
+      "net": null,
+      "property": null,
+      "severity": "warning",
+      "side": "layout",
+      "subcircuit": null
+    }
+  ],
   "net_correspondence": [
     {
+      "heuristic": true,
       "layout": "VGND",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VGND",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VGND",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VGND",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VGND",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VGND",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VGND",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPB",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPB",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPB",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPB",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPB",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPB",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPB",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPWR",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPWR",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPWR",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPWR",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPWR",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPWR",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": true,
       "layout": "VPWR",
       "pin": true,
       "reference": null
     },
     {
+      "heuristic": false,
       "layout": "A",
       "pin": true,
       "reference": "A"
     },
     {
+      "heuristic": false,
       "layout": "A",
       "pin": true,
       "reference": "A"
     },
     {
+      "heuristic": false,
       "layout": "A",
       "pin": true,
       "reference": "A"
     },
     {
+      "heuristic": false,
       "layout": "A0",
       "pin": true,
       "reference": "A0"
     },
     {
+      "heuristic": false,
       "layout": "A0",
       "pin": true,
       "reference": "A0"
     },
     {
+      "heuristic": false,
       "layout": "A1",
       "pin": true,
       "reference": "A1"
     },
     {
+      "heuristic": false,
       "layout": "A1",
       "pin": true,
       "reference": "A1"
     },
     {
+      "heuristic": false,
       "layout": "A1",
       "pin": true,
       "reference": "A1"
     },
     {
+      "heuristic": false,
       "layout": "A2",
       "pin": true,
       "reference": "A2"
     },
     {
+      "heuristic": false,
       "layout": "A2",
       "pin": true,
       "reference": "A2"
     },
     {
+      "heuristic": false,
       "layout": "A3",
       "pin": true,
       "reference": "A3"
     },
     {
+      "heuristic": false,
       "layout": "B",
       "pin": true,
       "reference": "B"
     },
     {
+      "heuristic": false,
       "layout": "B1",
       "pin": true,
       "reference": "B1"
     },
     {
+      "heuristic": false,
       "layout": "CE[0]",
       "pin": true,
       "reference": "CE[0]"
     },
     {
+      "heuristic": false,
       "layout": "CE[1]",
       "pin": true,
       "reference": "CE[1]"
     },
     {
+      "heuristic": false,
       "layout": "CE[2]",
       "pin": true,
       "reference": "CE[2]"
     },
     {
+      "heuristic": false,
       "layout": "CE[3]",
       "pin": true,
       "reference": "CE[3]"
     },
     {
+      "heuristic": false,
       "layout": "CLK",
       "pin": true,
       "reference": "CLK"
     },
     {
+      "heuristic": false,
       "layout": "CLK",
       "pin": true,
       "reference": "CLK"
     },
     {
+      "heuristic": false,
       "layout": "CLKNET_0_CLK",
       "pin": false,
       "reference": "CLKNET_0_CLK"
     },
     {
+      "heuristic": false,
       "layout": "CLKNET_1_0__LEAF_CLK",
       "pin": false,
       "reference": "CLKNET_1_0__LEAF_CLK"
     },
     {
+      "heuristic": false,
       "layout": "CLKNET_1_1__LEAF_CLK",
       "pin": false,
       "reference": "CLKNET_1_1__LEAF_CLK"
     },
     {
+      "heuristic": false,
       "layout": "D",
       "pin": true,
       "reference": "D"
     },
     {
-      "layout": "G_SLICE[0].U_SLICE/FF_Q",
+      "heuristic": false,
+      "layout": "G_SLICE[0]_U_SLICE/FF_Q",
       "pin": false,
       "reference": "G_SLICE_0__U_SLICE_FF_Q"
     },
     {
-      "layout": "G_SLICE[0].U_SLICE/_00_",
+      "heuristic": false,
+      "layout": "G_SLICE[0]_U_SLICE/_00_",
       "pin": false,
       "reference": "G_SLICE_0__U_SLICE__00_"
     },
     {
-      "layout": "G_SLICE[0].U_SLICE/_01_",
+      "heuristic": false,
+      "layout": "G_SLICE[0]_U_SLICE/_01_",
       "pin": false,
       "reference": "G_SLICE_0__U_SLICE__01_"
     },
     {
-      "layout": "G_SLICE[0].U_SLICE/_02_",
+      "heuristic": false,
+      "layout": "G_SLICE[0]_U_SLICE/_02_",
       "pin": false,
       "reference": "G_SLICE_0__U_SLICE__02_"
     },
     {
-      "layout": "G_SLICE[0].U_SLICE/_03_",
+      "heuristic": false,
+      "layout": "G_SLICE[0]_U_SLICE/_03_",
       "pin": false,
       "reference": "G_SLICE_0__U_SLICE__03_"
     },
     {
-      "layout": "G_SLICE[0].U_SLICE/_04_",
+      "heuristic": false,
+      "layout": "G_SLICE[0]_U_SLICE/_04_",
       "pin": false,
       "reference": "G_SLICE_0__U_SLICE__04_"
     },
     {
-      "layout": "G_SLICE[0].U_SLICE/_05_",
+      "heuristic": false,
+      "layout": "G_SLICE[0]_U_SLICE/_05_",
       "pin": false,
       "reference": "G_SLICE_0__U_SLICE__05_"
     },
     {
-      "layout": "G_SLICE[0].U_SLICE/_06_",
+      "heuristic": false,
+      "layout": "G_SLICE[0]_U_SLICE/_06_",
       "pin": false,
       "reference": "G_SLICE_0__U_SLICE__06_"
     },
     {
-      "layout": "G_SLICE[0].U_SLICE/_07_",
+      "heuristic": false,
+      "layout": "G_SLICE[0]_U_SLICE/_07_",
       "pin": false,
       "reference": "G_SLICE_0__U_SLICE__07_"
     },
     {
-      "layout": "G_SLICE[0].U_SLICE/_08_",
+      "heuristic": false,
+      "layout": "G_SLICE[0]_U_SLICE/_08_",
       "pin": false,
       "reference": "G_SLICE_0__U_SLICE__08_"
     },
     {
-      "layout": "G_SLICE[1].U_SLICE/FF_Q",
+      "heuristic": false,
+      "layout": "G_SLICE[1]_U_SLICE/FF_Q",
       "pin": false,
       "reference": "G_SLICE_1__U_SLICE_FF_Q"
     },
     {
-      "layout": "G_SLICE[1].U_SLICE/_00_",
+      "heuristic": false,
+      "layout": "G_SLICE[1]_U_SLICE/_00_",
       "pin": false,
       "reference": "G_SLICE_1__U_SLICE__00_"
     },
     {
-      "layout": "G_SLICE[1].U_SLICE/_01_",
+      "heuristic": false,
+      "layout": "G_SLICE[1]_U_SLICE/_01_",
       "pin": false,
       "reference": "G_SLICE_1__U_SLICE__01_"
     },
     {
-      "layout": "G_SLICE[1].U_SLICE/_02_",
+      "heuristic": false,
+      "layout": "G_SLICE[1]_U_SLICE/_02_",
       "pin": false,
       "reference": "G_SLICE_1__U_SLICE__02_"
     },
     {
-      "layout": "G_SLICE[1].U_SLICE/_03_",
+      "heuristic": false,
+      "layout": "G_SLICE[1]_U_SLICE/_03_",
       "pin": false,
       "reference": "G_SLICE_1__U_SLICE__03_"
     },
     {
-      "layout": "G_SLICE[1].U_SLICE/_04_",
+      "heuristic": false,
+      "layout": "G_SLICE[1]_U_SLICE/_04_",
       "pin": false,
       "reference": "G_SLICE_1__U_SLICE__04_"
     },
     {
-      "layout": "G_SLICE[1].U_SLICE/_05_",
+      "heuristic": false,
+      "layout": "G_SLICE[1]_U_SLICE/_05_",
       "pin": false,
       "reference": "G_SLICE_1__U_SLICE__05_"
     },
     {
-      "layout": "G_SLICE[1].U_SLICE/_06_",
+      "heuristic": false,
+      "layout": "G_SLICE[1]_U_SLICE/_06_",
       "pin": false,
       "reference": "G_SLICE_1__U_SLICE__06_"
     },
     {
-      "layout": "G_SLICE[1].U_SLICE/_07_",
+      "heuristic": false,
+      "layout": "G_SLICE[1]_U_SLICE/_07_",
       "pin": false,
       "reference": "G_SLICE_1__U_SLICE__07_"
     },
     {
-      "layout": "G_SLICE[1].U_SLICE/_08_",
+      "heuristic": false,
+      "layout": "G_SLICE[1]_U_SLICE/_08_",
       "pin": false,
       "reference": "G_SLICE_1__U_SLICE__08_"
     },
     {
-      "layout": "G_SLICE[2].U_SLICE/FF_Q",
+      "heuristic": false,
+      "layout": "G_SLICE[2]_U_SLICE/FF_Q",
       "pin": false,
       "reference": "G_SLICE_2__U_SLICE_FF_Q"
     },
     {
-      "layout": "G_SLICE[2].U_SLICE/_00_",
+      "heuristic": false,
+      "layout": "G_SLICE[2]_U_SLICE/_00_",
       "pin": false,
       "reference": "G_SLICE_2__U_SLICE__00_"
     },
     {
-      "layout": "G_SLICE[2].U_SLICE/_01_",
+      "heuristic": false,
+      "layout": "G_SLICE[2]_U_SLICE/_01_",
       "pin": false,
       "reference": "G_SLICE_2__U_SLICE__01_"
     },
     {
-      "layout": "G_SLICE[2].U_SLICE/_02_",
+      "heuristic": false,
+      "layout": "G_SLICE[2]_U_SLICE/_02_",
       "pin": false,
       "reference": "G_SLICE_2__U_SLICE__02_"
     },
     {
-      "layout": "G_SLICE[2].U_SLICE/_03_",
+      "heuristic": false,
+      "layout": "G_SLICE[2]_U_SLICE/_03_",
       "pin": false,
       "reference": "G_SLICE_2__U_SLICE__03_"
     },
     {
-      "layout": "G_SLICE[2].U_SLICE/_04_",
+      "heuristic": false,
+      "layout": "G_SLICE[2]_U_SLICE/_04_",
       "pin": false,
       "reference": "G_SLICE_2__U_SLICE__04_"
     },
     {
-      "layout": "G_SLICE[2].U_SLICE/_05_",
+      "heuristic": false,
+      "layout": "G_SLICE[2]_U_SLICE/_05_",
       "pin": false,
       "reference": "G_SLICE_2__U_SLICE__05_"
     },
     {
-      "layout": "G_SLICE[2].U_SLICE/_06_",
+      "heuristic": false,
+      "layout": "G_SLICE[2]_U_SLICE/_06_",
       "pin": false,
       "reference": "G_SLICE_2__U_SLICE__06_"
     },
     {
-      "layout": "G_SLICE[2].U_SLICE/_07_",
+      "heuristic": false,
+      "layout": "G_SLICE[2]_U_SLICE/_07_",
       "pin": false,
       "reference": "G_SLICE_2__U_SLICE__07_"
     },
     {
-      "layout": "G_SLICE[2].U_SLICE/_08_",
+      "heuristic": false,
+      "layout": "G_SLICE[2]_U_SLICE/_08_",
       "pin": false,
       "reference": "G_SLICE_2__U_SLICE__08_"
     },
     {
-      "layout": "G_SLICE[3].U_SLICE/FF_Q",
+      "heuristic": false,
+      "layout": "G_SLICE[3]_U_SLICE/FF_Q",
       "pin": false,
       "reference": "G_SLICE_3__U_SLICE_FF_Q"
     },
     {
-      "layout": "G_SLICE[3].U_SLICE/_00_",
+      "heuristic": false,
+      "layout": "G_SLICE[3]_U_SLICE/_00_",
       "pin": false,
       "reference": "G_SLICE_3__U_SLICE__00_"
     },
     {
-      "layout": "G_SLICE[3].U_SLICE/_01_",
+      "heuristic": false,
+      "layout": "G_SLICE[3]_U_SLICE/_01_",
       "pin": false,
       "reference": "G_SLICE_3__U_SLICE__01_"
     },
     {
-      "layout": "G_SLICE[3].U_SLICE/_02_",
+      "heuristic": false,
+      "layout": "G_SLICE[3]_U_SLICE/_02_",
       "pin": false,
       "reference": "G_SLICE_3__U_SLICE__02_"
     },
     {
-      "layout": "G_SLICE[3].U_SLICE/_03_",
+      "heuristic": false,
+      "layout": "G_SLICE[3]_U_SLICE/_03_",
       "pin": false,
       "reference": "G_SLICE_3__U_SLICE__03_"
     },
     {
-      "layout": "G_SLICE[3].U_SLICE/_04_",
+      "heuristic": false,
+      "layout": "G_SLICE[3]_U_SLICE/_04_",
       "pin": false,
       "reference": "G_SLICE_3__U_SLICE__04_"
     },
     {
-      "layout": "G_SLICE[3].U_SLICE/_05_",
+      "heuristic": false,
+      "layout": "G_SLICE[3]_U_SLICE/_05_",
       "pin": false,
       "reference": "G_SLICE_3__U_SLICE__05_"
     },
     {
-      "layout": "G_SLICE[3].U_SLICE/_06_",
+      "heuristic": false,
+      "layout": "G_SLICE[3]_U_SLICE/_06_",
       "pin": false,
       "reference": "G_SLICE_3__U_SLICE__06_"
     },
     {
-      "layout": "G_SLICE[3].U_SLICE/_07_",
+      "heuristic": false,
+      "layout": "G_SLICE[3]_U_SLICE/_07_",
       "pin": false,
       "reference": "G_SLICE_3__U_SLICE__07_"
     },
     {
-      "layout": "G_SLICE[3].U_SLICE/_08_",
+      "heuristic": false,
+      "layout": "G_SLICE[3]_U_SLICE/_08_",
       "pin": false,
       "reference": "G_SLICE_3__U_SLICE__08_"
     },
     {
+      "heuristic": false,
       "layout": "IN[0]",
       "pin": true,
       "reference": "IN[0]"
     },
     {
+      "heuristic": false,
       "layout": "IN[10]",
       "pin": true,
       "reference": "IN[10]"
     },
     {
+      "heuristic": false,
       "layout": "IN[11]",
       "pin": true,
       "reference": "IN[11]"
     },
     {
+      "heuristic": false,
       "layout": "IN[12]",
       "pin": true,
       "reference": "IN[12]"
     },
     {
+      "heuristic": false,
       "layout": "IN[13]",
       "pin": true,
       "reference": "IN[13]"
     },
     {
+      "heuristic": false,
       "layout": "IN[14]",
       "pin": true,
       "reference": "IN[14]"
     },
     {
+      "heuristic": false,
       "layout": "IN[15]",
       "pin": true,
       "reference": "IN[15]"
     },
     {
+      "heuristic": false,
       "layout": "IN[1]",
       "pin": true,
       "reference": "IN[1]"
     },
     {
+      "heuristic": false,
       "layout": "IN[2]",
       "pin": true,
       "reference": "IN[2]"
     },
     {
+      "heuristic": false,
       "layout": "IN[3]",
       "pin": true,
       "reference": "IN[3]"
     },
     {
+      "heuristic": false,
       "layout": "IN[4]",
       "pin": true,
       "reference": "IN[4]"
     },
     {
+      "heuristic": false,
       "layout": "IN[5]",
       "pin": true,
       "reference": "IN[5]"
     },
     {
+      "heuristic": false,
       "layout": "IN[6]",
       "pin": true,
       "reference": "IN[6]"
     },
     {
+      "heuristic": false,
       "layout": "IN[7]",
       "pin": true,
       "reference": "IN[7]"
     },
     {
+      "heuristic": false,
       "layout": "IN[8]",
       "pin": true,
       "reference": "IN[8]"
     },
     {
+      "heuristic": false,
       "layout": "IN[9]",
       "pin": true,
       "reference": "IN[9]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[0]",
       "pin": true,
       "reference": "LUT_INIT[0]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[10]",
       "pin": true,
       "reference": "LUT_INIT[10]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[11]",
       "pin": true,
       "reference": "LUT_INIT[11]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[12]",
       "pin": true,
       "reference": "LUT_INIT[12]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[13]",
       "pin": true,
       "reference": "LUT_INIT[13]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[14]",
       "pin": true,
       "reference": "LUT_INIT[14]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[15]",
       "pin": true,
       "reference": "LUT_INIT[15]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[16]",
       "pin": true,
       "reference": "LUT_INIT[16]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[17]",
       "pin": true,
       "reference": "LUT_INIT[17]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[18]",
       "pin": true,
       "reference": "LUT_INIT[18]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[19]",
       "pin": true,
       "reference": "LUT_INIT[19]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[1]",
       "pin": true,
       "reference": "LUT_INIT[1]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[20]",
       "pin": true,
       "reference": "LUT_INIT[20]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[21]",
       "pin": true,
       "reference": "LUT_INIT[21]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[22]",
       "pin": true,
       "reference": "LUT_INIT[22]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[23]",
       "pin": true,
       "reference": "LUT_INIT[23]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[24]",
       "pin": true,
       "reference": "LUT_INIT[24]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[25]",
       "pin": true,
       "reference": "LUT_INIT[25]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[26]",
       "pin": true,
       "reference": "LUT_INIT[26]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[27]",
       "pin": true,
       "reference": "LUT_INIT[27]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[28]",
       "pin": true,
       "reference": "LUT_INIT[28]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[29]",
       "pin": true,
       "reference": "LUT_INIT[29]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[2]",
       "pin": true,
       "reference": "LUT_INIT[2]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[30]",
       "pin": true,
       "reference": "LUT_INIT[30]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[31]",
       "pin": true,
       "reference": "LUT_INIT[31]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[32]",
       "pin": true,
       "reference": "LUT_INIT[32]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[33]",
       "pin": true,
       "reference": "LUT_INIT[33]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[34]",
       "pin": true,
       "reference": "LUT_INIT[34]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[35]",
       "pin": true,
       "reference": "LUT_INIT[35]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[36]",
       "pin": true,
       "reference": "LUT_INIT[36]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[37]",
       "pin": true,
       "reference": "LUT_INIT[37]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[38]",
       "pin": true,
       "reference": "LUT_INIT[38]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[39]",
       "pin": true,
       "reference": "LUT_INIT[39]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[3]",
       "pin": true,
       "reference": "LUT_INIT[3]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[40]",
       "pin": true,
       "reference": "LUT_INIT[40]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[41]",
       "pin": true,
       "reference": "LUT_INIT[41]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[42]",
       "pin": true,
       "reference": "LUT_INIT[42]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[43]",
       "pin": true,
       "reference": "LUT_INIT[43]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[44]",
       "pin": true,
       "reference": "LUT_INIT[44]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[45]",
       "pin": true,
       "reference": "LUT_INIT[45]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[46]",
       "pin": true,
       "reference": "LUT_INIT[46]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[47]",
       "pin": true,
       "reference": "LUT_INIT[47]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[48]",
       "pin": true,
       "reference": "LUT_INIT[48]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[49]",
       "pin": true,
       "reference": "LUT_INIT[49]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[4]",
       "pin": true,
       "reference": "LUT_INIT[4]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[50]",
       "pin": true,
       "reference": "LUT_INIT[50]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[51]",
       "pin": true,
       "reference": "LUT_INIT[51]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[52]",
       "pin": true,
       "reference": "LUT_INIT[52]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[53]",
       "pin": true,
       "reference": "LUT_INIT[53]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[54]",
       "pin": true,
       "reference": "LUT_INIT[54]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[55]",
       "pin": true,
       "reference": "LUT_INIT[55]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[56]",
       "pin": true,
       "reference": "LUT_INIT[56]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[57]",
       "pin": true,
       "reference": "LUT_INIT[57]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[58]",
       "pin": true,
       "reference": "LUT_INIT[58]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[59]",
       "pin": true,
       "reference": "LUT_INIT[59]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[5]",
       "pin": true,
       "reference": "LUT_INIT[5]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[60]",
       "pin": true,
       "reference": "LUT_INIT[60]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[61]",
       "pin": true,
       "reference": "LUT_INIT[61]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[62]",
       "pin": true,
       "reference": "LUT_INIT[62]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[63]",
       "pin": true,
       "reference": "LUT_INIT[63]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[6]",
       "pin": true,
       "reference": "LUT_INIT[6]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[7]",
       "pin": true,
       "reference": "LUT_INIT[7]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[8]",
       "pin": true,
       "reference": "LUT_INIT[8]"
     },
     {
+      "heuristic": false,
       "layout": "LUT_INIT[9]",
       "pin": true,
       "reference": "LUT_INIT[9]"
     },
     {
+      "heuristic": false,
       "layout": "OUT[0]",
       "pin": true,
       "reference": "OUT[0]"
     },
     {
+      "heuristic": false,
       "layout": "OUT[1]",
       "pin": true,
       "reference": "OUT[1]"
     },
     {
+      "heuristic": false,
       "layout": "OUT[2]",
       "pin": true,
       "reference": "OUT[2]"
     },
     {
+      "heuristic": false,
       "layout": "OUT[3]",
       "pin": true,
       "reference": "OUT[3]"
     },
     {
+      "heuristic": false,
       "layout": "Q",
       "pin": true,
       "reference": "Q"
     },
     {
+      "heuristic": false,
       "layout": "REG_SEL[0]",
       "pin": true,
       "reference": "REG_SEL[0]"
     },
     {
+      "heuristic": false,
       "layout": "REG_SEL[1]",
       "pin": true,
       "reference": "REG_SEL[1]"
     },
     {
+      "heuristic": false,
       "layout": "REG_SEL[2]",
       "pin": true,
       "reference": "REG_SEL[2]"
     },
     {
+      "heuristic": false,
       "layout": "REG_SEL[3]",
       "pin": true,
       "reference": "REG_SEL[3]"
     },
     {
+      "heuristic": false,
       "layout": "RST",
       "pin": true,
       "reference": "RST"
     },
     {
+      "heuristic": false,
       "layout": "S",
       "pin": true,
       "reference": "S"
     },
     {
+      "heuristic": false,
       "layout": "S0",
       "pin": true,
       "reference": "S0"
     },
     {
+      "heuristic": false,
       "layout": "S1",
       "pin": true,
       "reference": "S1"
     },
     {
+      "heuristic": false,
       "layout": "X",
       "pin": true,
       "reference": "X"
     },
     {
+      "heuristic": false,
       "layout": "X",
       "pin": true,
       "reference": "X"
     },
     {
+      "heuristic": false,
       "layout": "X",
       "pin": true,
       "reference": "X"
     },
     {
+      "heuristic": false,
       "layout": "X",
       "pin": true,
       "reference": "X"
     },
     {
+      "heuristic": false,
       "layout": "Y",
       "pin": true,
       "reference": "Y"
     },
     {
+      "heuristic": false,
       "layout": "Y",
       "pin": true,
       "reference": "Y"
@@ -949,16 +1157,46 @@
   ],
   "options": {
     "combine_devices": false,
+    "combine_devices_per_circuit": null,
+    "compare_parameters": null,
     "flatten_layout": false,
     "flatten_reference": false,
     "netgen_setup": null,
-    "parameter_tolerance": null
+    "parameter_tolerance": null,
+    "power_connectivity": false,
+    "supply_nets": [
+      "GND",
+      "VCC",
+      "VDD",
+      "VGND",
+      "VPWR",
+      "VSS"
+    ]
   },
   "parameter_tolerance": null,
+  "power_connectivity": {
+    "expected_nets": null,
+    "finding_count": 0,
+    "findings": [],
+    "instance_count": 0,
+    "power_pins": [],
+    "power_pins_derivation": null,
+    "reason": "disabled by options.power_connectivity: false",
+    "status": "unchecked",
+    "unchecked_expected_pins": []
+  },
   "provenance": {
     "deck": null,
-    "input": null,
-    "pdk": null
+    "input": {
+      "content_hash": "sha256:1eff80b2834a6c1b84375036f41792afdd3020716c0b07fbaf9106f1038c5626",
+      "role": "netlist"
+    },
+    "klayout_version_mismatch": true,
+    "pdk": {
+      "name": "sky130A",
+      "source": "PDK_ROOT environment variable",
+      "version": "open_pdks c6d73a35f524070e85faff4a6a9eef49553ebc2b"
+    }
   },
   "reference_top": "LOGIC_TILE",
   "rtl_input_sha256": "sha256:b0e47ed307405b0a6ab5e6bac974bf2522a59e56837cccf9a5637bad92f94f75",

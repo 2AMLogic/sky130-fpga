@@ -41,6 +41,7 @@ Writes the `klt.place_and_route.request/1` JSON document to <output.json>.
 from __future__ import annotations
 
 import argparse
+import copy
 import json
 import sys
 
@@ -57,6 +58,43 @@ _FLOORPLAN = {
     "site": "unithd",
 }
 _IO = {"layer_h": "met3", "layer_v": "met2"}
+
+# The power delivery network (issue #41). Until this block existed, `klt
+# place-and-route` drew only its unconditional `met1 -followpins` row rail
+# over the standard-cell PG pins: 15 mutually isolated stripes, no straps,
+# no via stack and no tapcells, i.e. a layout that could not be powered as
+# drawn. `flow/lvs.sh`'s signal-connectivity-only compare cannot see that
+# (its `gate-level-verilog` reference carries no supply pins at all), which
+# is why the gap survived an LVS "match" -- `flow/erc.sh` is the check that
+# binds it now.
+#
+# This is precisely the shared field par_request.py's header anticipated:
+# it MUST be identical between flow/layout.sh and flow/sdf-resim.sh, since
+# a PDN in one and not the other changes the floorplan and breaks
+# sdf-resim's byte-identical-DEF premise (that is exactly the class of
+# foot-gun issue #44 filed this file to remove).
+#
+# Geometry follows the block already in production on this PDK in the
+# sibling `sky130-modexp` / `sky130-sar-adc` repos rather than being tuned
+# here -- met1 followpins on the 5.44um `unithd` row pitch, met4/met5
+# straps on a ~27um pitch offset to the die centre. Nothing in this repo
+# sizes it against a current budget; see layout/README.md's "Power delivery
+# network" section for what the resulting claim does and does not cover.
+_POWER = {
+    "power_net": "VPWR",
+    "ground_net": "VGND",
+    "straps": [
+        {
+            "layer": "met1",
+            "width_um": 0.48,
+            "pitch_um": 5.44,
+            "offset_um": 0.0,
+            "followpins": True,
+        },
+        {"layer": "met4", "width_um": 1.6, "pitch_um": 27.14, "offset_um": 13.57},
+        {"layer": "met5", "width_um": 1.6, "pitch_um": 27.2, "offset_um": 13.6},
+    ],
+}
 _SEED = 1
 _TARGET_STAGE = "route"
 
@@ -77,6 +115,7 @@ def build_request(
         "pdk": {"cell_library": _CELL_LIBRARY, "corner": _CORNER},
         "floorplan": dict(_FLOORPLAN),
         "io": dict(_IO),
+        "power": copy.deepcopy(_POWER),
         "constraints": {
             "clock_port": clock_port,
             "clock_period_ns": clock_period_ns,

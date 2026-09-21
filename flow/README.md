@@ -17,14 +17,16 @@ nor klayout-tools currently pins one.
 
 **Recorded toolchain** (produced the artifacts currently committed under
 `layout/` and `measurements/timing-characterization/`, per
-`layout/logic_tile.par.json`'s own provenance block and
-`measurements/timing-characterization/records/20260909-225431-86f71d2.md`):
+`layout/logic_tile.erc.json`'s own `provenance.klt_version` pin and the
+successor records
+`measurements/timing-characterization/records/20260921-062500-e8a37ad.md` /
+`20260921-062530-e8a37ad.md`):
 
 | Tool | Version |
 |------|---------|
-| `klt` (klayout-tools) | `0.3.0+gc6dbf66c53c6` |
+| `klt` (klayout-tools) | `0.5.0+g2b7caa9939af` |
 | OpenROAD | `26Q3-1278-g4421880472` |
-| KLayout (via `klt`) | `0.30.12` |
+| KLayout (via `klt`) | `0.30.12` (last recorded under the 0.3.0 pin; not re-pinnable from the current reports, which do not echo it) |
 
 `flow/layout.sh`, `flow/sta-sweep.sh` and `flow/sdf-resim.sh` all source
 `flow/tool_versions.sh` and print the installed `klt`/OpenROAD versions at
@@ -74,6 +76,32 @@ treating the failure as a design regression** — re-run against the recorded
 toolchain if available, or inspect whether the diff is confined to
 provenance/byte-format fields (as in the known case above) versus an actual
 numeric/status change.
+
+**2026-09-21 re-stamp and its verification (issue #41).** The post-PDN
+artifacts were produced under klt `0.5.0+g2b7caa9939af`; the check-mode
+diffs of `flow/layout.sh`, `flow/lvs.sh`, `flow/drc.sh` and `flow/erc.sh`
+were then re-verified byte-reproducible on the same tree under klt
+`0.5.0+g2b1e55e51bb8.dirty` — the GDS and DEF regenerate byte-identical,
+and every verdict field (DRC clean/0, LVS match/1-warning,
+ERC 0 findings/0 antenna violations, par slacks/wirelength/utilization)
+is unchanged. Two envelope-only differences of the newer klt were
+normalized rather than papered over: `flow/par_report_trim.py` now strips
+the per-run `engine_logs[]` bookkeeping (random invocation ids), and
+`flow/drc.sh` / `flow/lvs.sh` resolve the PDK themselves so the
+resolution-path `provenance.pdk.source` string the newer klt writes stays
+deterministic. One moving part is **outside** this repo's control and is
+currently blocking re-runs of the SPEF-annotated legs of
+`flow/sta-sweep.sh` and the SDF-update gate of `flow/sdf-resim.sh` on the
+verifying host: the operator-local `openroad` wrapper runs an unpinned
+`openroad/orfs:latest` image (now `26Q3-2276-g4a7cf9b22a`, recorded
+toolchain `26Q3-1278`), under whose OpenSTA build the SPEF annotation of
+this design's escaped-identifier nets regresses to incomplete
+(klayout-tools#1623/#1624 family — `partially_unannotated_driver_count:
+40`, `annotation_complete: false` at the first corner). Both harnesses
+correctly refuse to record on such a run; the committed per-corner
+reports and the committed SDF remain the recorded-toolchain evidence,
+and the successor records under
+`measurements/timing-characterization/records/` document that lineage.
 
 ## Current contents
 
@@ -353,39 +381,61 @@ scratch netlists `klt lvs`'s own `environment.*_sha256` hash) so freshness
 is verifiable later without re-running the flow.
 
 **Out of scope here**: the `netgen` LVS engine (not exercised — this uses
-`klt lvs`'s default `"klayout"` engine) and a power-connectivity check
-(this compare is signal-connectivity only, per `docs/cli/lvs.md` — not a
-gap here, since `layout/README.md`'s "No power delivery network" note
-means there is no power connectivity for this mode to miss).
+`klt lvs`'s default `"klayout"` engine) and a power-connectivity check.
+This compare is **signal-connectivity only**, per `docs/cli/lvs.md`: the
+`gate-level-verilog` reference is written without `-include_pwr_gnd`, so it
+carries no supply pins and the comparer *drops* the layout's `VPWR`/`VGND`/
+`VPB` nets rather than failing on them — 21 of the committed report's
+`net_correspondence` entries have `reference: null` for exactly that
+reason. This README previously called that "not a gap here, since there is
+no power connectivity for this mode to miss", which stopped being true the
+moment a PDN existed and was never a safe thing to assert anyway: a
+signal-only `match` reads identically whether the layout is fully strapped
+or has fifteen mutually isolated rails (issue #41). The power half of the
+claim is `flow/erc.sh`, below.
 
-### `flow/erc.sh` — ERC supply report (T1 item 11, issue #51)
+### `flow/erc.sh` — supply connectivity + antenna (T1 items 11 and the power half of 4)
 
-`flow/erc.sh` runs klayout-tools' `klt erc` against the committed
-`layout/logic_tile.gds` with the committed supply spec
-(`layout/erc-supply-spec.json`), and checks the result against the
-committed report at `layout/logic_tile.erc.json`. This is the T1 item 11
-("power delivery, structural") evidence artifact — item 11 was added to
-the checklist as
-[klayout-tools#2025](https://github.com/2AMLogic/klayout-tools/pull/2025)
-on 2026-09-17 and tracked here by issue #51 and the gap-to-T1 tracker.
-Unlike items 3-4's clean/match gates, this harness does **not** gate the
-run on a clean verdict: the committed report is *expected* to carry
-findings while the layout has no power delivery network — `VPWR`
-currently resolves to 7 electrical islands and `VGND` to 8 (the 15
-isolated met1 rails issue #41 names), so the finding set is the recorded
-evidence, and `--update` rewrites it whenever the geometry changes. Read
-`layout/README.md`'s "ERC scope, concretely" section for the full
-what-this-claim-covers contract (antenna verdicts unchecked by design,
-`erc.missing_tie` not computed — the spec declares no `ties[]`,
-klayout-tools#2169 — and the well-tie evidence that does stand in).
+`flow/erc.sh` runs `klt erc` over the committed `layout/logic_tile.gds`
+with `flow/erc_supply_spec.json` and commits the verdict as
+`layout/logic_tile.erc.json`. It rebuilds the layer-by-layer connectivity
+model from the GDS geometry alone — no reference netlist — so a supply net
+that is drawn but not joined surfaces as `erc.unconnected_net` and a well
+with no tap contact inside it surfaces as `erc.missing_tie`. This is the
+T1 checklist **item 11 (power delivery, structural)** evidence — approved
+as klt#2025 on 2026-09-17, tracked by issues #51 and #4, first committed
+honestly unmet in PR #54 and met here — and the **power-connectivity half
+of T1 item 4** (issue #41). Against the committed layout it reports **0
+findings** and 0 antenna `violate` verdicts across 232 gates; against the
+pre-PDN layout (GDS `sha256:a6dc076c…`) the same invocation reported **9
+findings** — 7 `erc.missing_tie` plus 2 `erc.unconnected_net` — and PR
+#54's tie-less spec measured that same layout at VPWR 7 / VGND 8 islands.
+That gap is the whole reason this script exists.
+
+Two things about the spec are load-bearing:
+
+- **It must cover li1 through met5.** A spec that stops at met3 reports
+  false islands on a correctly strapped layout, because the straps joining
+  the met1 followpin rails live on met4/met5.
+- **`VPB` is checked as a tie rule, not as a net.** The n-well body is not
+  a drawn conductor on any routing layer, so it is covered by the
+  `nwell_tap` entry (every `nwell` region must contain a `tap` contact
+  reaching `li1` on `VPWR`) rather than by island analysis. `klt#2169`
+  (well+tie collapse, filed from gf180-drone-fc F-034) prescribed
+  tie-less specs as the interim and was fixed and closed upstream on
+  2026-09-20; the committed report's gates stay intact (232/no false
+  short/honest `missing_tie: 0`) precisely because the producing klt
+  build carries that fix — the report pins the build in
+  `provenance.klt_version`.
 
 Running:
 
 ```
 ./flow/erc.sh            # rerun klt erc against the committed GDS +
-                          # supply spec, diff the (trimmed) report against
-                          # the committed copy under layout/, and verify
-                          # the report still content-hash-pins both inputs
+                          # supply spec, gate on a clean verdict, diff the
+                          # (trimmed) report against the committed copy
+                          # under layout/, and verify the report still
+                          # content-hash-pins both inputs
                           # (provenance.input ↔ GDS,
                           # provenance.spec ↔ supply spec).
 ./flow/erc.sh --update   # rerun and overwrite the committed report (run
@@ -393,17 +443,25 @@ Running:
                           # supply-spec edit).
 ```
 
-Requires only `klt` and `python3` on `$PATH` — **no PDK install, no
-`openroad`/`yosys`**: `klt erc` is a pure geometry connectivity pass over
-the committed GDS and spec JSON. (`klt erc`'s own `--pdk` switch selects
-klt's *built-in antenna-ratio table*, not a PDK install; it is
-deliberately not passed, per the issue-#51 note that the antenna verdict
-is not item 11's subject — klayout-tools#1994.)
+Requires only `klt`, `python3` and a resolvable sky130A PDK rev on `$PATH`
+(the `--pdk sky130` switch selects klt's *built-in antenna-ratio table*
+only — the connectivity model itself is a pure geometry pass over the
+committed GDS and spec JSON and opens no PDK install).
 
-**Out of scope here**: IR-drop/EM (`klt power`, deliberately outside item
-11), the PDN work itself (issue #41), the LVS `power_connectivity` verdict
-(needs the PDN-bearing layout, issue #50), and the `klt signoff --manifest`
-grading pass (issue #52).
+**Toolchain note**: `klt erc` postdates `RECORDED_KLT_VERSION`, so this
+report cannot have been produced by the same klt as the committed GDS. The
+script prints a klt-version banner and records the producing build in the
+report's own `provenance.klt_version` rather than leaving the discrepancy
+implicit. The verdict is a pure-geometry statement about the GDS whose hash
+the same block pins, so it stays checkable independently of that.
+
+**Out of scope here**: IR drop, electromigration and current density —
+nothing in this repo computes them. `klt erc` answers "is every supply
+shape actually joined, and is every well tapped", a topology question, not
+"is the grid wide enough"; the LVS `power_connectivity` verdict is issue
+#50's (and is blocked by the greybox abstraction rather than the PDN —
+see `flow/lvs.sh`'s request-options comment), and the `klt signoff
+--manifest` grading pass is issue #52's.
 
 ### `flow/sta-sweep.sh` — multi-corner timing characterization (G4)
 

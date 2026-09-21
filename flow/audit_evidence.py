@@ -22,13 +22,28 @@ no network):
    that version must equal the repo's single pinned source
    (`RECORDED_PDK_VERSION` in `flow/tool_versions.sh`, passed in via
    `--recorded-pdk`).
-2. **Every hash a record pins still describes the committed file.** Each
-   `provenance.inputs[]` entry's `content_hash` is recomputed. A mismatch is
-   a FAIL unless it is in `ALLOWED_INPUT_DRIFT` below -- an explicit,
-   commit-cited allowance for a change already reviewed as
-   method-neutral. An input whose `role` marks it as not committed
-   (regenerated scratch) is allowed to be absent, but is FAIL if it is
-   absent without saying so.
+2. **Every hash a *current* record pins still describes the committed
+   file.** Each `provenance.inputs[]` entry's `content_hash` is recomputed.
+   A mismatch is a FAIL unless either (a) the record has been **superseded**
+   -- some other record's `record-meta` names it in `supersedes` -- or (b)
+   it is in `ALLOWED_INPUT_DRIFT` below, an explicit, commit-cited allowance
+   for a change already reviewed as method-neutral. An input whose `role`
+   marks it as not committed (regenerated scratch) is allowed to be absent,
+   but is FAIL if it is absent without saying so.
+
+   The supersession carve-out is what makes the append-only rule usable.
+   Records are never edited, so when the tree's geometry legitimately
+   changes (issue #41 added a power delivery network, moving
+   `layout/logic_tile.def`'s and `logic_tile.gds`'s hashes), the record
+   written against the *old* geometry can only be answered by writing a
+   successor -- which is exactly what this script's own failure message
+   tells you to do. Without this carve-out that instruction was
+   unfollowable: the superseded record's pinned hashes kept FAILing
+   forever, and the only way to silence them was an `ALLOWED_INPUT_DRIFT`
+   entry claiming the change "cannot move this record's numbers" -- a claim
+   that is false precisely when a successor was needed. A superseded record
+   pins the tree *as it was*; its successor pins the tree as it is, and is
+   still checked in full.
 3. **Every committed evidence report pins the same PDK.** Any report JSON
    under `layout/` or `measurements/` carrying `provenance.pdk` must name
    exactly the pinned revision. A report whose `provenance.pdk` is `null`
@@ -85,16 +100,18 @@ PDK_NULL_UPSTREAM_GAP = {
         "flow/lvs.sh's banner instead."
     ),
     "layout/logic_tile.erc.json": (
-        "klt erc pins no PDK version because it reads no PDK install at "
-        "all -- it is a pure geometry connectivity pass over the committed "
-        "GDS plus this repo's own spec JSON (its --pdk switch only selects "
-        "klt's built-in antenna-ratio table, which flow/erc.sh deliberately "
-        "does not pass). The report instead content-hash-pins both of its "
-        "actual inputs -- provenance.input.content_hash (the committed "
-        "layout/logic_tile.gds, whose PDK pin claim #4 carries in "
-        "provenance.pdk) and provenance.spec.content_hash -- and "
-        "flow/erc.sh re-verifies both hashes against the committed files "
-        "on every run."
+        "klt erc writes no provenance block at all (klayout-tools#2036) "
+        "and reads no PDK install -- it is a pure geometry connectivity "
+        "pass over the committed GDS plus this repo's own supply spec "
+        "JSON (flow/erc.sh passes --pdk sky130 solely to select klt's "
+        "built-in antenna-ratio table; the connectivity model opens no "
+        "PDK file). flow/erc_report_trim.py therefore synthesizes the "
+        "drc-shaped provenance block this report carries, content-hash-"
+        "pinning both of its actual inputs -- provenance.input."
+        "content_hash (the committed layout/logic_tile.gds, whose own "
+        "PDK pin claim #4 carries) and provenance.spec.content_hash -- "
+        "plus the producing klt_version, and flow/erc.sh re-verifies both "
+        "hashes against the committed files on every run."
     ),
 }
 
@@ -106,6 +123,8 @@ class Audit:
         self.root = root
         self.recorded_pdk = recorded_pdk
         self.failures = []
+        # record_id -> record_id of the successor that declared it superseded.
+        self.superseded_by: dict = {}
 
     def ok(self, msg: str) -> None:
         print(f"  ok    {msg}")
@@ -125,8 +144,29 @@ class Audit:
         if not records:
             self.fail("no characterization records found at all")
             return
+        # Pass 1: build the supersession map, so a record's disposition does
+        # not depend on whether its successor sorts before or after it.
+        for record in records:
+            meta = self._read_meta(record)
+            if not meta:
+                continue
+            successor = meta.get("record_id")
+            supersedes = meta.get("supersedes")
+            for old in [supersedes] if isinstance(supersedes, str) else (supersedes or []):
+                if old:
+                    self.superseded_by[old] = successor
+        # Pass 2: audit.
         for record in records:
             self._audit_record(record)
+
+    def _read_meta(self, record: Path):
+        match = _RECORD_META_RE.search(record.read_text())
+        if not match:
+            return None
+        try:
+            return json.loads(match.group(1))
+        except json.JSONDecodeError:
+            return None
 
     def _audit_record(self, record: Path) -> None:
         rel = record.relative_to(self.root).as_posix()
@@ -141,7 +181,8 @@ class Audit:
             return
 
         record_id = meta.get("record_id", rel)
-        print(f"--- {rel}")
+        successor = self.superseded_by.get(record_id)
+        print(f"--- {rel}{f'  [superseded by {successor}]' if successor else ''}")
 
         harness = meta.get("harness")
         if not harness:
@@ -184,8 +225,16 @@ class Audit:
             self.ok(f"{record_id}: {path} matches its pinned hash")
             return
 
+        successor = self.superseded_by.get(record_id)
         allowance = ALLOWED_INPUT_DRIFT.get((record_id, path))
-        if allowance:
+        if successor:
+            self.note(
+                f"{record_id}: {path} drifted from its pinned hash "
+                f"({expected} -> {actual}) -- expected: this record is superseded by "
+                f"{successor}, which pins the current tree. A superseded record pins "
+                f"the tree as it was."
+            )
+        elif allowance:
             self.note(f"{record_id}: {path} drifted from its pinned hash -- allowed: {allowance}")
         else:
             self.fail(

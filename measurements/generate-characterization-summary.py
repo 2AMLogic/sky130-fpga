@@ -15,14 +15,17 @@ Sources aggregated (see each `assert` below for exactly what is
 cross-checked against each one):
 
 - layout/logic_tile.drc.json           (DRC)
-- layout/logic_tile.lvs.json           (LVS)
+- layout/logic_tile.lvs.json           (LVS -- signal connectivity only)
+- layout/logic_tile.erc.json           (ERC -- supply connectivity + antenna,
+  the power half the LVS compare structurally cannot supply; see issue #41)
 - measurements/timing-characterization/records/20260909-225431-86f71d2.md
   and the per-corner corners/<corner>/{lef-only,spef}.sta.json machine
   reports it is derived from (18-corner STA sweep)
 - spec/tile-spec.md and
   spec/decisions/0002-tile-timing-spec-ratification.md (ratified spec row)
-- measurements/timing-characterization/records/20260915-133517-234b13b.md
-  (SDF generation + gate-level re-simulation)
+- measurements/timing-characterization/records/20260921-062530-e8a37ad.md
+  (SDF generation + gate-level re-simulation, post-PDN successor of the
+  20260915-133517-234b13b record)
 
 Usage:
     python3 measurements/generate-characterization-summary.py [--check]
@@ -40,14 +43,16 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_PATH = REPO_ROOT / "measurements" / "characterization-summary.md"
 
-STA_RECORD_ID = "20260909-225431-86f71d2"
-SDF_RECORD_ID = "20260915-133517-234b13b"
-STA_RECORD_PATH = (
-    REPO_ROOT / "measurements/timing-characterization/records" / f"{STA_RECORD_ID}.md"
-)
-SDF_RECORD_PATH = (
-    REPO_ROOT / "measurements/timing-characterization/records" / f"{SDF_RECORD_ID}.md"
-)
+STA_RECORD_ID = "20260921-062500-e8a37ad"
+SDF_RECORD_ID = "20260921-062530-e8a37ad"
+# The record id ADR-0002 cites as its evidentiary source. A ratified
+# decision record is never edited, so this historical id stays fixed even
+# while a successor sweep record (see its meta's `supersedes`) becomes the
+# current STA_RECORD_ID; collect_ratified_spec_row walks the chain.
+RATIFIED_STA_RECORD_ID = "20260909-225431-86f71d2"
+RECORDS_DIR = REPO_ROOT / "measurements/timing-characterization/records"
+STA_RECORD_PATH = RECORDS_DIR / f"{STA_RECORD_ID}.md"
+SDF_RECORD_PATH = RECORDS_DIR / f"{SDF_RECORD_ID}.md"
 CORNERS_DIR = REPO_ROOT / "measurements/timing-characterization/corners"
 
 
@@ -101,18 +106,73 @@ def collect_drc():
     }
 
 
+def collect_erc():
+    """The power-connectivity + antenna half of the layout claim (issue #41).
+
+    Exists because `collect_lvs` structurally cannot supply it: that compare
+    reads a `gate-level-verilog` reference carrying no supply pins, so it
+    drops the layout's VPWR/VGND/VPB nets rather than checking them. `klt
+    erc` works from the GDS geometry alone and needs no reference netlist,
+    so a supply net that is drawn but not joined shows up as an island and
+    an untapped well shows up as `erc.missing_tie`.
+    """
+    path = REPO_ROOT / "layout/logic_tile.erc.json"
+    data = load_json(path)
+    require(data["erc_finding_count"] == 0, "ERC erc_finding_count is not 0")
+    require(data["erc_findings"] == [], "ERC erc_findings[] is not empty")
+    gate_counts = data["antenna_gate_verdict_counts"]
+    require(gate_counts["violate"] == 0, "ERC reports antenna 'violate' gates")
+    require(
+        data["antenna_verdict_counts"]["violate"] == 0,
+        "ERC reports antenna 'violate' levels",
+    )
+    return {
+        "path": path,
+        "finding_count": data["erc_finding_count"],
+        "gate_count": data["gate_count"],
+        "gate_verdicts": gate_counts,
+        "layout_gds_sha256": data["provenance"]["input"]["content_hash"],
+        "klt_version": data["provenance"]["klt_version"],
+        "commit": git_last_commit("layout/logic_tile.erc.json"),
+    }
+
+
 def collect_lvs():
     path = REPO_ROOT / "layout/logic_tile.lvs.json"
     data = load_json(path)
     require(data["status"] == "match", "LVS status is not 'match'")
-    require(data["mismatch_count"] == 0, "LVS mismatch_count is not 0")
     require(data["error_count"] == 0, "LVS error_count is not 0")
-    require(data["mismatches"] == [], "LVS mismatches[] is not empty")
+
+    # `mismatches[]` must carry no *error*-severity entry; `warning`-severity
+    # entries are allowed and are surfaced by name below rather than
+    # asserted away (issue #41). This used to be a flat
+    # `mismatch_count == 0` / `mismatches == []` pair, which was correct
+    # only while the layout had no PDN: adding one makes `klt lvs` emit a
+    # standing `severity: "warning"` entry, `topology.power_only_pruned`,
+    # recording that it dropped `SKY130_FD_SC_HD__TAPVPWRVGND_1` and its
+    # instances before comparing (every pin that cell declares is a
+    # power/ground pin the gate-level-Verilog reference never carries).
+    # That prune is what keeps `status: "match"` honest -- without it the
+    # compare would report the tapcells as spurious extra instances -- so
+    # the summary must be able to represent "matched, with a disclosed
+    # warning" instead of failing shut on a warning it expects. Blocking on
+    # *error* severity is unchanged.
+    errors = [m for m in data["mismatches"] if m.get("severity") == "error"]
+    require(errors == [], f"LVS mismatches[] carries {len(errors)} error-severity entrie(s)")
+    warnings = [m for m in data["mismatches"] if m.get("severity") == "warning"]
+    require(
+        len(warnings) == data["mismatch_count"],
+        "LVS mismatches[] carries entries that are neither error- nor warning-severity",
+    )
+
     return {
         "path": path,
         "status": data["status"],
         "engine": data["engine"],
         "mismatch_count": data["mismatch_count"],
+        "warning_categories": sorted(
+            {m.get("category") for m in warnings if m.get("category")}
+        ),
         "layout_gds_sha256": data["layout_gds_sha256"],
         "top": data["top"],
         "commit": git_last_commit("layout/logic_tile.lvs.json"),
@@ -206,10 +266,36 @@ def collect_ratified_spec_row():
         "ratified upon this PR merging" in adr_text,
         "ADR-0002 status line no longer matches expected ratification-via-PR language",
     )
+    # ADR-0002 is a ratified decision record and is never edited, so the
+    # record id it cites is a fixed historical one; the *current* sweep may
+    # be a successor record (records are append-only). The ratification's
+    # evidence stays traceable while the current record's `supersedes`
+    # chain still reaches the cited original, which is what this walks.
     require(
-        STA_RECORD_ID in adr_text,
+        RATIFIED_STA_RECORD_ID in adr_text,
         "ADR-0002 no longer cites the STA sweep record it ratifies from",
     )
+    cited_path = (
+        RECORDS_DIR / f"{RATIFIED_STA_RECORD_ID}.md"
+    )
+    require(cited_path.exists(), "the ADR-cited STA record file no longer exists")
+    lineage_id, seen = STA_RECORD_ID, set()
+    while lineage_id != RATIFIED_STA_RECORD_ID:
+        require(
+            lineage_id not in seen,
+            "cycle in the STA record supersedes chain",
+        )
+        seen.add(lineage_id)
+        lineage_path = RECORDS_DIR / f"{lineage_id}.md"
+        require(lineage_path.exists(), f"supersedes-chain record {lineage_id} is missing")
+        lineage_meta = parse_record_meta(lineage_path)
+        supersedes = lineage_meta.get("supersedes")
+        require(
+            bool(supersedes) and isinstance(supersedes, str),
+            f"record {lineage_id} supersedes nothing -- the ADR-cited "
+            f"{RATIFIED_STA_RECORD_ID} is unreachable from the current record",
+        )
+        lineage_id = supersedes
 
     return {
         "tile_spec_path": tile_spec_path,
@@ -259,7 +345,7 @@ def rel(path: Path) -> str:
     return str(path.relative_to(REPO_ROOT))
 
 
-def render(drc, lvs, sta, spec_row, sdf) -> str:
+def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
     lines = []
     lines.append("<!-- GENERATED FILE -- do not hand-edit.")
     lines.append(
@@ -297,6 +383,11 @@ def render(drc, lvs, sta, spec_row, sdf) -> str:
         f"| LVS | **{lvs['status']}** ({lvs['mismatch_count']} mismatches, "
         f"engine `{lvs['engine']}`) "
         f"| [`{rel(lvs['path'])}`]({rel(lvs['path'])}) | commit `{lvs['commit']}` |"
+    )
+    lines.append(
+        f"| ERC (supply connectivity + antenna) | **{erc['finding_count']} findings**, "
+        f"0 antenna `violate` across {erc['gate_count']} gates "
+        f"| [`{rel(erc['path'])}`]({rel(erc['path'])}) | commit `{erc['commit']}` |"
     )
     lines.append(
         f"| 18-corner STA sweep | **setup/hold-clean at all "
@@ -343,7 +434,50 @@ def render(drc, lvs, sta, spec_row, sdf) -> str:
         f"- **Source**: [`{rel(lvs['path'])}`]({rel(lvs['path'])}) "
         f"(layout GDS hash `{lvs['layout_gds_sha256']}`)"
     )
+    if lvs["warning_categories"]:
+        lines.append(
+            "- **Warning-severity entries** (0 error-severity): "
+            + ", ".join(f"`{c}`" for c in lvs["warning_categories"])
+        )
+    lines.append(
+        "- **Scope**: signal-connectivity only -- this compare comes from a "
+        "`gate-level-verilog` reference carrying no supply pins, so it says "
+        "nothing about power/ground. The power half of the claim is ERC, "
+        "below. See `layout/README.md`'s \"LVS scope, concretely\"."
+    )
     lines.append(f"- **Committed at**: `{lvs['commit']}`")
+    lines.append("")
+
+    lines.append("## ERC (supply connectivity + antenna)")
+    lines.append("")
+    lines.append(
+        f"- **Findings**: {erc['finding_count']} "
+        f"(no floating supply island, no `erc.missing_tie`)"
+    )
+    lines.append(
+        "- **Antenna**: 0 `violate` across "
+        f"{erc['gate_count']} gates "
+        f"({erc['gate_verdicts']['pass_partial']} `pass_partial`, "
+        f"{erc['gate_verdicts']['pass']} `pass`, "
+        f"{erc['gate_verdicts']['unchecked']} `unchecked`). "
+        "`pass_partial` is the expected sky130 verdict, not a violation: "
+        "that PDK's antenna-limit table has no met3-met5 entries, so some "
+        "graded level of every gate is necessarily `unchecked`."
+    )
+    lines.append(
+        f"- **Source**: [`{rel(erc['path'])}`]({rel(erc['path'])}) "
+        f"(layout GDS hash `{erc['layout_gds_sha256']}`, "
+        f"produced by klt `{erc['klt_version']}`)"
+    )
+    lines.append(
+        "- **Why this is separate from LVS**: the LVS compare above is "
+        "signal-connectivity only and drops the layout's supply nets. This "
+        "is the check that actually binds the power half of the claim -- "
+        "against the pre-PDN layout the same invocation reported 9 findings "
+        "(7 `erc.missing_tie`, 2 `erc.unconnected_net`). See "
+        "`layout/README.md`'s \"Power delivery network\"."
+    )
+    lines.append(f"- **Committed at**: `{erc['commit']}`")
     lines.append("")
 
     lines.append("## 18-corner STA sweep")
@@ -453,11 +587,12 @@ def main() -> int:
 
     drc = collect_drc()
     lvs = collect_lvs()
+    erc = collect_erc()
     sta = collect_sta_sweep()
     spec_row = collect_ratified_spec_row()
     sdf = collect_sdf_resim()
 
-    rendered = render(drc, lvs, sta, spec_row, sdf)
+    rendered = render(drc, lvs, erc, sta, spec_row, sdf)
 
     if check_only:
         current = OUTPUT_PATH.read_text() if OUTPUT_PATH.exists() else ""
