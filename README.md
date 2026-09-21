@@ -110,6 +110,8 @@ sim/           verification evidence — bitstream-level testbenches + results
 layout/        tile physical design — GDS + routed DEF + DRC/LVS reports (klayout-tools driven)
 measurements/  characterization evidence — multi-corner extracted-parasitics timing
                (pre-silicon); silicon characterization empty until tape-out
+signoff/       klt signoff block manifest + graded T1 tier report — the block's
+               machine-graded gap-to-T1 state (see signoff/README.md)
 ```
 
 ## License

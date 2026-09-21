@@ -1,0 +1,32 @@
+{
+  "block": "sky130-fpga",
+  "kind": "digital",
+  "evidence": {
+    "3": {
+      "file": "layout/logic_tile.drc.json",
+      "content_hash": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f"
+    },
+    "4": {
+      "file": "layout/logic_tile.lvs.json",
+      "content_hash": "sha256:1eff80b2834a6c1b84375036f41792afdd3020716c0b07fbaf9106f1038c5626"
+    },
+    "8": {
+      "file": "signoff/characterization-evidence.json",
+      "content_hash": "sha256:f9780703108af7bad58a53cfefda3533720a46915c4650b27943b36cb5910e53"
+    },
+    "11": [
+      {
+        "file": "layout/logic_tile.erc.json",
+        "content_hash": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f"
+      },
+      {
+        "file": "layout/logic_tile.lvs.json",
+        "content_hash": "sha256:1eff80b2834a6c1b84375036f41792afdd3020716c0b07fbaf9106f1038c5626"
+      },
+      {
+        "file": "layout/logic_tile.par.json",
+        "content_hash": "sha256:220840d26409c3572a50156fb29b2f3e2ee8c9e8b26d94550546f397e667dbb9"
+      }
+    ]
+  }
+}

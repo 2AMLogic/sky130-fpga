@@ -1,0 +1,93 @@
+# .github/workflows/signoff.yml
+#
+# Re-grade this block's gap-to-T1 state from the committed signoff manifest
+# (issue #52) -- the "CI re-runs it" leg of the manifest's rot protection.
+#
+# Two gates, catching the two ways the record can go stale:
+#
+#   1. verify-pins.sh -- every content_hash the manifest pins is re-checked
+#      against the LIVE bytes of the artifact it pins, so a layout or supply-
+#      spec change that lands without re-running the corresponding flow
+#      script fails here even though the committed envelope still agrees
+#      with the stale hash it carries.
+#   2. klt signoff --manifest is re-run and its output byte-diffed against
+#      the committed evidence record (signoff/tier-report.json), so a
+#      regenerated/edited envelope, a manifest edit, or a grading-relevant
+#      klt change that is not accompanied by a fresh record fails the build
+#      instead of quietly diverging from what the repo claims.
+#
+# `klt signoff --manifest` exits 3 when the block is not yet T1 (some item is
+# unmet) -- that is a successful, expected run today, not a CI failure. The
+# gate is the diff, not the exit code; exit 0 (T1 reached) and 3 (not yet)
+# both pass, everything else fails.
+#
+# klt is pinned to the exact upstream commit the committed tier report was
+# graded with (its bundled copy of docs/design-evidence-tiers.md fixes the
+# item skeleton and its text, so a floating install would churn the record):
+# 2b1e55e51bb803c082e8857da44687f3e37ebfc0, "feat(signoff): pin the tier
+# report's governing checklist by content hash" (#2191). This pin is
+# independent of flow/tool_versions.sh's RECORDED_KLT_VERSION, which governs
+# the design-flow evidence (see layout/README.md's "ERC scope, concretely"
+# for the same split); bump it deliberately, together with a regenerated
+# signoff/tier-report.json, when a new klt must re-grade the manifest.
+
+name: signoff
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Install the pinned klt (klayout-tools)
+        run: |
+          uv tool install "klayout-tools @ git+https://github.com/2AMLogic/klayout-tools@2b1e55e51bb803c082e8857da44687f3e37ebfc0"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Verify every manifest pin against the live artifacts
+        run: ./signoff/verify-pins.sh
+
+      - name: Re-run klt signoff and diff against the committed tier report
+        run: |
+          set +e
+          klt signoff --manifest signoff/block-manifest.json --format json > /tmp/tier-report-fresh.json
+          rc=$?
+          set -e
+          if [ "$rc" -ne 0 ] && [ "$rc" -ne 3 ]; then
+            echo "klt signoff failed (exit $rc):"
+            cat /tmp/tier-report-fresh.json
+            exit 1
+          fi
+          if [ "$rc" -eq 3 ]; then
+            echo "note: block is not yet T1 (klt signoff exit 3) -- expected until every item is met"
+          fi
+          if ! diff -u \
+              <(python3 -m json.tool signoff/tier-report.json) \
+              <(python3 -m json.tool /tmp/tier-report-fresh.json); then
+            echo "::error::fresh klt signoff grade differs from the committed record signoff/tier-report.json"
+            echo "Regenerate the record against the changed evidence:"
+            echo "  klt signoff --manifest signoff/block-manifest.json --format json > signoff/tier-report.json"
+            echo "and update the manifest's content_hash pins if a cited artifact was regenerated."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json
+          r = json.load(open("/tmp/tier-report-fresh.json"))
+          met = [i for i in r["items"] if i["tier"] == "T1" and i["status"] == "met"]
+          print(f'signoff record reproduced: tier={r["tier"]} '
+                f'{r["t1_met_count"]}/{r["t1_item_count"]} T1 items met')
+          for i in sorted(met, key=lambda x: x["id"] or 0):
+              print(f'  met   item {i["id"]}: {i["title"]}')
+          PY

@@ -323,7 +323,11 @@ table has no met3/met4/met5 entries, so some graded level of every gate is
 necessarily `unchecked` (klayout-tools#1997). `flow/erc_report_trim.py`
 summarizes the ~600 KB per-gate array into the two histograms the report
 commits, and spills any `violate` or `unchecked` gate in full, so the
-summary cannot hide a violation.
+summary cannot hide a violation. (Since issue #52 the trimmed report also
+retains a `gates` key — the empty-on-clean spill list, never the full
+per-gate array — because `klt signoff`'s `erc` envelope contract requires
+it for the T1 item-11 citation in `signoff/block-manifest.json`; the
+per-gate picture lives in the histograms and `gate_count`, as before.)
 
 **The supply spec must reach met5.** A spec that stops at met3 reports
 false islands on a correctly strapped layout: the straps that join the met1

@@ -4685,6 +4685,7 @@
   "file": "layout/logic_tile.gds",
   "gate_count": 232,
   "gate_role": "poly",
+  "gates": [],
   "pdk": "sky130",
   "provenance": {
     "input": {

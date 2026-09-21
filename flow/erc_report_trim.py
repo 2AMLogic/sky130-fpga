@@ -12,7 +12,11 @@ Two things happen here.
 per-stackup-level antenna accumulation -- 232 gates x 7 levels, ~600 KB of
 JSON for this tile. That is a derived, fully-regenerable intermediate, and
 committing 600 KB of it on every layout change would swamp the diff of the
-verdict it exists to support. It is replaced by two histograms --
+verdict it exists to support. **A trimmed `gates` key is still present**
+(carrying only the offending-gate spill, empty on a clean run) because
+`klt signoff`'s `erc` envelope contract requires it -- but the per-gate
+detail lives in the histograms below, never in that key. It is replaced by
+two histograms --
 `antenna_verdict_counts` (every *level*'s verdict across every gate) and
 `antenna_gate_verdict_counts` (each *gate*'s rolled-up `antenna_verdict`,
 so `layout/README.md`'s "0 `violate` across N gates" claim is checkable
@@ -114,6 +118,17 @@ def trim(
     trimmed["antenna_gate_verdict_counts"] = gate_counts
     if not_passing:
         trimmed["antenna_gates_not_passing"] = not_passing
+    # `gates` is re-inserted as exactly the offending-gate spill -- empty on
+    # a clean run, the same list `antenna_gates_not_passing` names on a
+    # dirty one -- never the full per-gate array. `klt signoff`'s `erc`
+    # envelope contract requires the key to be present (docs/cli/signoff.md,
+    # "Envelope validation": status/gates/gate_role), so dropping it wholesale
+    # left the committed report ungradeable as a T1 item-11 citation
+    # (signoff/block-manifest.json); with the spill in place the summary
+    # cannot hide a violation -- a clean run commits `gates: []`, and that
+    # emptiness is itself the all-gates-passed statement the two histograms
+    # and `gate_count` above summarize.
+    trimmed["gates"] = not_passing
     trimmed["provenance"] = {
         "pdk": None,
         "klt_version": klt_version,
