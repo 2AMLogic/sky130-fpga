@@ -117,7 +117,7 @@ Regenerate + check all with:
 ./flow/erc.sh --update       # rerun ERC and overwrite the committed report
                               # (run after ./flow/lvs.sh --update)
 
-./flow/erc.sh                # rerun klt erc (spec: layout/erc-supply-spec.json)
+./flow/erc.sh                # rerun klt erc (spec: flow/erc_supply_spec.json)
                               # against the committed GDS, diff the report
                               # against the committed copy, and verify it
                               # still content-hash-pins the committed GDS
