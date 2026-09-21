@@ -9,7 +9,13 @@ string stripped out.
 
 Why strip those: absolute paths (`def_path`, `gds_path`, `verilog_path`,
 `layer_map.path`) point into the invoking machine's own scratch directory
-and are never reproducible across machines/checkouts.
+and are never reproducible across machines/checkouts. `engine_logs`
+(surfacing on newer `klt` builds) is the same class of thing one level up:
+it carries each OpenROAD stage's per-run `invocation_id` (a fresh random
+UUID every run) and the `flow/build/.klt/place-and-route/openroad-logs/`
+log paths keyed by it, so no two runs of the identical seeded request
+could ever byte-match while it is retained -- the per-run bookkeeping
+belongs to the run's scratch, not to the committed evidence.
 `provenance.pdk.source` is the same class of thing one level down: it names
 how `find_pdk()` happened to resolve the PDK in the invoking shell
 ("PDK_ROOT environment variable" vs. "search root: ~/.volare"), which flips
@@ -35,7 +41,7 @@ import sys
 
 from _report_trim import run_cli, strip_nested
 
-_DROP_TOP_LEVEL = ("def_path", "gds_path", "verilog_path", "engine_version")
+_DROP_TOP_LEVEL = ("def_path", "gds_path", "verilog_path", "engine_version", "engine_logs")
 _DROP_LAYER_MAP = ("path",)
 _DROP_PROVENANCE = ("klt_version", "klayout_version")
 _DROP_PDK = ("source",)

@@ -236,6 +236,22 @@ LVS_REQUEST="$LVS_BUILD_DIR/lvs_request.json"
 LVS_RESPONSE="$LVS_BUILD_DIR/lvs_response.json"
 GENERATED_REPORT="$LVS_BUILD_DIR/${REPORT_NAME}"
 
+# options.power_connectivity is deliberately false. This compare is the
+# *signal-connectivity* half of T1 item 4 (see layout/README.md's "LVS
+# scope, concretely"): the gate-level-verilog reference carries no supply
+# pins at all, so the power half is verified by flow/erc.sh against the GDS
+# geometry (issue #41). klt >= 16ca3d40 additionally runs an inline
+# power-connectivity check over the layout-side netlist, and under this
+# flow's --abstract-cells greyboxing that check cannot be answered here:
+# the blackboxed cells hide the in-cell well geometry, so each standard
+# cell's VPB pin extracts onto its row-pair-local well net (VPB, VPB$1,
+# ... VPB$6 on this layout) and the checker reports
+# power.inconsistent_pin_net even though every one of those well regions
+# contains a tap contact reaching the single-island VPWR node -- exactly
+# what klt erc's nwell_tap tie rule verifies (0 missing_tie, see
+# flow/erc.sh). A klt that predates the feature ignores the key entirely
+# (unknown request options are dropped, not rejected), so this stays
+# portable across the toolchain versions flow/tool_versions.sh warns about.
 cat > "$LVS_REQUEST" <<EOF
 {
   "schema": "klt.lvs.request/1",
@@ -246,7 +262,8 @@ cat > "$LVS_REQUEST" <<EOF
     "top": "${TOP_MODULE}",
     "form": "gate-level-verilog",
     "library": "${STD_CELL_LIBRARY}"
-  }
+  },
+  "options": { "power_connectivity": false }
 }
 EOF
 

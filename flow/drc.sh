@@ -72,13 +72,23 @@ fi
 
 # shellcheck source=./pdk_root.sh
 source "$SCRIPT_DIR/pdk_root.sh"
+# Same Docker-wrapper/plain-env accommodation as flow/lvs.sh and
+# flow/sta-sweep.sh: klt builds after the #1901 fix write a real
+# `provenance.pdk` (name/source/version) into every `klt drc` report, and
+# that block's `source` string varies with how the PDK was resolved
+# ("PDK_ROOT environment variable" vs "search root: ~/.volare") -- so the
+# report's committed bytes are only reproducible when every invocation
+# resolves the PDK the same way. export_pdk_root_if_unset makes this
+# script's own invocation deterministic regardless of the operator's shell,
+# leaving an explicit $PDK_ROOT configuration authoritative as before.
+export_pdk_root_if_unset "$PDK_VARIANT"
 require_pdk_resolvable "$PDK_VARIANT"
 
-# Pin the PDK revision this run resolves against. `klt drc` writes
-# `provenance.pdk: null` into its own report even when given `--pdk`
-# (klayout-tools#1901), so the committed layout/logic_tile.drc.json records
-# no PDK revision and its check-mode diff cannot notice a PDK swap -- this
-# banner is where a swap becomes visible. See flow/tool_versions.sh
+# Pin the PDK revision this run resolves against. On klt builds carrying the
+# klayout-tools#1901 fix the written `provenance.pdk` block above now pins
+# the PDK revision inside the committed report itself; on older builds
+# `klt drc` still writes `provenance.pdk: null`, and even there this banner
+# remains where a PDK swap becomes visible. See flow/tool_versions.sh
 # (issue #34, T1 checklist item 9). Only the PDK half of the banner is
 # printed: this script needs no `openroad`.
 # shellcheck source=./tool_versions.sh

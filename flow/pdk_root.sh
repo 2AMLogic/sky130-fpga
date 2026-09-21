@@ -12,8 +12,13 @@
 #   - export_pdk_root_if_unset <variant>: if $PDK_ROOT is unset in the
 #     invoking shell, export it (and $PDK) from `klt pdk find`'s own
 #     resolved root, without overriding an operator's explicit
-#     configuration. Used only by flow/lvs.sh and flow/sta-sweep.sh, which
-#     both delegate to `openroad`.
+#     configuration. Used by flow/drc.sh, flow/lvs.sh and flow/sta-sweep.sh:
+#     the lvs/sta pair delegate to `openroad` wrappers that only mount
+#     $PDK_ROOT when it is set, and klt builds after the klayout-tools#1901
+#     fix write a resolution-dependent `provenance.pdk.source` string into
+#     every drc/lvs report -- so drc.sh needs the same deterministic
+#     invocation-side resolution for its committed report to stay
+#     byte-reproducible.
 #
 # Local-environment robustness (why export_pdk_root_if_unset exists): some
 # local `openroad` installs are thin Docker wrappers (see e.g.
