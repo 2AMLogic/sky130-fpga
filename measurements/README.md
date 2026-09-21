@@ -18,7 +18,8 @@ is.
 ### `characterization-summary.md` — one aggregated, current artifact (T1 item 8)
 
 [`characterization-summary.md`](characterization-summary.md) pulls DRC, LVS,
-the 18-corner STA sweep, the ratified `spec/tile-spec.md` timing row (ADR-0002)
+the 18-corner STA sweep, the ratified `spec/tile-spec.md` timing row (ADR-0002,
+its WNS figure of record re-ratified by ADR-0003)
 and the SDF-generation/gate-level re-simulation result into a single current
 snapshot, each entry naming its status, its source record/report path, and
 the commit/run it was derived from. It is **generated**, not hand-typed: every
@@ -68,10 +69,14 @@ canary `sky130-modexp`'s `verification/records/`.) The per-corner JSON under
 layout, and `flow/sta-sweep.sh` diff-checks it on every run.
 
 The current record is
-[`records/20260909-225431-86f71d2.md`](timing-characterization/records/20260909-225431-86f71d2.md).
-A second record,
-[`records/20260915-133517-234b13b.md`](timing-characterization/records/20260915-133517-234b13b.md),
-covers the separate SDF-generation + gate-level-resimulation experiment
+[`records/20260921-062500-e8a37ad.md`](timing-characterization/records/20260921-062500-e8a37ad.md)
+— the post-PDN re-sweep, which supersedes
+[`records/20260909-225431-86f71d2.md`](timing-characterization/records/20260909-225431-86f71d2.md)
+(that record stays committed as the historical account of the pre-PDN
+sweep). A second record,
+[`records/20260921-062530-e8a37ad.md`](timing-characterization/records/20260921-062530-e8a37ad.md)
+— the post-PDN successor of `20260915-133517-234b13b` — covers the
+separate SDF-generation + gate-level-resimulation experiment
 below — it does not supersede this one.
 
 ### `timing-characterization/logic_tile_route.sdf` — SDF-annotated gate-level re-simulation (T1 item 7, issue #29)
@@ -87,7 +92,7 @@ escaped identifiers, filed as
 [klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890)
 rather than worked around with a fabricated result. Full method and the
 crash bisection:
-[`records/20260915-133517-234b13b.md`](timing-characterization/records/20260915-133517-234b13b.md).
+[`records/20260921-062530-e8a37ad.md`](timing-characterization/records/20260921-062530-e8a37ad.md).
 
 **What was measured.** One fixed piece of routed geometry — the committed
 `layout/logic_tile.def`, byte-identical across every run — re-timed in a
@@ -106,14 +111,15 @@ unannotated and the annotated run — plus die/core area from
 `layout/logic_tile.par.json`, so the "Fmax, area and power across the corner
 set" triple sits in one place.
 
-**Headline results** (full table and caveats in the record):
+**Headline results** (full table and caveats in the current record,
+[`records/20260921-062500-e8a37ad.md`](timing-characterization/records/20260921-062500-e8a37ad.md)):
 
 | | Corner | SPEF-annotated |
 | --- | --- | ---: |
-| Binding (worst) corner for setup | `ss_n40C_1v28` | WNS 15.1760 ns @ 20 ns, `fmax_mhz` 207.29 |
-| Fastest corner | `ff_n40C_1v95` | WNS 19.5887 ns, `fmax_mhz` 2431.13 |
+| Binding (worst) corner for setup | `ss_n40C_1v28` | WNS 15.2146 ns @ 20 ns, `fmax_mhz` 208.967 |
+| Fastest corner | `ff_n40C_1v95` | WNS 19.5927 ns, `fmax_mhz` 2455.04 |
 | Hold | — | 0 hold violations at **all 18** corners, both runs |
-| Interconnect penalty at the binding corner | `ss_n40C_1v28` | −0.2890 ns setup slack (LEF-only → SPEF) |
+| Interconnect penalty at the binding corner | `ss_n40C_1v28` | −0.2504 ns setup slack (LEF-only → SPEF; LEF-only WNS unchanged at 15.465 ns) |
 
 **What these numbers do NOT claim:**
 
@@ -128,10 +134,14 @@ set" triple sits in one place.
 - **Not a sign-off-grade parasitic model.** One lumped series R and one
   ground C per net in a star topology (plus vertical-overlap coupling) —
   no distributed RC ladder, no field solve, quasi-static.
-- **Not a spec number.** `spec/tile-spec.md`'s timing rows still read "No
-  numbers in this spec". Publishing any of these into the spec is a spec
-  change and needs its own decision record; this directory is the evidence
-  such a record would cite, not the ruling.
+- **Not a spec ruling.** The only spec-level timing claim is the ratified
+  `spec/tile-spec.md` Timing row — ratified by
+  `spec/decisions/0002-tile-timing-spec-ratification.md` (ADR-0002), with
+  its WNS figure of record re-ratified against the post-PDN geometry by
+  `spec/decisions/0003-tile-timing-spec-re-ratification.md` (ADR-0003).
+  This directory is the evidence those decision records cite, not the
+  ruling; publishing any *new* number into the spec is a spec change and
+  needs its own decision record.
 - **Not the fabric.** Only the logic tile's BELs exist to characterize —
   the switch matrix and inter-tile routing (`spec/framework-gaps.md`
   G1/G2) have not landed, so no fabric routing delay is characterized
