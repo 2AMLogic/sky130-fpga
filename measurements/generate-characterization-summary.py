@@ -18,9 +18,11 @@ cross-checked against each one):
 - layout/logic_tile.lvs.json           (LVS -- signal connectivity only)
 - layout/logic_tile.erc.json           (ERC -- supply connectivity + antenna,
   the power half the LVS compare structurally cannot supply; see issue #41)
-- measurements/timing-characterization/records/20260909-225431-86f71d2.md
-  and the per-corner corners/<corner>/{lef-only,spef}.sta.json machine
-  reports it is derived from (18-corner STA sweep)
+- measurements/timing-characterization/records/20260921-062500-e8a37ad.md
+  (the current 18-corner STA sweep record, post-PDN successor of the
+  20260909-225431-86f71d2 record ADR-0002 originally cited) and the
+  per-corner corners/<corner>/{lef-only,spef}.sta.json machine reports
+  it is derived from
 - spec/tile-spec.md and
   spec/decisions/0002-tile-timing-spec-ratification.md (ratified spec row)
 - measurements/timing-characterization/records/20260921-062530-e8a37ad.md
@@ -33,6 +35,32 @@ Usage:
 Without arguments, (re)writes `measurements/characterization-summary.md`.
 With `--check`, regenerates in memory and exits non-zero if the committed
 file would change (CI-style drift check) -- it does not touch the file.
+
+Provenance design decision -- how "Committed at" lines behave under squash
+merges (issue #57 item 4; mechanical implementation split out to #61):
+
+`git_last_commit()` currently bakes `git log -1` short SHAs into the
+generated summary (per-section "Committed at" bullets plus the
+at-a-glance "Derived from" cells). The repo squash-merges every PR, which
+rewrites those SHAs away on every merge, so `--check` on `origin/main`
+fails whenever a cited source's last-touching commit was squash-rewritten,
+and any PR that regenerates the summary repairs the stamps for files it
+does not touch while re-introducing the drift for the files it does. That
+is inherent to the field, not to any one regeneration.
+
+Decided: drop the git-history-derived fields, keeping only content-stable
+lineage -- the in-artifact content hashes each section already cites, plus
+the append-only records' own `record-meta` ids and `git_revision` (the
+existing "Record / git revision" lines stay). Repo-history SHA stamps are
+neither needed (the summary is a tree-relative aggregation: the sources it
+cites are the ones in the same checkout) nor stable under squash-merge.
+The alternative -- making `--check` tolerate squash-rewritten SHAs -- is
+rejected: it would leave unreachable SHAs baked into a committed,
+hash-pinned evidence artifact (signoff/characterization-evidence.json and
+signoff/block-manifest.json item 8 pin this file by content hash), which
+is misleading provenance in exactly the place this repo's traceability
+discipline lives. The removal, the summary regeneration and the signoff
+re-pin chain land in #61.
 """
 import json
 import re
