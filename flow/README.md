@@ -358,6 +358,53 @@ is verifiable later without re-running the flow.
 gap here, since `layout/README.md`'s "No power delivery network" note
 means there is no power connectivity for this mode to miss).
 
+### `flow/erc.sh` — ERC supply report (T1 item 11, issue #51)
+
+`flow/erc.sh` runs klayout-tools' `klt erc` against the committed
+`layout/logic_tile.gds` with the committed supply spec
+(`layout/erc-supply-spec.json`), and checks the result against the
+committed report at `layout/logic_tile.erc.json`. This is the T1 item 11
+("power delivery, structural") evidence artifact — item 11 was added to
+the checklist as
+[klayout-tools#2025](https://github.com/2AMLogic/klayout-tools/pull/2025)
+on 2026-09-17 and tracked here by issue #51 and the gap-to-T1 tracker.
+Unlike items 3-4's clean/match gates, this harness does **not** gate the
+run on a clean verdict: the committed report is *expected* to carry
+findings while the layout has no power delivery network — `VPWR`
+currently resolves to 7 electrical islands and `VGND` to 8 (the 15
+isolated met1 rails issue #41 names), so the finding set is the recorded
+evidence, and `--update` rewrites it whenever the geometry changes. Read
+`layout/README.md`'s "ERC scope, concretely" section for the full
+what-this-claim-covers contract (antenna verdicts unchecked by design,
+`erc.missing_tie` not computed — the spec declares no `ties[]`,
+klayout-tools#2169 — and the well-tie evidence that does stand in).
+
+Running:
+
+```
+./flow/erc.sh            # rerun klt erc against the committed GDS +
+                          # supply spec, diff the (trimmed) report against
+                          # the committed copy under layout/, and verify
+                          # the report still content-hash-pins both inputs
+                          # (provenance.input ↔ GDS,
+                          # provenance.spec ↔ supply spec).
+./flow/erc.sh --update   # rerun and overwrite the committed report (run
+                          # after ./flow/layout.sh --update, or after any
+                          # supply-spec edit).
+```
+
+Requires only `klt` and `python3` on `$PATH` — **no PDK install, no
+`openroad`/`yosys`**: `klt erc` is a pure geometry connectivity pass over
+the committed GDS and spec JSON. (`klt erc`'s own `--pdk` switch selects
+klt's *built-in antenna-ratio table*, not a PDK install; it is
+deliberately not passed, per the issue-#51 note that the antenna verdict
+is not item 11's subject — klayout-tools#1994.)
+
+**Out of scope here**: IR-drop/EM (`klt power`, deliberately outside item
+11), the PDN work itself (issue #41), the LVS `power_connectivity` verdict
+(needs the PDN-bearing layout, issue #50), and the `klt signoff --manifest`
+grading pass (issue #52).
+
 ### `flow/sta-sweep.sh` — multi-corner timing characterization (G4)
 
 `flow/sta-sweep.sh` extracts parasitics once from the committed

@@ -84,6 +84,18 @@ PDK_NULL_UPSTREAM_GAP = {
         "klt lvs writes provenance.pdk: null (klayout-tools#1901); pinned by "
         "flow/lvs.sh's banner instead."
     ),
+    "layout/logic_tile.erc.json": (
+        "klt erc pins no PDK version because it reads no PDK install at "
+        "all -- it is a pure geometry connectivity pass over the committed "
+        "GDS plus this repo's own spec JSON (its --pdk switch only selects "
+        "klt's built-in antenna-ratio table, which flow/erc.sh deliberately "
+        "does not pass). The report instead content-hash-pins both of its "
+        "actual inputs -- provenance.input.content_hash (the committed "
+        "layout/logic_tile.gds, whose PDK pin claim #4 carries in "
+        "provenance.pdk) and provenance.spec.content_hash -- and "
+        "flow/erc.sh re-verifies both hashes against the committed files "
+        "on every run."
+    ),
 }
 
 _RECORD_META_RE = re.compile(r"<!--\s*record-meta\s*(\{.*?\})\s*-->", re.DOTALL)
