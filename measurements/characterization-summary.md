@@ -16,7 +16,7 @@ One aggregated, current snapshot of the tile's design-evidence artifacts -- klay
 | LVS | **match** (1 mismatches, engine `klayout`) | [`layout/logic_tile.lvs.json`](layout/logic_tile.lvs.json) | commit `0054e5e 2026-09-21 01:31:37 -0700` |
 | ERC (supply connectivity + antenna) | **0 findings**, 0 antenna `violate` across 232 gates | [`layout/logic_tile.erc.json`](layout/logic_tile.erc.json) | commit `0054e5e 2026-09-21 01:31:37 -0700` |
 | 18-corner STA sweep | **setup/hold-clean at all 18 corners** (binding setup corner `ss_n40C_1v28`, SPEF WNS 15.2146 ns) | [`measurements/timing-characterization/records/20260921-062500-e8a37ad.md`](measurements/timing-characterization/records/20260921-062500-e8a37ad.md) | record `20260921-062500-e8a37ad`, git revision `e8a37ad` |
-| Ratified timing spec row | **RATIFIED** (ADR-0002) | [`spec/tile-spec.md`](spec/tile-spec.md), [`spec/decisions/0002-tile-timing-spec-ratification.md`](spec/decisions/0002-tile-timing-spec-ratification.md) | commit `3b6e165 2026-09-21 08:51:10 -0700` (tile-spec.md), `234b13b 2026-09-15 13:15:44 +0000` (ADR-0002) |
+| Ratified timing spec row | **RATIFIED** (ADR-0002) | [`spec/tile-spec.md`](spec/tile-spec.md), [`spec/decisions/0002-tile-timing-spec-ratification.md`](spec/decisions/0002-tile-timing-spec-ratification.md) | commit `aad6298 2026-09-21 08:57:06 -0700` (tile-spec.md), `234b13b 2026-09-15 13:15:44 +0000` (ADR-0002) |
 | SDF-generation + gate-level re-sim | **zero-delay: PASS; SDF-annotated: BLOCKED** (klayout-tools#1890) | [`measurements/timing-characterization/records/20260921-062530-e8a37ad.md`](measurements/timing-characterization/records/20260921-062530-e8a37ad.md) | record `20260921-062530-e8a37ad`, git revision `e8a37ad` |
 
 ## DRC
@@ -57,7 +57,7 @@ One aggregated, current snapshot of the tile's design-evidence artifacts -- klay
   > **RATIFIED 2026-09-15 (ADR-0002, #28); WNS figure of record re-ratified 2026-09-21 (ADR-0003, #42)** — tile BEL logic only (no switch matrix): setup- and hold-clean (0 violations, 0 TNS) at all 18 `sky130_fd_sc_hd` PVT corners, LEF-only and SPEF-annotated, against a 20 ns non-propagated-clock SDC period on `clk`; binding setup corner `ss_n40C_1v28`, SPEF WNS 15.2146 ns, from the post-PDN successor record `20260921-062500-e8a37ad`. **No Fmax/MHz number ratified** — see `spec/decisions/0003-tile-timing-spec-re-ratification.md`.
 
 - **Source**: [`spec/tile-spec.md`](spec/tile-spec.md) (summary table), decision record [`spec/decisions/0002-tile-timing-spec-ratification.md`](spec/decisions/0002-tile-timing-spec-ratification.md).
-- **Committed at**: `3b6e165 2026-09-21 08:51:10 -0700` (tile-spec.md), `234b13b 2026-09-15 13:15:44 +0000` (ADR-0002).
+- **Committed at**: `aad6298 2026-09-21 08:57:06 -0700` (tile-spec.md), `234b13b 2026-09-15 13:15:44 +0000` (ADR-0002).
 
 ## SDF-generation + gate-level re-simulation
 

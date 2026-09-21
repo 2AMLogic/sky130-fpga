@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "kind": "generic",
+  "status": "pass",
+  "summary": "T1 item 8 aggregated characterization report, current against its committed sources (generate-characterization-summary.py --check passes): DRC clean (0 violations), LVS signal-match (topology.power_only_pruned warning, signal-connectivity scope), ERC supply connectivity 0 findings and 0 antenna violations across 232 gates, 18-corner SPEF-annotated STA setup/hold-clean at every corner (binding corner ss_n40C_1v28, SPEF WNS 15.2146 ns), timing spec row ratified (ADR-0002) with the WNS figure of record re-ratified against the post-PDN geometry (ADR-0003). The SDF-annotated gate-level re-simulation leg is still blocked by upstream klayout-tools#1890 and is recorded as BLOCKED in the same report.",
+  "source": "measurements/characterization-summary.md",
+  "provenance": {
+    "input": {
+      "content_hash": "sha256:f9780703108af7bad58a53cfefda3533720a46915c4650b27943b36cb5910e53",
+      "role": "characterization-record"
+    }
+  }
+}
