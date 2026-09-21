@@ -50,14 +50,20 @@ place-and-route` and `klt sta` write `provenance.pdk.{name,version}` into
 their own reports, so `layout/logic_tile.par.json` and all 36 per-corner
 reports under `measurements/timing-characterization/corners/` already carry
 it, and check mode's diff fails if the installed PDK differs. **`klt drc`
-and `klt lvs` do not**: both emit `provenance.pdk: null` even when invoked
-with `--pdk sky130A` (filed upstream as klayout-tools#1901), so
-`layout/logic_tile.drc.json` and `layout/logic_tile.lvs.json` record no PDK
-revision and their diffs cannot notice a PDK swap. `flow/drc.sh` and
-`flow/lvs.sh` therefore print `print_pdk_version_banner` — the same
-warn-on-mismatch shape, and for those two claims the only place a PDK swap
-becomes visible at all. T1 checklist item 9 ("every claimed measurement has
-a committed testbench and a pinned PDK version") is what this is for; the
+and `klt lvs` now pin it in-artifact too**: on klt builds after the
+klayout-tools#1901 fix both write a real `provenance.pdk.{name,version}`
+(pre-fix builds wrote `provenance.pdk: null` even when invoked with
+`--pdk sky130A`), and the committed `layout/logic_tile.drc.json` /
+`layout/logic_tile.lvs.json` have carried the in-artifact pin since the
+2026-09-21 re-stamp (issue #41, PR #55). The one committed report that
+still records no PDK revision is `layout/logic_tile.erc.json` — `klt erc`
+writes no provenance block at all and reads no PDK install
+(klayout-tools#2036) — so that claim inherits its pin from
+`RECORDED_PDK_VERSION`. `flow/drc.sh` and `flow/lvs.sh` therefore print
+`print_pdk_version_banner` — the same warn-on-mismatch shape, now a
+double-check on top of the in-artifact pins and the stated pin for the
+ERC claim. T1 checklist item 9 ("every claimed measurement has a
+committed testbench and a pinned PDK version") is what this is for; the
 full claim-by-claim walk is `measurements/claim-traceability.md`.
 
 **Known drift (issue #23, unverified byte-level root cause):** running
@@ -661,10 +667,15 @@ tree:
    (a mismatch fails unless it is an explicit, commit-cited entry in
    `flow/audit_evidence.py`'s `ALLOWED_INPUT_DRIFT`);
 3. every committed report JSON under `layout/`/`measurements/` pins that
-   same PDK revision — or is one of the two `klt drc`/`klt lvs` reports
-   whose `provenance.pdk` is null for the filed upstream reason
-   (klayout-tools#1901), listed explicitly so a *new* PDK-less report type
-   cannot quietly join them.
+   same PDK revision — or is listed explicitly in
+   `flow/audit_evidence.py`'s `PDK_NULL_UPSTREAM_GAP`. Only
+   `layout/logic_tile.erc.json` is a live null gap there (`klt erc` writes
+   no provenance block and reads no PDK install, klayout-tools#2036); the
+   `klt drc`/`klt lvs` entries are retained as regression guards — those
+   two reports have pinned the PDK in-artifact since the 2026-09-21
+   re-stamp (klayout-tools#1901 was fixed upstream before klt 0.5.0) —
+   and the explicit listing is what stops a *new* PDK-less report type
+   from quietly joining them.
 
 ```
 ./flow/audit-evidence.sh   # exit 0 iff every claim is traceable and PDK-pinned
