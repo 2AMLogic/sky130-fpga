@@ -17,14 +17,16 @@ nor klayout-tools currently pins one.
 
 **Recorded toolchain** (produced the artifacts currently committed under
 `layout/` and `measurements/timing-characterization/`, per
-`layout/logic_tile.par.json`'s own provenance block and
-`measurements/timing-characterization/records/20260909-225431-86f71d2.md`):
+`layout/logic_tile.erc.json`'s own `provenance.klt_version` pin and the
+successor records
+`measurements/timing-characterization/records/20260921-062500-e8a37ad.md` /
+`20260921-062530-e8a37ad.md`):
 
 | Tool | Version |
 |------|---------|
-| `klt` (klayout-tools) | `0.3.0+gc6dbf66c53c6` |
+| `klt` (klayout-tools) | `0.5.0+g2b7caa9939af` |
 | OpenROAD | `26Q3-1278-g4421880472` |
-| KLayout (via `klt`) | `0.30.12` |
+| KLayout (via `klt`) | `0.30.12` (last recorded under the 0.3.0 pin; not re-pinnable from the current reports, which do not echo it) |
 
 `flow/layout.sh`, `flow/sta-sweep.sh` and `flow/sdf-resim.sh` all source
 `flow/tool_versions.sh` and print the installed `klt`/OpenROAD versions at
@@ -74,6 +76,32 @@ treating the failure as a design regression** — re-run against the recorded
 toolchain if available, or inspect whether the diff is confined to
 provenance/byte-format fields (as in the known case above) versus an actual
 numeric/status change.
+
+**2026-09-21 re-stamp and its verification (issue #41).** The post-PDN
+artifacts were produced under klt `0.5.0+g2b7caa9939af`; the check-mode
+diffs of `flow/layout.sh`, `flow/lvs.sh`, `flow/drc.sh` and `flow/erc.sh`
+were then re-verified byte-reproducible on the same tree under klt
+`0.5.0+g2b1e55e51bb8.dirty` — the GDS and DEF regenerate byte-identical,
+and every verdict field (DRC clean/0, LVS match/1-warning,
+ERC 0 findings/0 antenna violations, par slacks/wirelength/utilization)
+is unchanged. Two envelope-only differences of the newer klt were
+normalized rather than papered over: `flow/par_report_trim.py` now strips
+the per-run `engine_logs[]` bookkeeping (random invocation ids), and
+`flow/drc.sh` / `flow/lvs.sh` resolve the PDK themselves so the
+resolution-path `provenance.pdk.source` string the newer klt writes stays
+deterministic. One moving part is **outside** this repo's control and is
+currently blocking re-runs of the SPEF-annotated legs of
+`flow/sta-sweep.sh` and the SDF-update gate of `flow/sdf-resim.sh` on the
+verifying host: the operator-local `openroad` wrapper runs an unpinned
+`openroad/orfs:latest` image (now `26Q3-2276-g4a7cf9b22a`, recorded
+toolchain `26Q3-1278`), under whose OpenSTA build the SPEF annotation of
+this design's escaped-identifier nets regresses to incomplete
+(klayout-tools#1623/#1624 family — `partially_unannotated_driver_count:
+40`, `annotation_complete: false` at the first corner). Both harnesses
+correctly refuse to record on such a run; the committed per-corner
+reports and the committed SDF remain the recorded-toolchain evidence,
+and the successor records under
+`measurements/timing-characterization/records/` document that lineage.
 
 ## Current contents
 

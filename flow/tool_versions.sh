@@ -47,11 +47,17 @@
 
 # The klt / OpenROAD versions that produced the artifacts CURRENTLY
 # committed under layout/ and measurements/timing-characterization/ (per
-# layout/logic_tile.par.json's own provenance and this record:
-# measurements/timing-characterization/records/20260909-225431-86f71d2.md).
-# Update these two values (and this comment's record reference) whenever
-# `--update` is run with a different toolchain.
-RECORDED_KLT_VERSION="0.3.0+gc6dbf66c53c6"
+# layout/logic_tile.erc.json's provenance.klt_version pin and the successor
+# records:
+# measurements/timing-characterization/records/20260921-062500-e8a37ad.md
+# and 20260921-062530-e8a37ad.md, superseders of the 20260909/20260915
+# pre-PDN pair). Updated for issue #41's PDN regeneration: the post-PDN
+# GDS/DEF/SPEF/SDF lineage was produced under 0.5.0+g2b7caa9939af, and
+# check-mode diffs were re-verified 2026-09-21 on this tree under
+# 0.5.0+g2b1e55e51bb8.dirty -- byte-identical GDS/DEF, identical verdict
+# fields in every re-stamped report. See flow/README.md's "Known drift"
+# for the OpenROAD-image annotation regression the SPEF legs hit.
+RECORDED_KLT_VERSION="0.5.0+g2b7caa9939af"
 RECORDED_OPENROAD_VERSION="26Q3-1278-g4421880472"
 
 # The sky130A PDK revision those same committed artifacts were produced

@@ -23,8 +23,9 @@ cross-checked against each one):
   reports it is derived from (18-corner STA sweep)
 - spec/tile-spec.md and
   spec/decisions/0002-tile-timing-spec-ratification.md (ratified spec row)
-- measurements/timing-characterization/records/20260915-133517-234b13b.md
-  (SDF generation + gate-level re-simulation)
+- measurements/timing-characterization/records/20260921-062530-e8a37ad.md
+  (SDF generation + gate-level re-simulation, post-PDN successor of the
+  20260915-133517-234b13b record)
 
 Usage:
     python3 measurements/generate-characterization-summary.py [--check]
@@ -42,14 +43,16 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_PATH = REPO_ROOT / "measurements" / "characterization-summary.md"
 
-STA_RECORD_ID = "20260909-225431-86f71d2"
-SDF_RECORD_ID = "20260915-133517-234b13b"
-STA_RECORD_PATH = (
-    REPO_ROOT / "measurements/timing-characterization/records" / f"{STA_RECORD_ID}.md"
-)
-SDF_RECORD_PATH = (
-    REPO_ROOT / "measurements/timing-characterization/records" / f"{SDF_RECORD_ID}.md"
-)
+STA_RECORD_ID = "20260921-062500-e8a37ad"
+SDF_RECORD_ID = "20260921-062530-e8a37ad"
+# The record id ADR-0002 cites as its evidentiary source. A ratified
+# decision record is never edited, so this historical id stays fixed even
+# while a successor sweep record (see its meta's `supersedes`) becomes the
+# current STA_RECORD_ID; collect_ratified_spec_row walks the chain.
+RATIFIED_STA_RECORD_ID = "20260909-225431-86f71d2"
+RECORDS_DIR = REPO_ROOT / "measurements/timing-characterization/records"
+STA_RECORD_PATH = RECORDS_DIR / f"{STA_RECORD_ID}.md"
+SDF_RECORD_PATH = RECORDS_DIR / f"{SDF_RECORD_ID}.md"
 CORNERS_DIR = REPO_ROOT / "measurements/timing-characterization/corners"
 
 
@@ -263,10 +266,36 @@ def collect_ratified_spec_row():
         "ratified upon this PR merging" in adr_text,
         "ADR-0002 status line no longer matches expected ratification-via-PR language",
     )
+    # ADR-0002 is a ratified decision record and is never edited, so the
+    # record id it cites is a fixed historical one; the *current* sweep may
+    # be a successor record (records are append-only). The ratification's
+    # evidence stays traceable while the current record's `supersedes`
+    # chain still reaches the cited original, which is what this walks.
     require(
-        STA_RECORD_ID in adr_text,
+        RATIFIED_STA_RECORD_ID in adr_text,
         "ADR-0002 no longer cites the STA sweep record it ratifies from",
     )
+    cited_path = (
+        RECORDS_DIR / f"{RATIFIED_STA_RECORD_ID}.md"
+    )
+    require(cited_path.exists(), "the ADR-cited STA record file no longer exists")
+    lineage_id, seen = STA_RECORD_ID, set()
+    while lineage_id != RATIFIED_STA_RECORD_ID:
+        require(
+            lineage_id not in seen,
+            "cycle in the STA record supersedes chain",
+        )
+        seen.add(lineage_id)
+        lineage_path = RECORDS_DIR / f"{lineage_id}.md"
+        require(lineage_path.exists(), f"supersedes-chain record {lineage_id} is missing")
+        lineage_meta = parse_record_meta(lineage_path)
+        supersedes = lineage_meta.get("supersedes")
+        require(
+            bool(supersedes) and isinstance(supersedes, str),
+            f"record {lineage_id} supersedes nothing -- the ADR-cited "
+            f"{RATIFIED_STA_RECORD_ID} is unreachable from the current record",
+        )
+        lineage_id = supersedes
 
     return {
         "tile_spec_path": tile_spec_path,
