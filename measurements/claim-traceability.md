@@ -1,9 +1,11 @@
 # Claim traceability audit (T1 checklist item 9)
 
 **Audited**: 2026-09-15, against `c3c6757` (issue #34, Epic #4 Phase 4).
-**Re-audited**: 2026-09-21, for the post-PDN tree (issue #41) — rows 5–13
-gained the new ERC claim and the successor records; `./flow/audit-evidence.sh`
-re-derives this walk's machine half on every run.
+**Re-audited**: 2026-09-21, for the post-PDN tree — rows 5–13 gained the
+ERC claim and the successor records (issue #41), then were merged with PR
+#54's item-11 registration (issues #41 + #51) into the single row 13 and
+gap G-4 below. `./flow/audit-evidence.sh` re-derives this walk's machine
+half on every run.
 **Re-derive with**: `./flow/audit-evidence.sh` — no toolchain, no PDK
 install and no network needed; it reads only committed files.
 
@@ -48,8 +50,8 @@ intention or a spec target.
 | 9 | Post-route SDF is real `klt place-and-route --post_route_sdf` output for the byte-identical committed DEF (`measurements/timing-characterization/logic_tile_route.sdf`) | `flow/sdf-resim.sh` (+ `flow/sdf_canonicalize.py`) | **Inherited** — SDF headers carry PVT but no PDK revision; pinned by record `20260921-062530-e8a37ad`'s `record-meta`, which also content-hashes this exact file. |
 | 10 | Zero-delay gate-level `PASS: tb_logic_tile -- 4 checks, 0 failures` against the as-built `sky130_fd_sc_hd` netlist (`measurements/.../records/20260921-062530-e8a37ad.md`, `sim/README.md`) | `flow/sdf-resim.sh` re-running `sim/tb_logic_tile.v` **unmodified** (+ `flow/sdf_annotate_shim.py`) | **In-artifact** — record `record-meta.provenance.pdk.version`. Reads the PDK's `sky130_fd_sc_hd` behavioral models, so the pin is load-bearing here. |
 | 11 | SDF-annotated leg **blocked** by klayout-tools#1890, reproduced on every run (same record) | `flow/sdf-resim.sh`, which treats a *changed* crash signature as a failure | **In-artifact** — same record. |
-| 12 | Ratified timing row: setup/hold-clean at all 18 corners, binding corner `ss_n40C_1v28`, SPEF WNS 15.1760 ns, **no Fmax ratified** (`spec/decisions/0002-tile-timing-spec-ratification.md`, `spec/tile-spec.md`) | No harness of its own — a ruling **on** claim #7, citing it by path. Regenerate the underlying evidence with `./flow/sta-sweep.sh`. | **Inherited** — via the claim-#7 record lineage: ADR-0002 cites the 20260909 original, which remains committed; the post-PDN successor record `20260921-062500-e8a37ad` re-meets the ruling's criteria (WNS 15.2146 ns). |
-| 13 | ERC supply-connectivity + antenna: `erc_finding_count: 0` (no floating supply island, no `missing_tie`), 0 antenna `violate` verdicts across 232 gates — the power half of T1 item 4 (`layout/README.md`, `layout/logic_tile.erc.json`) | `flow/erc.sh` (+ `flow/erc_report_trim.py`, `flow/erc_supply_spec.json`) | **Inherited** — `klt erc` writes no provenance block at all (klayout-tools#2036); the trimmed report pins its analysed GDS and supply spec by content hash, and the PDK revision is pinned by `flow/erc.sh`'s banner plus the explicit `PDK_NULL_UPSTREAM_GAP` entry in `flow/audit_evidence.py`. Gap G-4 below. |
+| 12 | Ratified timing row: setup/hold-clean at all 18 corners, binding corner `ss_n40C_1v28`, SPEF WNS 15.1760 ns, **no Fmax ratified** (`spec/decisions/0002-tile-timing-spec-ratification.md`, `spec/tile-spec.md`) | No harness of its own — a ruling **on** claim #7, citing it by path. Regenerate the underlying evidence with `./flow/sta-sweep.sh`. | **Inherited** — via the claim-#7 record lineage: ADR-0002 cites the 20260909 original, which remains committed; the post-PDN successor record `20260921-062500-e8a37ad` re-meets the ruling's criteria (WNS 15.2146 ns), the re-ratification issue #42 tracks. |
+| 13 | ERC supply-connectivity + antenna (T1 item 11, issues #51 + #4, **and the power half of T1 item 4**, issue #41): `erc_finding_count: 0` post-PDN — every supply one island, `missing_tie: 0` via the `nwell_tap` tie rule, 0 antenna `violate` across 232 gates; the pre-PDN baselines were 7 `missing_tie` + 2 `unconnected_net` findings under this spec and VPWR 7 / VGND 8 islands under PR #54's tie-less interim spec (`layout/README.md` "ERC scope, concretely", `layout/logic_tile.erc.json`) | `flow/erc.sh` (+ `flow/erc_report_trim.py`, against `flow/erc_supply_spec.json` and the committed GDS) | **Inherited, content-addressed** — `klt erc` opens no PDK install for the connectivity model (`flow/erc.sh` passes `--pdk sky130` only to select klt's built-in antenna-ratio table) and writes no provenance block (klayout-tools#2036); the trimmed report pins its analysed GDS and supply spec by content hash plus the producing klt build, and the PDK revision is pinned by `flow/erc.sh`'s banner plus the explicit `PDK_NULL_UPSTREAM_GAP` entry in `flow/audit_evidence.py`. Gap G-4 below. |
 
 `spec/decisions/0001-fabric-framework-choice.md` publishes no measurement —
 it is a framework-selection decision — so it has no row.

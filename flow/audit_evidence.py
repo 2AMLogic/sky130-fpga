@@ -100,9 +100,18 @@ PDK_NULL_UPSTREAM_GAP = {
         "flow/lvs.sh's banner instead."
     ),
     "layout/logic_tile.erc.json": (
-        "klt erc writes no provenance block at all (klayout-tools#2036); "
-        "flow/erc_report_trim.py synthesizes the drc-shaped one this report "
-        "carries, and flow/erc.sh's banner pins the PDK."
+        "klt erc writes no provenance block at all (klayout-tools#2036) "
+        "and reads no PDK install -- it is a pure geometry connectivity "
+        "pass over the committed GDS plus this repo's own supply spec "
+        "JSON (flow/erc.sh passes --pdk sky130 solely to select klt's "
+        "built-in antenna-ratio table; the connectivity model opens no "
+        "PDK file). flow/erc_report_trim.py therefore synthesizes the "
+        "drc-shaped provenance block this report carries, content-hash-"
+        "pinning both of its actual inputs -- provenance.input."
+        "content_hash (the committed layout/logic_tile.gds, whose own "
+        "PDK pin claim #4 carries) and provenance.spec.content_hash -- "
+        "plus the producing klt_version, and flow/erc.sh re-verifies both "
+        "hashes against the committed files on every run."
     ),
 }
 

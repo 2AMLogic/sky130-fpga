@@ -402,7 +402,113 @@ Tokens marked bad in `.loom/tokens/.bad_tokens` are skipped at every tier.
 CLAUDE_CODE_OAUTH_TOKEN=...` / `export LOOM_TOKEN_NAME=...` lines (plus a
 non-exported `LOOM_TOKEN_MODE=...`) so callers `eval` the output directly
 instead of round-tripping through a JSON parser; `--auto-unpin` runs the
-pinned-account auto-recovery pre-flight (see below) before selecting.
+pinned-account auto-recovery pre-flight (see below) before selecting, and
+`--role <name>` supplies the prompt-cache affinity key described next.
+
+### Prompt-cache affinity: a preference tier, off by default (issue #8146)
+
+Anthropic's prompt cache is scoped **per account**. A role tick therefore reads
+its ~20–80k-token injected prefix (Claude Code system prompt + tool schemas +
+repo `CLAUDE.md` + the expanded role prompt) from cache only when it lands on
+the same account as the previous tick of that same `(repo, role)`. Measured
+over 378 role ticks on one host: ticks whose previous same-role tick <60 min
+ago ran on the **same** account were a full prefix hit **65%** of the time;
+ticks that landed on a different account, **1.4%**. The caching machinery
+already works — rotation is what keeps it from paying off.
+
+When enabled, selection **prefers** the account that most recently ran the same
+`(workspace, role)`. State lives in `.loom/tokens/.cache_affinity`, a JSON
+`{"<workspace>|<role>": {"account": ..., "at": ...}}` map written next to
+`.ranking` / `.bad_tokens` / `.failure_counts` and pruned of records older than
+7 days on each write.
+
+**It is a preference, never a constraint.** The implementation
+(`tokens_pool::affinity`) can only return an *index into a candidate list one of
+the three tiers already built*, so an affine account that is rate-limited,
+bad-marked, `.ranking`-hard-excluded, non-Claude, pinned out by `.allowlist`, or
+over the tier-1 load gate is passed over exactly as it is today. There is no
+path by which affinity admits an account the existing algorithm refused, and
+none by which it changes *which* tier fires. In the ranked tier the rotation
+cursor is left un-advanced on an affine pick, so the spread of the spawns that
+do rotate is unaffected.
+
+Three bounds keep it from defeating the rotation the pool exists for:
+
+| Bound | Default | Why |
+|---|---|---|
+| **Off unless configured** | disabled | An unconfigured pool behaves bit-for-bit as before, and never grows a `.cache_affinity` file. |
+| **TTL** | 3600 s | The observed cache window is ~1h (a hit was recorded 56 min after the warming tick). Past it there is nothing left to hit. |
+| **Quota guard** | 0.50 of the 5h window | Affinity is withdrawn unless the affine account's own `5h_util` is *measured* and strictly below the threshold, so one repo's load cannot concentrate on one account. Deliberately stricter than the 0.70 tier-1 load gate — a cache hit is never worth trading quota headroom for. |
+
+**The quota guard requires evidence, and this is the one operational
+prerequisite.** An *unknown* 5h utilization — no `.ranking` row for the affine
+account, a legacy 2-field row, or no `.ranking` file at all — withdraws the
+preference rather than waiving the guard. That deliberately inverts the tier-1
+load gate's "unknown → never gated" rule (#4195), because the two fail in
+opposite directions: the load gate is an *exclusion*, so gating on unknown
+there could empty a live pool, whereas this guard only chooses whether to
+express a preference among candidates a tier already admitted, so failing
+closed costs one cache hit and nothing else. It matters because the record's
+timestamp is refreshed on every reuse — a role ticking more often than once per
+TTL stays pinned indefinitely, and the quota guard is then the *only* live
+bound on concentration; waiving it whenever telemetry is missing would make
+that bound vacuous exactly when a pool is least observable.
+
+Practically: **affinity needs `tokens check --ranking` to be running** (the
+daemon's ranking refresher does this on a 600 s cadence by default). On a pool
+with no ranking data the feature stays inert. An operator who wants it anyway
+can set `maxUtil5h` above `1.0`, which disables the guard outright — the same
+escape hatch `LOOM_TOKEN_5H_LOAD_GATE` has. Unlike tier 1, the `.ranking` is
+read at **any** age here: a stale-but-low measurement is still evidence the
+account is not saturated, and a stale-but-high one still withdraws.
+
+The record always follows the account that *actually ran*, never the one merely
+preferred, so a withdrawn preference costs one cache miss rather than causing a
+tick-by-tick thrash: once some rule pushes a key off its affine account, the
+replacement becomes the new affine account and the key warms up there.
+
+Config (`.loom/config.json`) and env overrides, **env > config > default** like
+every other knob:
+
+```jsonc
+{
+  "tokens": {
+    "cacheAffinity": {
+      "enabled": true,        // LOOM_TOKEN_CACHE_AFFINITY=1|0
+      "ttlSeconds": 3600,     // LOOM_TOKEN_CACHE_AFFINITY_TTL
+      "maxUtil5h": 0.50,      // LOOM_TOKEN_CACHE_AFFINITY_MAX_UTIL (>1.0 disables the guard)
+      "roles": ["judge", "guide", "curator", "doctor", "champion", "auditor"]
+    }
+  }
+}
+```
+
+`roles` (env: `LOOM_TOKEN_CACHE_AFFINITY_ROLES`, comma-separated) scopes the
+preference; **empty or absent means every role**. It exists because sweeps are
+the harder case, explicitly deferred to a second phase: they spawn as
+`LOOM_ROLE=sweep-lifecycle`, their parallel waves deliberately fan out across
+accounts, and each sweep's prompt carries a different issue number anyway, so
+the cache upside is smaller and the concentration risk larger. Listing only the
+support roles is the recommended first configuration.
+
+The key is populated from `LOOM_ROLE`, which `tokens select`'s `--role` arg
+reads straight from the environment (`spawn-claude.sh` passes nothing extra on
+the command line — the env var is already present in its own environment, and
+a daemon binary predating the `--role` field simply never reads it, no
+shell-side capability probe required).
+
+That env pickup is exactly why `claude-wrapper.sh`'s three post-failure
+rotation `tokens select` calls are each invoked as `env -u LOOM_ROLE
+"${daemon_bin}" tokens select …`: LOOM_ROLE *is* inherited all the way into the
+wrapper, so without the explicit unset the affinity key would be live on those
+paths too. `reselect_account_no_mark()` is the load-bearing one — it handles a
+concurrent-session-limit fault and deliberately does **not** bad-mark, so the
+saturated account is still a candidate and an active affinity key would name it
+as the preferred one, re-picking the account the retry exists to move away from.
+The other two bad-mark first, so the affine account is already excluded there;
+they unset it anyway, so the invariant holds end-to-end and a rotation never
+re-records the affinity key. `test-token-cache-affinity.sh` is the regression
+guard for all three.
 
 ### `.ranking` status exclusions reach every tier (issue #5629)
 
@@ -550,7 +656,9 @@ document.
 ## Bad-token tracking (`loom-daemon tokens mark-bad`)
 
 When a token returns `TOKEN_EXPIRED`, `TOKEN_EXHAUSTED`, or
-`MODEL_CREDITS_EXHAUSTED` (#5687 — treated exactly like `TOKEN_EXHAUSTED` here),
+`MODEL_CREDITS_EXHAUSTED` (#5687 — the same rotation and the same cooldown, but
+since #8058 a **model-class-scoped** entry rather than an account-wide one; see
+[Model-class-scoped entries](#model-class-scoped-entries-8058) below),
 callers append an entry
 to `.loom/tokens/.bad_tokens` via `loom-daemon tokens mark-bad <name> --reason
 <text>` (native Rust, `loom-daemon/src/tokens_pool/bad_tokens.rs`, exposed as a
@@ -569,6 +677,200 @@ long it survives on disk (24h / 30d) are two different clocks — see
 [Permanence: auth vs exhaustion](#permanence-auth-vs-exhaustion-at-read-time-and-on-disk)
 below.
 
+### Model-class-scoped entries (#8058)
+
+Anthropic's subscription limits are not model-blind: a Max plan carries a
+per-model-class ceiling alongside the all-models weekly limit. Before #8058 an
+Opus ceiling bad-marked the **whole account**, so a fleet running Opus and
+Sonnet arms against one shared pool had the Opus arm starve the Sonnet arm out
+of accounts it could still have used.
+
+An exhaustion that is *provably* scoped to one model class now records that
+class in the entry:
+
+```text
+2026-09-17T04:05:06Z agent-1 exhausted: out of usage credits [model-class:opus]
+```
+
+**The line format is unchanged.** The marker rides inside the existing
+free-form reason field, so the `<ISO8601> <name> <reason words...>` shape every
+reader already parses is untouched, and a reader that knows nothing about
+classes sees an ordinary reason string.
+
+The rule, in both directions:
+
+| Entry | `tokens select` (no `--model`) | `tokens select --model <opus>` | `--model <sonnet>` |
+|---|---|---|---|
+| class-less (every pre-#8058 line, every weekly/plan limit, every auth line) | blocks | blocks | blocks |
+| `[model-class:opus]` | blocks | blocks | **does not block** |
+
+So a class-scoped mark is **strictly narrower** than an account-wide one and
+never wider. `bad_tokens::is_bad` / `blocking_entry` keep their account-wide
+meaning verbatim — callers outside the pool (`sweep_registry::quarantine`,
+`sweep_registry::crash_signals`) ask "is this account unusable at all", and
+narrowing them would readmit genuinely dead accounts. The class-aware question
+is a separate sibling read, `is_bad_for_class` / `blocking_entry_for_class`.
+
+Each class-scoped mark is its own line with its own timestamp, so it ages out
+on its own schedule (the ordinary 6h exhaustion TTL) independently of any
+account-wide line for the same account. Auth reasons always win: a revoked
+credential blocks every class whatever marker the line carries.
+
+**Who writes a class-scoped mark.** Only `claude-wrapper.sh`'s rotation path,
+and only when the death is provably per-class — a `MODEL_CREDITS_EXHAUSTED`
+classification (definitionally per-tier) or a #4501 per-model ceiling
+("reached your `<model>` limit") whose named words are not an account-wide
+qualifier (`weekly`/`monthly`/`session`/`plan`/…). The class itself comes from
+the **resolved model in flight** (`$LOOM_MODEL`, or an explicit `--model` arg
+that beat it), mapped through `script_helpers::model_tiers::task_alias_of` —
+the same classifier the sweep orchestrator's cost ladder uses. Anything
+ambiguous, any unrecognized model, and the daemon-side reaper
+(`sweep_registry::quarantine`, which has no model in hand) all write the
+ordinary account-wide entry. Widening is the fail-safe direction.
+
+**Who reads it.** `spawn-claude.sh` and `claude-wrapper.sh` pass the resolved
+model to `loom-daemon tokens select --model <alias|id>`, each behind the same
+`tokens select --help | grep -q -- '--model'` capability probe the `--auto-unpin`
+flag already uses, so a daemon binary mid-roll degrades to account-wide
+selection instead of hard-failing on an unknown argument. An unrecognized
+`--model` value is likewise not an error: it warns on stderr and falls back to
+class-less selection. Selection must never fail closed on a model name the
+classifier does not know.
+
+Scope note: `.ranking`-sourced exclusions (`exhausted`/`blocked` statuses) stay
+account-wide, because `.ranking` carries no per-class state — see
+[Per-class observability](#per-class-observability-8058-phase-3) below for why
+it still does not, and what the health/status surfaces report instead.
+
+### Per-class observability (#8058 Phase 3)
+
+Phases 1-2 changed what the *selector* does with a class-scoped hold. They did
+not change what an operator **sees**: every health/status surface printed one
+account-wide healthy count, which by construction reads a class-scoped hold as
+a whole-account outage. A pool reporting `2/20 healthy` while eighteen accounts
+could still serve Sonnet was indistinguishable from a genuinely dead pool.
+
+Both surfaces now carry a per-class breakdown beside that number:
+
+```text
+$ loom-daemon health
+  tokens  GREEN  2/20 healthy (per class: fable 20/20, haiku 20/20, opus 2/20, sonnet 20/20) (18 exhausted), ranking 3m old
+
+$ loom-daemon status
+Token capacity:
+  pool: /home/you/.loom/tokens
+  2/20 accounts healthy (per class: fable 20/20, haiku 20/20, opus 2/20, sonnet 20/20), 18 exhausted/near-ceiling (from .loom/tokens/.ranking)
+```
+
+and structurally, as a `class -> healthy` object:
+`health --json`'s `tokens.healthy_by_class`, `status --json`'s
+`capacity.healthy_accounts_by_class` — each has a sibling
+`monitor_utilization_by_class` field carrying claude-monitor's predictive
+per-class data when present (see "The claude-monitor ingest path" below).
+The Codex/other-provider health surface
+(`tokens_pool::health::ProviderCapacity`) carries the same field, populated
+from Phase 2's per-class cooldowns instead of `.bad_tokens` lines. It reports
+only the classes actually under a live hold, where the Claude surface reports
+the whole known vocabulary — deliberately: the Claude pool's classes are a
+closed set (`haiku`/`sonnet`/`opus`/`fable`), so the un-marked ones can be
+named and shown to be fine, while a provider whose class vocabulary is
+open-ended model IDs has no list to enumerate and must not invent one.
+
+Three properties are worth relying on:
+
+- **Degradation is the contract.** The breakdown appears only when
+  `.bad_tokens` actually names at least one model class. Without one — which is
+  every pool that has never recorded a class-scoped hold — the suffix is empty
+  and the JSON field is `{}`, so both lines are byte-identical to their
+  pre-#8058 form. An empty object means "no class-scoped state", which stays
+  distinguishable from `{"opus": 0}`, "this class has no capacity".
+- **Every known class is listed once any class is named**, not just the marked
+  one. The un-marked classes are the point: an operator staring at `2/20` needs
+  to be told Sonnet is `20/20`, and a class with no marks can never appear in
+  the file.
+- **Narrower, never wider.** Each count is computed through the same
+  class-scoped blocking scan the selector uses
+  (`bad_tokens::blocking_entry_in_dir_for_class`), which checks every
+  account-wide hold first — so a per-class count can only ever reveal capacity
+  the headline number was hiding, never claim capacity a spawn would be
+  refused. It is always `>=` the account-wide count.
+
+**Why `.ranking` gained no per-class columns.** The design called for them
+*if and only if* Anthropic's usage endpoint actually emits a per-class
+utilization header. Two independent live captures on 2026-09-19 — each 5
+accounts x 3 model classes (15 requests), the exact `POST /v1/messages`
+`max_tokens: 1` probe `tokens check` sends — found that it does **not**. The
+second capture's full header dump is posted on #8242. The recorded finding:
+
+- **The `200` path returns 12 `anthropic-ratelimit-unified-*` headers**
+  (`-5h-utilization`, `-7d-utilization`, `-5h-reset`, `-7d-reset`, `-5h-status`,
+  `-7d-status`, `-status`, `-reset`, `-representative-claim`, `-overage-status`,
+  `-overage-disabled-reason`, `-fallback-percentage`) — exactly 12 on every
+  `200` in the capture, rising to 13-15 on a window-scoped `429` as the
+  situational `-fallback` / `-5h-surpassed-threshold` /
+  `-7d-surpassed-threshold` appear. Every one is scoped to a **time window**
+  (5h / 7d) or to the account. **Not one is scoped to a model class**, and no
+  header name anywhere in either capture contains a class, model, or tier
+  token.
+- **A per-class limit demonstrably exists anyway — the endpoint just will not
+  name it.** On `agent10` at one instant, `claude-haiku-4-5-20251001` returned
+  `200` with `5h-utilization: 0.0`, `5h-status: allowed`, `status: allowed`,
+  while `claude-sonnet-4-6` and `claude-opus-5` were both refused `429`
+  `{"type":"rate_limit_error","message":"Error"}`. Three of five accounts
+  showed that exact split.
+- **The refusal carries strictly less information, not more.** Every one of
+  those class-scoped `429`s returned **zero** `anthropic-ratelimit-*` headers
+  and a body whose `message` is the literal string `"Error"`. (A *window*-scoped
+  `429` — the account's own 5h/7d ceiling — carries the full 13-15 header set
+  and a descriptive body, `"This request would exceed your account's rate
+  limit."`; the zero-header/`"Error"` shape is therefore diagnostic of *which
+  kind* of limit fired, but it still names no class.)
+
+So the per-class state above comes entirely from Phase 1/2 marks, and
+`.ranking` keeps its four-field `name|status|5h_util|limit_reset` shape.
+That is also the cheaper answer: `select::parse_ranking_line` splits on
+`splitn(4, '|')`, so a fifth column would be swallowed into `limit_reset` by
+every reader that has not been upgraded — a real compatibility cost to pay for
+a column no probe can currently fill.
+
+**The claude-monitor ingest path (#8297).** The one per-class source that
+*does* exist is claude-monitor's `ranking.json`, whose
+`accounts[].models.<class>.utilization` map was confirmed populated on a live
+host in the same pass — e.g. `{"fable": {"utilization": 0.91}}`. Three design
+decisions shape how it is consumed:
+
+- **Report-only, never a selection gate.** Phase 1/2's `.bad_tokens` marks are
+  *terminal* — a probe or a wrapper-observed rotation already concluded an
+  account is down for a class. claude-monitor's utilization is *predictive* —
+  a fraction approaching 100% forecasts a future block, it has not happened
+  yet. Mixing the two would need a threshold policy this issue did not scope,
+  and the "narrower, never wider" fail-safe direction above rules out guessing
+  one. So `select.rs`/`bad_tokens.rs` never consult it; it is surfaced for an
+  operator to read, nothing more.
+- **A JSON sidecar, not a fifth `.ranking` column.** `select::parse_ranking_line`
+  splits on `splitn(4, '|')`, so a naive fifth column would be silently
+  swallowed into `limit_reset` by any reader that has not been upgraded to
+  expect it — the exact compatibility cost the section above already paid to
+  avoid. Instead, `monitor.rs` writes `.ranking.classes.json` beside
+  `.ranking` (`tokens_pool::monitor_classes`, its own `schema` field), read
+  only by the observability path — `.ranking`'s four-field shape and every
+  existing reader are untouched.
+- **Coverage stays honest.** Only the class actually in use appears in
+  `models` (today: `fable` only). An absent class reads as "no data", never
+  coerced to a fabricated `0.0` — `MonitorAccount::class_utilization` is a map,
+  not a fixed-size record, so an absent key and a genuine `0.0` stay
+  distinguishable end to end.
+
+`capacity::model_class::ClassCapacity` consumes the sidecar (its
+`monitor_utilization` field, one number per class — the *highest* utilization
+seen across accounts, the actionable "which account is closest to a future
+block" signal) and appends it to the existing render, e.g. `per class: fable
+20/20, opus 2/20; monitor: opus 91%` and the JSON sidecar fields named above.
+It is consumed **only once `by_class` already has `.bad_tokens`-derived state
+to report beside** — so the degradation contract from the bullets above is
+unchanged: a pool with no class-scoped `.bad_tokens` state still renders
+exactly its pre-#8058 single number, whether or not a monitor sidecar exists.
+
 ## Error classification (`.loom/scripts/lib/classify-error.sh`)
 
 The `classify_error <output> <exit_code>` function returns one of `SUCCESS`,
@@ -580,13 +882,18 @@ matching — clean exits (`exit_code == 0`) always return `SUCCESS` regardless o
 stdout content.
 
 `MODEL_CREDITS_EXHAUSTED` (#5687, "You're out of usage credits") is a
-per-model-**tier** credit exhaustion, not an account death. **Every pool
-mechanism treats it exactly like `TOKEN_EXHAUSTED`** — same rotation, same
-`.bad_tokens` entry, same cooldown, same retryability — because the pool tracks
-account health, not per-model account state. The distinct name exists for the
-in-session `/loom:sweep` orchestrator, which has no pool to rotate through and
-instead re-dispatches one model rung down (`sweep.md` → "Credit-exhaustion
-fallback").
+per-model-**tier** credit exhaustion, not an account death. The Claude pool
+treats it like `TOKEN_EXHAUSTED` in every respect but one: same rotation, same
+cooldown, same retryability, but since #8058 the `.bad_tokens` entry it writes
+is **scoped to the model class that was in flight** rather than blocking the
+whole account (see
+[Model-class-scoped entries](#model-class-scoped-entries-8058)). The distinct
+name also still matters for the in-session `/loom:sweep` orchestrator, which
+has no pool to rotate through and instead re-dispatches one model rung down
+(`sweep.md` → "Credit-exhaustion fallback"). On the **Codex/other-provider**
+health surface (`tokens_pool/health.rs`) the same split landed in #8058 Phase
+2, expressed as per-class entries in `AccountHealth::class_cooldowns` rather
+than as `.bad_tokens` lines.
 
 A **monthly spend-limit kill** ("You've hit your monthly spend limit", issue
 #5631/#6518) classifies as plain `TOKEN_EXHAUSTED` — it is not, and does not
@@ -811,7 +1118,7 @@ Each role tick now reads the pool it would resolve to (repo-local shadow pool if
 it holds `.token` files, else shared — the same precedence `spawn-claude.sh`
 performs) and counts **spawnable** accounts. When that count is zero and the pool
 is non-empty, the tick returns `RoleTickOutcome::PoolExhausted { total,
-next_clear_at }` and **spawns nothing**:
+next_clear_at, pool }` and **spawns nothing**:
 
 - The skip is logged at `WARN` on the state **edge** for each `(workspace, role)`
   and downgraded to `DEBUG` on every repeat, so a dry pool costs one line per
@@ -834,6 +1141,72 @@ fail-safe retry, #5629) enforces, so `usable == 0` guarantees a real selection
 would have failed. It does not model the `index.json` non-Claude exclusion
 (#5609), which can only make the real count *lower* — so this can never block a
 spawn that would have succeeded.
+
+### The gate follows the admitted runtime (#8408)
+
+This pool is Claude's. A role admitted onto another runtime
+(`runtimes.roles.<role> = "codex"`) never draws a token from it, so since #8408
+the role runner resolves the runtime **first** and gates on the credential
+source that runtime actually consumes — everything above describes the `claude`
+row, which is unchanged byte for byte:
+
+| Admitted runtime | Gate reads | `PoolExhausted.pool` / telemetry `gated_pool` |
+|---|---|---|
+| `claude` (default) | this pool | `ClaudeTokens` / `claude_tokens` |
+| `codex` | enabled `loom-daemon accounts` codex profiles | `CodexAccounts` / `codex_accounts` |
+| `pi`, `opencode`, other | nothing (no pre-spawn pool gate) | — |
+
+**Which paths write the holds this gate reads (#8443).** The codex row reads
+account-wide `cooldown_until` holds out of `.loom/account-health.json`
+(`tokens_pool::health::record_terminal_for_class_at`) — but reading them is only
+half the story; something has to have written one first. Two producers turn an
+adapter's own `# LOOM_TERMINAL_RESULT …` log line into that write, both by
+parsing the log region for *that one dispatch* (never a stale line left by an
+earlier one) and validating provider/account/exit-code before trusting it:
+
+- **Sweeps**: `sweep_registry::SweepRegistry::apply_provider_health_feedback`,
+  anchored on the dispatch's `sweep_id=` header line, called from the reaper
+  before any retry/failover decision.
+- **Role ticks**: `role_runner::provider_health_feedback::
+  apply_role_tick_provider_health_feedback`, anchored on the tick's own
+  `role_runner: <timestamp> role=…` header line, called from
+  `run_role_with_timeout` right after the child exits — the role-tick analogue
+  of the sweep path above, added because a codex-pinned role tick otherwise had
+  no producer at all: the adapter printed `TOKEN_EXHAUSTED` on every exhausted
+  spawn, nothing ever read it back into health, and every account looked
+  spawnable no matter how many times it had already died.
+
+Both share the same log-parsing primitives
+(`sweep_registry::parse_terminal_result_after` /
+`sweep_registry::parse_token_name_after`) rather than each reimplementing
+terminal-line parsing. If a third dispatch surface starts running the codex
+runtime, it needs its own producer wired the same way — the gate above never
+writes a hold, it only ever reads one.
+
+Before this, an exhausted Claude pool skipped a codex-pinned role on every tick
+even with valid codex accounts idle — the pin could not relieve the very
+pressure it exists for. The fail-closed shape is kept: a codex-pinned role with
+no spawnable codex account still skips pre-spawn, with a role-log line naming
+the **codex account pool** rather than `.loom/tokens`. Two differences from the
+Claude row are deliberate:
+
+- **Only a Claude-pool skip feeds the #6614 brake.** That brake holds *sweep*
+  dispatch on a token-selection wall; a dry codex account pool says nothing
+  about the pool sweeps draw from.
+- **The codex gate only counts holds the spawn-time selector could not get
+  past**, so it can never block a launch that would have succeeded. It stands
+  down entirely when `spawn-codex.sh` would not reach the account selector (an
+  explicit `LOOM_CODEX_HOME` / `CODEX_HOME` / `LOOM_CODEX_PROFILE` pin, or a
+  `codex.json` whose `accountProvider` is not `codex`), and it does not count a
+  class-scoped credit hold (#8058 — the role's model is not resolved yet) or a
+  re-auth hold on a session-managed profile (#6927 — the selector's own probe
+  can release it). An unreadable inventory or health state fails closed,
+  exactly as the selector does.
+
+Native harness runtimes are not gated: their credential may live in the harness
+CLI's own auth store, which the daemon cannot observe, so an unset
+`credentialEnv` variable is not proof of an empty credential source. The
+API-key account pool (#8401) is the countable source a native gate can use.
 
 ## Sweep dispatch pre-flights the pool too, and holds the host (#7708)
 

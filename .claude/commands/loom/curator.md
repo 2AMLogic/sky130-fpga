@@ -118,8 +118,11 @@ agent touches them.
   ./.loom/scripts/hard-exclusion-labels.sh --jq-not   # a jq select() fragment
   ```
 
-  Every `gh issue list` query below composes the `--jq-not` fragment rather
-  than spelling `external` out again.
+**Repo-local non-work labels (#8255)**: this fixed list has no per-repo
+extension point. `autonomous.workFinder.extraSkipLabels` in `.loom/config.json`
+(#6685) is the per-repo one — e.g. 2AMLogic/2am's `journal` status label
+(2am#625). `./.loom/scripts/skip-labels.sh --jq-not` folds both in (same
+output when unconfigured); Priority 2 below uses it for that reason.
 
 ## Exception: Explicit User Instructions
 
@@ -326,9 +329,9 @@ be careful:
 This is the same discipline the base-branch trap requires: a fact about the
 repository read once at session start (your local checkout, or anything in
 your own context) is a snapshot, not a live fact, and drifts further from
-reality the longer a sweep runs. See [`troubleshooting.md` → "The base-branch
-trap: a session-start git snapshot is not evidence about the
-present"](../../../.loom/docs/troubleshooting.md) for the general form of this check
+reality the longer a sweep runs. See `.loom/docs/troubleshooting.md` → "The
+base-branch trap: a session-start git snapshot is not evidence about the
+present" for the general form of this check
 (three refs that must agree: local, remote-tracking after an explicit fetch,
 and the forge's own view) and why a reported divergence should carry the live
 command output that established it.
@@ -341,7 +344,7 @@ enhancement") is the entry point, so **target it first**:
 
 ```bash
 # Newly filed issues awaiting Curator enhancement
-EXCL="$(./.loom/scripts/hard-exclusion-labels.sh --jq-not)"   # #7528 shared source
+EXCL="$(./.loom/scripts/skip-labels.sh --jq-not)"   # #8255 shared source
 gh issue list --label="loom:triage" --state=open --limit 500 --json number,title,labels,createdAt \
   --jq "sort_by(.createdAt) | .[] | select($EXCL) | \"#\(.number) \(.title)\""
 ```
@@ -352,7 +355,7 @@ reserved for a human operator, so an autonomous Curator never "curates" an
 issue being built, awaiting evaluation, or outside its authority entirely:
 
 ```bash
-EXCL="$(./.loom/scripts/hard-exclusion-labels.sh --jq-not)"   # #7528 shared source
+EXCL="$(./.loom/scripts/skip-labels.sh --jq-not)"   # #8255 shared source
 gh issue list --state=open --limit 500 --json number,title,labels,createdAt \
   --jq "sort_by(.createdAt) | .[] | select(
     ([.labels[].name] | contains([\"loom:curated\"]) | not) and
@@ -745,7 +748,7 @@ The Builder's complexity-assessment path (`defaults/.claude/commands/loom/builde
 > re-count against the current tree before relying on this number."
 > ```
 >
-> This applies to: raw counts ("18 verbs"), version numbers ("schema_version is 1"), file/line citations ("see parser.py:142"), and negative claims ("no schema_version bump is needed"). The incident this convention guards against: example-org/tool-repo#203 curated "18 verbs / 13 net-new" and "no schema_version bump needed" as bare facts; both were correct when written and both had gone stale two days later — after `eval` and `lef-abstract` landed and `schema_version` bumped 1 -> 2 — ahead of an irrevocable PyPI publish that could not be re-uploaded for that version. Neither was a curation error; the facts simply weren't marked as snapshots. See "Complexity routing marker" below for when skipping the stamp on an irrevocable-output issue is itself a curation defect.
+> This applies to: raw counts ("18 verbs"), version numbers ("schema_version is 1"), file/line citations ("see parser.py:142"), and negative claims ("no schema_version bump is needed"). The incident this convention guards against: example-org/tool-repo#203 curated "18 verbs / 13 net-new" and "no schema_version bump needed" as bare facts; both were correct when written and both had gone stale two days later — after `eval` and `lef-abstract` landed and `schema_version` bumped 1 -> 2 — ahead of an irrevocable PyPI publish that could not be re-uploaded for that version. Neither was a curation error; the facts weren't marked as snapshots. See "Complexity routing marker" below for when skipping the stamp on an irrevocable-output issue is itself a curation defect.
 
 ### Measurable claims need their measurement (or a marker, #6380)
 
@@ -883,6 +886,7 @@ gh issue close <number> --reason "not planned"
 **Guardrails (safety — do NOT skip these):**
 - **Always comment the rationale BEFORE closing.** A silent close destroys context. `--reason "not planned"` distinguishes a judgment-call close from a fix.
 - **Never close an issue that encodes a still-pending human decision.** If the right call requires a human (a policy choice, a controversial trade-off, a security/access decision, anything you are not authorized to settle), route it instead — add `loom:blocked` (automatable but waiting on a dependency/clarification) or `loom:operator-only` **plus exactly one sub-kind label**, per "Applying `loom:operator-only`" immediately below — do **not** close it.
+- **An autonomous filing is never operator approval.** Reversing a documented design/safety/test decision still routes to `loom:operator-decision` — don't reason "the filing IS the approval" (#7855's anti-pattern). Detail: `.loom/docs/label-state-machine.md` → "loom:operator-only sub-kinds".
 - **Never invent new labels.** Use only the existing label set.
 - **Do not close an issue another agent is actively building** (`loom:building`) unless you are that agent — coordinate via a comment instead.
 - **Stand down on operator-session-lane issues.** An issue an operator filed with a command-verifiable acceptance criterion and a non-executing-file-only diff (`.md`/`.txt`; see CLAUDE.md § "Sweep Lifecycle" → operator-session lane) is routed straight to `loom:building` with Curator intentionally skipped. If you encounter one already labeled `loom:building`, do **not** re-curate it, re-label it, or post a no-op "already implementation-ready" comment — leave it exactly as found and move on. Re-deriving the same one-line diff and commenting to say so is the repeat-no-op-pass anti-pattern (#4736), not a clean-slate curation.
@@ -1268,6 +1272,61 @@ Ask yourself: "Is the original issue already clear and actionable?"
 
 Before marking an issue as `loom:curated`, check if it has a **Dependencies** section with a task list.
 
+### First: Champion out-of-band AC hold, not a dependency (#8259)
+
+**Run before anything else below**, on any `loom:blocked` + `loom:operator`
+issue. That pair marks Champion's Out-of-Band Acceptance-Criteria Gate
+(`champion-pr-merge.md` → "Out-of-Band Acceptance-Criteria Gate", #6883) —
+its own `<!-- champion:ac-hold pr=<n> sha=<sha> -->` comment already states
+the terminal condition (a human posting `<!-- loom:ac-verified sha=<sha>
+-->`). There is no dependency to re-check, so routing it through "Re-check
+Idempotency" below heartbeats a textually-stable block reason every 24h
+**forever** — `decide()` has no terminal state for "never re-check again"
+(18 near-identical comments on one issue over three weeks, #8259). Same class
+of bug "Checking Operator-Only Premises" (#6849) fixed for
+`loom:operator-only`; this covers the `loom:operator` + `loom:blocked` case
+that section does not reach.
+
+```bash
+ISSUE_NUMBER=<number>
+LABELS=$(gh issue view "$ISSUE_NUMBER" --json labels --jq '[.labels[].name] | join(",")')
+COMMENTS=$(gh issue view "$ISSUE_NUMBER" --json comments --jq '.comments[].body')
+HOLD=""
+[[ ",$LABELS," == *",loom:operator,"* ]] && HOLD=$(printf '%s\n' "$COMMENTS" \
+  | grep -oE '<!-- champion:ac-hold pr=[0-9]+ sha=[0-9a-f]+ -->' | tail -n 1)
+
+if [ -n "$HOLD" ]; then
+  # AC hold, not a dependency — re-run the exact classifier Champion used to
+  # post it (abbreviation-tolerant SHA match; never hand-roll it).
+  HOLD_PR=$(printf '%s' "$HOLD" | sed -n 's/.*pr=\([0-9]*\) sha=.*/\1/p')
+  HOLD_SHA=$(printf '%s' "$HOLD" | sed -n 's/.*sha=\([0-9a-f]*\) -->.*/\1/p')
+  NOTICE_MARKER="<!-- curator:ac-hold-verified-notice:sha=$HOLD_SHA -->"
+
+  if ! printf '%s\n' "$COMMENTS" | grep -qF "$NOTICE_MARKER"; then
+    ./.loom/scripts/classify-ac-verification.sh \
+      --issue "$ISSUE_NUMBER" --pr "$HOLD_PR" --head-sha "$HOLD_SHA" >/dev/null 2>&1
+    if [ "$?" -eq 11 ]; then   # SATISFIED: an ac-verified marker names this tree.
+      gh issue edit "$ISSUE_NUMBER" --add-label "loom:curating"
+      gh issue comment "$ISSUE_NUMBER" --body "**Champion's out-of-band AC hold now has a \`loom:ac-verified\` marker** for \`$HOLD_SHA\` — needs a human to close this issue (Curator does not). $NOTICE_MARKER"
+      gh issue edit "$ISSUE_NUMBER" --remove-label "loom:curating"
+    fi
+    # Any other exit (12/13 unverified/stale, 0/10 no AC left, 1 error):
+    # silent skip — no comment, no claim. Never route this through decide()'s
+    # heartbeat: a verified hold is a one-shot transition, not a recurring
+    # conclusion to reconfirm.
+  fi
+  # STOP either way — do NOT fall into "How to Check Dependencies" /
+  # "Re-check Idempotency" below for this issue this pass.
+fi
+```
+
+**Never does**: remove `loom:blocked`/`loom:operator`, add `loom:curated`
+(closing an AC-held issue is a human call), or claim `loom:curating` outside
+the one-shot notice above. Only fires on `loom:blocked` + `loom:operator` +
+an ac-hold marker — an ordinary `loom:blocked` (no `loom:operator`) falls
+through to "How to Check Dependencies" unchanged, and `loom:operator-only`
+stays "Checking Operator-Only Premises"'s case.
+
 ### How to Check Dependencies
 
 Look for a section like this in the issue:
@@ -1497,7 +1556,7 @@ PRIOR_HASH=$(printf '%s\n' "$PRIOR" | jq -r '.body // ""' \
 PRIOR_AT=$(printf '%s\n' "$PRIOR" | jq -r '.createdAt // empty')
 
 # Age in hours (portable: BSD `date -j -f` on macOS, GNU `date -d` elsewhere).
-_epoch() { date -j -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s 2>/dev/null || date -d "$1" +%s; }
+_epoch() { date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s 2>/dev/null || date -d "$1" +%s; }
 if [ -n "$PRIOR_AT" ]; then
   PRIOR_AGE_H=$(( ( $(date +%s) - $(_epoch "$PRIOR_AT") ) / 3600 ))
 else
@@ -1825,7 +1884,7 @@ PRIOR=$(gh issue view "$ISSUE_NUMBER" --json comments \
 PRIOR_HASH=$(printf '%s\n' "$PRIOR" | jq -r '.body // ""' \
   | sed -n 's|.*<!-- curator:operator-premise-recheck:\([0-9a-f]\{1,\}\) -->.*|\1|p' | tail -n 1)
 PRIOR_AT=$(printf '%s\n' "$PRIOR" | jq -r '.createdAt // empty')
-_epoch() { date -j -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s 2>/dev/null || date -d "$1" +%s; }
+_epoch() { date -u -j -f '%Y-%m-%dT%H:%M:%SZ' "$1" +%s 2>/dev/null || date -d "$1" +%s; }
 if [ -n "$PRIOR_AT" ]; then
   PRIOR_AGE_H=$(( ( $(date +%s) - $(_epoch "$PRIOR_AT") ) / 3600 ))
 else
@@ -2207,20 +2266,11 @@ Added comment:
 **Complexity**: Medium (3-5 days)
 **Dependencies**: #78 (daemon API refactor)
 
-### Option 3: SQLite full-text search
-**Approach**: Store all terminal output in FTS5 table
-**Pros**: Powerful search, persistent history, analytics potential
-**Cons**: Storage overhead, migration complexity
-**Complexity**: High (1-2 weeks)
-**Dependencies**: #78, #92 (database schema)
-
 ### Recommendation
-Start with **Option 1** for v0.3.0 (quick win), then add **Option 2** in v0.4.0 if user feedback shows need for persistent search. Option 3 is overkill unless we also need analytics.
+Start with **Option 1** for v0.3.0 (quick win), then add **Option 2** in v0.4.0 if user feedback shows need for persistent search.
 
 ### Related Work
-- #78: Daemon API refactor (required for options 2 & 3)
-- #92: Database schema design (required for option 3)
-- Similar feature in Warp terminal: [link]
+- #78: Daemon API refactor (required for option 2)
 ---
 ```
 

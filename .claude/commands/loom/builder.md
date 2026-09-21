@@ -156,6 +156,8 @@ This is the Builder-side counterpart of the orchestrator guardrail in `sweep.md`
 - **Headless (`claude -p` sweep, daemon dispatch)**: ending your turn *terminates the process*. The watcher is killed with it, the build result is never read, no PR is opened, and the issue is left claimed `loom:building` with nobody to release it.
 - **Interactive (Task-tool subagent)**: the re-invocation you are counting on never arrives. The sweep simply stalls until a human notices and nudges you — in the incident behind #5659 the orchestrator had to nudge parked Builder/Judge subagents roughly eight times in a single sweep.
 
+This rule is about *when your own turn may end*, not about *whether someone else is already running the same check*. For that second, separate question — a coordinator re-verifying what you already verified, or a sibling subagent duplicating your suite — see `.loom/docs/verification-ownership.md` → "Reconciling the two background-work rules already in force" (#8268) and `loom-daemon inflight claim` before you launch a long one.
+
 ### Local build/test runs
 
 Run them in the **foreground** and read the exit status yourself. If a command is too slow for one foreground tool call, background it and **poll in-turn against an explicit cap** — never park on it:
@@ -919,6 +921,12 @@ Before creating your PR, answer these questions:
 
 If your fix is documentation-only for a process issue, you must justify why documentation alone will change behavior this time when it didn't before. If you can't justify it, find a structural approach.
 
+**If the change touches a role prompt or an operator dispatch brief itself**
+(not merely a fix that happens to live in a `.md` file), the root-cause bar is
+pressure-testing it against a scenario built to resist the instruction and
+auditing it for conflicts with rules already in force — see
+`.loom/docs/role-prompt-authoring.md`.
+
 ## When You Can't Determine Changes
 
 **If you investigate an issue but cannot determine what code changes to make, you MUST leave a comment on the issue before exiting.** This preserves context for the next attempt (human or automated).
@@ -1083,9 +1091,10 @@ gh issue list --label="loom:issue" --label="loom:curated" --state=open --limit=1
 **Step 3: If no curated, fall back to approved-only issues**
 
 ```bash
-# #7528: the hard-exclusion fragment comes from the shared source, never a
-# hardcoded `external` literal. Note the DOUBLE-quoted --jq so $EXCL expands.
-EXCL="$(./.loom/scripts/hard-exclusion-labels.sh --jq-not)"
+# #7528/#8255: the exclusion fragment comes from the shared source (hard
+# exclusions plus this repo's autonomous.workFinder.extraSkipLabels), never a
+# hardcoded literal. Note the DOUBLE-quoted --jq so $EXCL expands.
+EXCL="$(./.loom/scripts/skip-labels.sh --jq-not)"
 gh issue list --label="loom:issue" --state=open --json number,title,labels \
   --jq ".[] | select(([.labels[].name] | contains([\"loom:curated\"]) | not) and $EXCL) |
   \"#\(.number): \(.title)\""
@@ -1111,7 +1120,7 @@ For additional PR quality guidelines, see **builder-pr.md**.
 - Run the project's check command (see `buildGate.command` in `.loom/config.json`, or the repo's documented CI command) before creating PR
 - **Run the project's formatter + linter on your changed files before committing** — discover the commands from repo convention (`buildGate.command`, `CONTRIBUTING.md`, CI workflow, or the language's standard tool). A format-only CI failure is a **guaranteed Judge rejection** that costs a Doctor cycle — see **builder-pr.md § "Format and Lint Changed Files"**
 - **Test-first discipline, for behavior changes**: write the failing test (or bug-reproducing test) before the fix, confirm it fails for the right reason, then implement to green. Record a `TDD:` line in the PR's Test Plan section — Judge re-verifies it against the diff, not just your say-so. Full requirement, format, and advisory/blocking rules: **builder-pr.md § "Test-First Discipline (TDD line)"** (ADR-0015).
-- **If you touched an already-large file, run `scripts/check-file-size-budget.sh` before pushing.** On failure, extract into a sibling file first — see `.loom/docs/file-size-policy.md`.
+- **If you touched an already-large file, run `scripts/check-file-size-budget.sh` before pushing.** On failure, extract into a sibling file first; never grow it in place.
 
 ### Live Verification You Cannot Perform: Say So, Don't Claim It
 

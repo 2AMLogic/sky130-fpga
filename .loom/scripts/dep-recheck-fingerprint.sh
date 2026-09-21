@@ -30,6 +30,9 @@
 #
 # BLOCK_REASON and ORTHOGONAL (#6516) stay caller-supplied pass-throughs: both
 # are judgement calls made by reading prose, not mechanical PR-state facts.
+# They are echoed back verbatim but CANONICALIZED before hashing (#8254) -
+# trimmed, internal whitespace collapsed, casefolded - so "doctor cycle
+# exhausted" and "Doctor cycle  exhausted" are one conclusion, not two.
 #
 # Usage:
 #   dep-recheck-fingerprint.sh dep-recheck (--number N [--repo OWNER/NAME] | --stdin)
@@ -45,11 +48,15 @@
 #
 # Subcommands:
 #   dep-recheck        VERDICT (blocked|clear) + BLOCKERS, one
-#                      "<pr#>:<state>:<block-label|no-block-label>:<conflicting|mergeable>"
+#                      "<pr#>:<state>:<block-label|no-block-label>:<conflicting|mergeable|n/a>"
 #                      line per PR in `closedByPullRequestsReferences`. The
 #                      label component is deliberately narrow (#7362) and an
 #                      UNKNOWN merge state fails safe to conflicting (#7281),
 #                      so ordinary review-cycle churn never moves the hash.
+#                      The merge-state bucket is "n/a" for any PR that is not
+#                      OPEN (#8253): GitHub stops computing mergeability once a
+#                      PR merges or closes, so a MERGED/CLOSED PR's transient
+#                      UNKNOWN reading must not move the hash either.
 #   operator-premise   VERDICT (stale-premise|open) + REFS. CONCLUSION_HASH is
 #                      left EMPTY when VERDICT=open: no comment this pass, so
 #                      nothing to compare.

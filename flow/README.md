@@ -394,18 +394,23 @@ signal-only `match` reads identically whether the layout is fully strapped
 or has fifteen mutually isolated rails (issue #41). The power half of the
 claim is `flow/erc.sh`, below.
 
-### `flow/erc.sh` — supply connectivity + antenna (the power half of T1 item 4)
+### `flow/erc.sh` — supply connectivity + antenna (T1 items 11 and the power half of 4)
 
 `flow/erc.sh` runs `klt erc` over the committed `layout/logic_tile.gds`
 with `flow/erc_supply_spec.json` and commits the verdict as
 `layout/logic_tile.erc.json`. It rebuilds the layer-by-layer connectivity
 model from the GDS geometry alone — no reference netlist — so a supply net
 that is drawn but not joined surfaces as `erc.unconnected_net` and a well
-with no tap contact inside it surfaces as `erc.missing_tie`. Against the
-committed layout it reports **0 findings** and 0 antenna `violate` verdicts
-across 232 gates; against the pre-PDN layout (GDS `sha256:a6dc076c…`) the
-identical invocation reported **9 findings** — 7 `erc.missing_tie` plus 2
-`erc.unconnected_net`. That gap is the whole reason this script exists.
+with no tap contact inside it surfaces as `erc.missing_tie`. This is the
+T1 checklist **item 11 (power delivery, structural)** evidence — approved
+as klt#2025 on 2026-09-17, tracked by issues #51 and #4, first committed
+honestly unmet in PR #54 and met here — and the **power-connectivity half
+of T1 item 4** (issue #41). Against the committed layout it reports **0
+findings** and 0 antenna `violate` verdicts across 232 gates; against the
+pre-PDN layout (GDS `sha256:a6dc076c…`) the same invocation reported **9
+findings** — 7 `erc.missing_tie` plus 2 `erc.unconnected_net` — and PR
+#54's tie-less spec measured that same layout at VPWR 7 / VGND 8 islands.
+That gap is the whole reason this script exists.
 
 Two things about the spec are load-bearing:
 
@@ -415,7 +420,33 @@ Two things about the spec are load-bearing:
 - **`VPB` is checked as a tie rule, not as a net.** The n-well body is not
   a drawn conductor on any routing layer, so it is covered by the
   `nwell_tap` entry (every `nwell` region must contain a `tap` contact
-  reaching `li1` on `VPWR`) rather than by island analysis.
+  reaching `li1` on `VPWR`) rather than by island analysis. `klt#2169`
+  (well+tie collapse, filed from gf180-drone-fc F-034) prescribed
+  tie-less specs as the interim and was fixed and closed upstream on
+  2026-09-20; the committed report's gates stay intact (232/no false
+  short/honest `missing_tie: 0`) precisely because the producing klt
+  build carries that fix — the report pins the build in
+  `provenance.klt_version`.
+
+Running:
+
+```
+./flow/erc.sh            # rerun klt erc against the committed GDS +
+                          # supply spec, gate on a clean verdict, diff the
+                          # (trimmed) report against the committed copy
+                          # under layout/, and verify the report still
+                          # content-hash-pins both inputs
+                          # (provenance.input ↔ GDS,
+                          # provenance.spec ↔ supply spec).
+./flow/erc.sh --update   # rerun and overwrite the committed report (run
+                          # after ./flow/layout.sh --update, or after any
+                          # supply-spec edit).
+```
+
+Requires only `klt`, `python3` and a resolvable sky130A PDK rev on `$PATH`
+(the `--pdk sky130` switch selects klt's *built-in antenna-ratio table*
+only — the connectivity model itself is a pure geometry pass over the
+committed GDS and spec JSON and opens no PDK install).
 
 **Toolchain note**: `klt erc` postdates `RECORDED_KLT_VERSION`, so this
 report cannot have been produced by the same klt as the committed GDS. The
@@ -427,7 +458,10 @@ the same block pins, so it stays checkable independently of that.
 **Out of scope here**: IR drop, electromigration and current density —
 nothing in this repo computes them. `klt erc` answers "is every supply
 shape actually joined, and is every well tapped", a topology question, not
-"is the grid wide enough".
+"is the grid wide enough"; the LVS `power_connectivity` verdict is issue
+#50's (and is blocked by the greybox abstraction rather than the PDN —
+see `flow/lvs.sh`'s request-options comment), and the `klt signoff
+--manifest` grading pass is issue #52's.
 
 ### `flow/sta-sweep.sh` — multi-corner timing characterization (G4)
 

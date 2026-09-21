@@ -48,7 +48,7 @@ One aggregated, current snapshot of the tile's design-evidence artifacts -- klay
 - **Fastest corner**: `ff_n40C_1v95` -- WNS 19.5927 ns (SPEF-annotated), `fmax_mhz` 2455.04.
 - **Fmax caveat carried forward** (per the source record and ADR-0002): `fmax_mhz` is a single-period `1/(T-WNS)` extrapolation, not a bisected measurement -- the slacks above are the trustworthy numbers; no Fmax/MHz figure is ratified anywhere in this repo.
 - **Source**: [`measurements/timing-characterization/records/20260921-062500-e8a37ad.md`](measurements/timing-characterization/records/20260921-062500-e8a37ad.md), harness `flow/sta-sweep.sh`.
-- **Record / git revision**: `20260921-062500-e8a37ad`, produced at git revision `e8a37ad641c7913495f8e9aa14d5dd4c1bf93d45`. Committed at: `unknown (no commit found)`.
+- **Record / git revision**: `20260921-062500-e8a37ad`, produced at git revision `e8a37ad641c7913495f8e9aa14d5dd4c1bf93d45`. Committed at: `78978e4 2026-09-21 00:48:21 -0700`.
 
 ## Ratified timing spec row
 
@@ -64,7 +64,7 @@ One aggregated, current snapshot of the tile's design-evidence artifacts -- klay
 - **Zero-delay leg**: PASS (`sim/tb_logic_tile.v`, unmodified, run gate-level against the as-built netlist) -- functional-only, no timing claim.
 - **SDF-annotated leg**: BLOCKED by a real, generically-reproducible upstream defect in `$sdf_annotate` (crashes on escaped identifiers containing `.`/`[]`, which this design's flattened `generate`-block RTL produces) -- filed as [klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890), not worked around with a fabricated result.
 - **Source**: [`measurements/timing-characterization/records/20260921-062530-e8a37ad.md`](measurements/timing-characterization/records/20260921-062530-e8a37ad.md); post-route SDF artifact: [`measurements/timing-characterization/logic_tile_route.sdf`](measurements/timing-characterization/logic_tile_route.sdf).
-- **Record / git revision**: `20260921-062530-e8a37ad`, produced at git revision `e8a37ad641c7913495f8e9aa14d5dd4c1bf93d45`. Committed at: `unknown (no commit found)`.
+- **Record / git revision**: `20260921-062530-e8a37ad`, produced at git revision `e8a37ad641c7913495f8e9aa14d5dd4c1bf93d45`. Committed at: `78978e4 2026-09-21 00:48:21 -0700`.
 
 ## Regenerating
 

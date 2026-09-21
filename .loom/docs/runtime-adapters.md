@@ -8,10 +8,10 @@ so that Loom can drive Claude Code, OpenAI Codex CLI, Amp, oh-my-pi (omp), and
 future tools through **one** interface instead of a growing pile of per-runtime
 special cases.
 
-It is the reference for the multi-runtime effort tracked by epic **#4167**
-(first-class multi-runtime worker support) and the fork-harvest triage in
-**#4165**. The collaboration model is upstream PRs from the gpeyton/loom fork
-(see the [fork mapping table](#fork-mapping-table)), not one-way cherry-picks.
+Pi and OpenCode have experimental **native Rust** adapters behind the same
+worker entry point. Harness selection, model profiles and trial evidence are
+separate: see [Native harness and model trials](runtime-model-trials.md).
+Guarded issue roles and sweeps: [native guardrail parity](guardrail-parity-native.md).
 
 > **Path convention.** This doc lives at `defaults/docs/runtime-adapters.md` in
 > the Loom source repo and cites `defaults/` paths throughout. A consumer
@@ -109,14 +109,14 @@ tier-1/tier-2:
   than exactly `"yes"` as unmet, so `"no"` fails closed identically to
   `"partial"`.
 - **Read-only admission is per-role, not automatic for the whole "read-only"
-  category.** `judge.json` declares `runtimeRequirements: ["mcp"]`, so a
-  tier-3 runtime with no MCP support (the honest default — see below) is
+  category.** `judge.json` declares `runtimeRequirements: ["loomControl"]`, so a
+  tier-3 runtime with no verified Loom control route is
   refused for Judge too, for the same reason it is refused for Builder: a
   declared `"no"` is not a declared `"yes"`. `curator.json`, `guide.json`, and
   `auditor.json` declare **no** `runtimeRequirements` today, so they are the
-  roles a no-MCP tier-3 runtime is actually admitted for (any runtime is
+  roles an unverified tier-3 runtime is actually admitted for (any runtime is
   trivially compatible with a role that declares no requirements). A tier-3
-  runtime that *does* support MCP can declare `mcp: "yes"` and pick up Judge
+  runtime with a verified control route can declare `loomControl: "yes"` and admit Judge
   too — the manifest is the single source of truth, not a hardcoded
   runtime-vs-role table.
 
@@ -303,7 +303,7 @@ set:
 | `CWD_DELETED` | worktree removed mid-run | abandon cleanly |
 | `TOKEN_EXPIRED` | 401 / OAuth expired | skip this token |
 | `TOKEN_EXHAUSTED` | quota / weekly / usage limit | rotate to another account, mark bad |
-| `MODEL_CREDITS_EXHAUSTED` | per-model-**tier** credits ran out ("out of usage credits") | in-session dispatch: re-dispatch one model rung down, same account. Subprocess dispatch: identical to `TOKEN_EXHAUSTED` |
+| `MODEL_CREDITS_EXHAUSTED` | per-model-**tier** credits ran out ("out of usage credits") | in-session dispatch: re-dispatch one model rung down, same account. Subprocess dispatch: rotate, but the hold is **class-scoped**, not account-wide, so the account keeps serving every other class — Claude pool: a `.bad_tokens` entry carrying the class in flight (`[model-class:opus]`, #8058 Phase 1); every other provider: a `class_cooldowns` entry in `.loom/account-health.json` with its own deadline, distinct from the account-wide `plan_exhausted` cooldown `TOKEN_EXHAUSTED` still writes (#8058 Phase 2). Both narrow **only when the model in flight is known** — with no model, either path records the account-wide hold instead, because guessing which class ran out could block one that still has credit |
 | `SESSION_LIMIT` | concurrent-session cap (healthy account) | re-select, retry, do **not** mark bad |
 | `MODEL_REFUSAL` | safety classifier refused the turn | drop one ladder rung, no Doctor cycle consumed |
 | `RECOVERABLE` | rate limit / 5xx / network | retry with backoff |
@@ -456,7 +456,7 @@ separate issue (epic #4167, design pillar 2). Sketch:
 }
 ```
 
-Roles declare requirements (e.g. Builder needs `worktreeIsolation` + `mcp`;
+Roles declare requirements (e.g. Builder needs `worktreeIsolation` + `loomControl`;
 Judge needs read-only + forge access). Dispatch computes role → runtime
 compatibility and refuses to dispatch a role onto a runtime that cannot meet its
 requirements, rather than letting the session fail partway. The declaration is
@@ -469,10 +469,10 @@ by the standalone checker and daemon admission:
 - **Declaration** — `defaults/runtimes/<name>.json` (e.g.
   `defaults/runtimes/claude.json`), matching the sketch above exactly (tri-state
   `"yes" | "no" | "partial"` string values, capability set `mcp`, `subagents`,
-  `hooks`, `skills`, `worktreeIsolation`).
+  `hooks`, `skills`, `worktreeIsolation`, `loomControl`).
 - **Requirements** — an optional `"runtimeRequirements"` array on a role sidecar
   (`defaults/roles/<name>.json`), e.g. `"runtimeRequirements": ["worktreeIsolation",
-  "mcp"]` on `builder.json`. A role with no `runtimeRequirements` key has no
+  "loomControl"]` on `builder.json`. A role with no `runtimeRequirements` key has no
   constraints (any runtime is compatible). This is a distinct field from the
   pre-existing `suggestedWorkerType` (a dispatch *preference* hint) — the checker
   reads only `runtimeRequirements`, and `runtime_admission::resolve_and_admit`
@@ -523,7 +523,7 @@ there is no parity doc for tier-3 at all (see
 [Tier 3: generic passthrough](#tier-3-generic-passthrough)). The same "any
 non-`yes` value fails closed" matcher rule that enforces Codex's `partial`
 enforces this `no` identically — `--role builder --runtime aider` and
-`--role judge --runtime aider` (judge requires `mcp`, declared `"no"` here)
+`--role judge --runtime aider` (judge requires `loomControl`, declared `"no"` here)
 both exit 78, while `--role curator --runtime aider` exits 0 because
 `curator.json` declares no `runtimeRequirements` at all.
 
@@ -535,7 +535,7 @@ unchanged, deliberately: they are **evidence-gated**, and the remaining evidence
 is recorded machine-readably in `codex.json`'s `capabilityGate.pending` and in
 prose in [`guardrail-parity-codex.md`](guardrail-parity-codex.md) § "Promotion
 gate". Read that block before changing either value. `defaults/roles/doctor.json`
-also declares `["worktreeIsolation", "mcp"]` as of #4495 — Doctor mutates a
+now declares `["worktreeIsolation", "loomControl"]` — Doctor mutates a
 worktree exactly as Builder does, so it must fail closed for the same reason
 instead of slipping through with no constraints.
 
@@ -748,6 +748,20 @@ model-selection block resolves an effective model (explicit `-m`/`--model` >
 options and exits `78` (`EX_CONFIG`) before any auth work. Escape hatch:
 `LOOM_CODEX_MODEL_CHECK=0`.
 
+#### The credential-pool preflight follows the admitted runtime (#8408)
+
+Resolving admission first also decides **which credential pool** the role
+runner's pre-spawn pool gate (#4642 / #7607) reads. It used to read the Claude
+token pool for every role, so `runtimes.roles.judge = "codex"` on a host whose
+Claude pool was exhausted skipped every judge tick (`token pool exhausted: 0/N
+spawnable in .loom/tokens`) while valid codex accounts sat idle. The gate now
+reads the pool the admitted runtime draws from — `.loom/tokens/` for `claude`
+(unchanged), the enabled `loom-daemon accounts` codex profiles for `codex`,
+nothing for the native harnesses — and a skip names that pool in the role log,
+the daemon log, and `role_tick.outcome`'s `gated_pool` key. Full contract,
+including when the codex gate deliberately stands down:
+[token-pool.md § The gate follows the admitted runtime](token-pool.md#the-gate-follows-the-admitted-runtime-8408).
+
 #### ChatGPT-plan seats cannot serve a pinned model at all (#5499)
 
 The family-level checks above only catch a Claude-shaped model on a Codex
@@ -877,6 +891,24 @@ dispatch the canonical single-issue lifecycle. With nothing configured this stay
 byte-for-byte the old `claude -p ... --dangerously-skip-permissions` invocation
 (via `spawn-worker.sh` → `spawn-claude.sh`).
 
+### Test-isolation defaults the dispatcher exports (#8077)
+
+Before dispatching, `spawn-worker.sh` sets two variables — with `${VAR:-default}`
+semantics, so an explicit caller value always wins:
+
+| Variable | Default | Why |
+|---|---|---|
+| `LOOM_DAEMON_LOG` | `$TMPDIR/loom-worker-isolation-<pid>/daemon.log` | A worker inherits the daemon's environment, and the daemon's own systemd unit sets `LOOM_SOCKET_PATH=$HOME/.loom/loom-daemon.sock`. `resolve_loom_dir()` takes that variable's **parent** as the loom dir, so any `loom-daemon` a worker spawns without an override resolves the **live** `~/.loom/daemon.log` — omitting an override yields the production path, not a neutral one. `LOOM_DAEMON_LOG` is the daemon's highest-precedence log tier, so setting it here makes the safe thing the default. |
+| `LOOM_TEST_ALLOW_SYSTEMD` | `0` | Test blocks that drive the **live** `systemctl --user` manager are opt-in. Inside a sweep, that manager is the one supervising the production daemon. CI opts in explicitly (`.github/workflows/ci.yml`); a sweep never does. |
+
+`LOOM_SOCKET_PATH`, `LOOM_WORKSPACE` and `LOOM_SHARED_TOKENS_DIR` are
+deliberately **not** repointed: the worker itself has to reach the real daemon
+over the real socket and draw from the real token pool, so isolating them would
+break the sweep rather than isolate a test. Test-side isolation for those lives
+in `defaults/scripts/tests/lib/live-state-sandbox.sh`, whose
+`live_host_leak_snapshot` / `live_host_leak_assert_unchanged` pair
+`run-ci-suites.sh` wraps around every suite it runs.
+
 ### Adapter observability markers
 
 Daemon-compatible runners emit a small, secret-free contract on stderr:
@@ -893,6 +925,108 @@ launching the runtime CLI. Account values are display names only; credential
 values and credential paths must never appear. Parsers anchor these markers
 after the newest daemon dispatch header. Historical `spawn-claude:` preamble
 and `# CLAUDE_CLI_START` records remain supported.
+
+#### The `LOOM_TERMINAL_RESULT` record (Codex/generic-only, #8058/#8277)
+
+`spawn-codex.sh` and `spawn-generic.sh` emit one more line to stderr right
+before exiting: a strict, exact-arity terminal-feedback record consumed by
+`sweep_registry::crash_signals::parse_terminal_result_after` (never by the
+Claude runtime — `tokens_pool::health` is Codex/generic-only, see that
+module's header comment).
+
+```text
+# LOOM_TERMINAL_RESULT v=1 provider=<provider> account=<account> category=<CATEGORY> exit_code=<n>
+# LOOM_TERMINAL_RESULT v=2 provider=<provider> account=<account> category=<CATEGORY> exit_code=<n> model=<model-or-none>
+```
+
+Both versions are strict: the parser requires the exact field count for the
+declared `v=` and fails closed (mutates no account health) on any other
+arity, an unrecognized `v=`, a duplicate record in the current dispatch
+region, or an `account=unknown`/malformed identity. `category` is one of the
+[error-classification](#3-error-classification) categories.
+
+- **`v=1`** (5 fields) is the original contract — still emitted verbatim by
+  `spawn-generic.sh`, which always reports `account=unknown` and so is
+  already inert past the account-identity check.
+- **`v=2`** (6 fields) adds `model=`, the model alias/pinned ID that was in
+  flight — `spawn-codex.sh`'s own `-m`/`--model` resolution
+  (`EFFECTIVE_MODEL`), sanitized to `[A-Za-z0-9._@-]+`. `model=none` is the
+  explicit "no model was in flight" sentinel, parsed identically to a v1
+  record's absent field. It is reported both when nothing was pinned **and**
+  when a pin was resolved but then *dropped before exec* by the #5499
+  ChatGPT-plan auth-mode guard — in that case the account's own default model
+  ran, and naming the dropped model would pin a class-scoped hold on a class
+  that never ran while leaving the class that did run selectable. A `model`
+  value the class classifier
+  (`tokens_pool::health::model_class_of`) does not recognize (e.g. it fails
+  `model=`'s own charset once normalized, or is simply not a name the
+  classifier has been taught) degrades to the same class-less, account-wide
+  health write a v1 record produces — selection must never fail closed on an
+  unrecognized model name.
+- **A `model@…` suffix is stripped before classification** (#8380), so
+  `gpt-5-codex@high` (Loom's own `model@effort` rung grammar, #3702) and
+  `gpt-5-codex@2026-01-01` (a pinned dated ID — why `@` is in `model=`'s
+  charset at all) both resolve to the one `gpt-5-codex` class, exactly as
+  `model_tiers::base_of`, `sweep_registry::model_family`, and
+  `spawn-codex.sh`'s own `${EFFECTIVE_MODEL%%@*}` Claude-shape check already
+  do. The suffix names a reasoning effort or a snapshot of the *same* model,
+  never a second credit pool. Before this, `@` failed normalization outright
+  and a fleet pinning suffixed IDs got **zero** benefit from Phase 2 — every
+  credit exhaustion was still a whole-account outage. A value that is only a
+  suffix (`@high`, empty base) stays unrecognized, on the fail-safe side.
+
+Consumer: `sweep_registry::quarantine::apply_provider_health_feedback`, the
+only production caller, feeds the parsed `(provider, account, category,
+model)` into `tokens_pool::record_terminal_for_model` — a
+`MODEL_CREDITS_EXHAUSTED` category with a recognized `model` writes a
+**class-scoped** `class_cooldowns` entry (`.loom/account-health.json`)
+rather than the account-wide `plan_exhausted` cooldown every other category
+(and every v1 record) still writes. See
+[`tokens_pool::health`'s module doc](https://github.com/rjwalters/loom/blob/main/loom-daemon/src/tokens_pool/health.rs)
+for the full narrowing/fail-safe contract (#8058 Phase 2).
+
+An adapter emitting this record for the first time should start at `v=2`
+directly — there is no reason to ship the strictly-less-informative `v=1`
+shape going forward, though the daemon keeps parsing it for adapters (and
+historical logs) that already do.
+
+##### Known and accepted: selection narrows by a model the #5499 guard may then drop (#8380)
+
+`spawn-codex.sh` narrows account selection to the model about to be dispatched
+(`tokens select --model "$EFFECTIVE_MODEL"`, #8277) so an account held only for
+a *different* class stays selectable. But the [#5499 ChatGPT-plan
+guard](#chatgpt-plan-seats-cannot-serve-a-pinned-model-at-all-5499) that decides
+whether the pin actually survives runs **after** selection — it has to, because
+it shells out to `codex login status` against the profile selection just chose,
+and nothing before that point knows the profile's auth mode.
+
+So when the pin is dropped, selection was narrowed to class X while class Y —
+the account's own default — is what really runs. An account holding a live
+class-Y `class_cooldowns` entry is therefore selectable for a dispatch that will
+run exactly the exhausted class.
+
+**This is accepted, not a latent bug to be fixed opportunistically**, on these
+grounds:
+
+- **Bounded and self-correcting.** The blast radius is one failed dispatch. That
+  run reports `model=none` (the pin was dropped, so the adapter cannot name what
+  ran), which writes the **account-wide** hold — the account then drops out of
+  selection entirely rather than being re-offered the same doomed narrowing. It
+  cannot loop.
+- **The alternatives cost more than the failure.** Re-selecting after a drop
+  buys a second selection round-trip that lands on a *different* profile, whose
+  auth mode is again unknown — so the probe has to re-run, and the
+  select→probe→reselect cycle needs an arbitrary cutoff to terminate. The real
+  fix is to carry the profile's auth mode in the account descriptor so selection
+  knows up front which seats are ChatGPT-plan (they *always* drop the pin, so
+  the narrowing is always wrong for them — a persistent property, not a
+  per-dispatch accident). That is a larger change than this asymmetry justifies
+  on its own.
+- **It fails in the safe direction.** The mismatch can only ever *admit* an
+  account that should have been skipped; it can never block one that had credit.
+
+If the ordering is ever inverted, this subsection and the `model=none` bullet
+above are the two places that must change together.
 
 ### Runtime resolution (precedence)
 
@@ -1010,12 +1144,160 @@ unknown to known did not weaken this guard for other names.)
 Containers as a session-persistence and containment boundary for worker
 runtimes — per-account persistent session containers for runtimes with
 mutable interactive auth (Codex), per-sweep ephemeral containers for
-stateless-auth runtimes (Claude) — are specified in
+stateless-auth runtimes (Claude, Pi/OpenCode) — are specified in
 [ADR-0017: Session-Container Architecture](https://github.com/rjwalters/loom/blob/main/docs/adr/0017-session-container-architecture.md)
 (epic #6896). Both container lifetimes dispatch through the existing
 `spawn-worker.sh` → `spawn-<runtime>.sh` seam described above with **no new
 dispatch path**; this doc's seven contract points are unchanged by that ADR.
 This is a pointer only — no contract-point changes ship with it.
+
+| Runtime | Lifetime | Image | Enable with | Telemetry `containment=` |
+|---|---|---|---|---|
+| Claude | per-sweep **ephemeral** | `ghcr.io/rjwalters/loom-worker` | `runtimes.containment.enabled: true` (#7429) | `claude-ephemeral` |
+| Codex | per-account **persistent session** | `ghcr.io/rjwalters/loom-worker-session` | ADR-0017 Phase 2 | — |
+| Pi, OpenCode | per-sweep **ephemeral** | `ghcr.io/rjwalters/loom-worker-native` | `runtimes.containment.native: "ephemeral"` (#8403) | `native-ephemeral` |
+
+#### Why native harnesses do NOT reuse Codex's session container
+
+The per-account session container exists for exactly one reason: Codex's
+`CODEX_HOME/auth.json` is a **mutable OAuth refresh chain**. A refresh rotates
+the stored credential in place, so the chain needs exactly one owning process —
+a second concurrent owner invalidates the first — and container *persistence*
+is what gives it that owner.
+
+An API-key subscription has no refresh chain. There is no rotating stored
+credential, nothing to own, and therefore nothing for persistence to buy. The
+key is injected as container **env** at `docker run` time (by NAME, `-e VAR`
+with no `=value`, so it is read live from the dispatching process's own
+environment and never appears in the container's argv) and exists nowhere on
+the container's filesystem — not in a profile directory, not in a mounted
+volume, not in a config file.
+
+Reusing the session shape here would therefore cost both of the properties the
+ephemeral shape gives for free — a guaranteed-clean filesystem per sweep, and a
+hard teardown at sweep end — in exchange for solving a problem native harnesses
+do not have. The two images differ by **lifetime**, not by which CLI they
+install; see [`docker/native/README.md`](https://github.com/rjwalters/loom/blob/main/docker/native/README.md).
+
+### Native-harness ephemeral containment (issue #8403, epic #6896 Phase 3)
+
+Native-harness sweeps (Pi, OpenCode — admitted by #8363/#8400) run **uncontained
+on the host by default**, exactly as before. Opt in per workspace:
+
+```json
+{
+  "runtimes": {
+    "containment": {
+      "native": "ephemeral"
+    }
+  }
+}
+```
+
+| Precedence | Source |
+|---|---|
+| 1 (highest) | `LOOM_NATIVE_CONTAINERIZED` env var (`1`/`true`/`yes`/`ephemeral` enables; anything else disables) |
+| 2 | `.loom/config.json` → `runtimes.containment.native` |
+| 3 (default) | off — byte-for-byte uncontained native dispatch, unchanged |
+
+This is a **separate switch** from Claude's `runtimes.containment.enabled`, on
+purpose. That flag selects the `loom-worker` base image, which ships no Node and
+therefore neither native CLI, so inheriting it would dispatch a native sweep
+into an image that cannot run it. The image resolves
+`LOOM_NATIVE_CONTAINER_IMAGE` env → `runtimes.containment.nativeImage` config →
+`ghcr.io/rjwalters/loom-worker-native:latest`.
+
+**Mechanism.** The same one `spawn-claude.sh` uses — re-exec the dispatcher
+inside a `docker run`, guarded by the shared `LOOM_SPAWN_CONTAINERIZED=1`
+recursion sentinel — expressed where the native launch decision actually lives.
+Native harnesses have no shell adapter to re-exec (`spawn-worker.sh` is a stub
+that execs `loom-daemon spawn-worker`), so the block is
+`loom_daemon::worker_spawn::containment` rather than a new wrapper script. The
+container runs `<workspace>/.loom/scripts/spawn-worker.sh <original args>`; the
+re-exec'd copy sees the sentinel, dispatches bare, and does its prompt expansion
+and guarded-binding provisioning *there*, against the container's own isolated
+directories.
+
+**Mounts** follow `docker/worker/MOUNT-CONTRACT.md`: the workspace read-write at
+its identical absolute host path (§1, so git's absolute worktree pointers
+resolve the same inside and out), the git commit identity (`~/.gitconfig`) and —
+only when neither `GH_TOKEN` nor `GITHUB_TOKEN` is in the environment — `gh`'s
+config directory, both read-only and both remapped under the *container's* home
+rather than the host's (HOME is not path-parity-load-bearing; `gh`'s copy lands
+inside the redirected `XDG_CONFIG_HOME`, because `gh` honours XDG), a log
+directory that lives outside the workspace, and an out-of-workspace
+`CARGO_TARGET_DIR` (§4) so a contained sweep shares the host's warm build cache
+instead of recompiling into a layer `--rm` discards. Everything else on the host
+is simply absent — the "read-only view of everything outside the worktree" is
+the container boundary itself, not a flag.
+
+**Per-launch directory isolation** — the concrete problem this closes.
+Uncontained, `XDG_DATA_HOME` is not relocated per launch, so N concurrent native
+workers on one host share **one** `~/.local/share/opencode` session store and
+**one** `auth.json`, and a `/connect`-style login by one worker is visible to
+all. Contained, every one of these is pointed at
+`/home/loom/.loom-native/<per-launch-id>/…` inside the container's own ephemeral
+writable layer:
+
+| Variable | Why it matters |
+|---|---|
+| `XDG_DATA_HOME` | OpenCode's session store and `auth.json` |
+| `XDG_CONFIG_HOME` | XDG-honouring config, including `gh`'s (bind-mounted *into* this path, not the host's `~/.config/gh`, so `gh` can still find it) |
+| `XDG_CACHE_HOME`, `XDG_STATE_HOME` | the remaining XDG bases, relocated for completeness rather than left to leak |
+| `OPENCODE_CONFIG_DIR` | the injected deny-by-default `loom-worker` agent config; `OPENCODE_CONFIG_CONTENT` itself is unchanged |
+| `LOOM_NATIVE_TOOLS_DIR` | the generated guarded-tool bindings (`native_tools::provision`), which otherwise default to the *shared*, parity-mounted `<workspace>/.loom/native-tools` |
+
+Two concurrent contained workers are therefore disjoint twice over: different
+containers, **and** different paths within them. The per-launch id is not
+redundant — it makes the disjointness inspectable (`docker exec <id> ls
+/home/loom/.loom-native`) rather than merely implied by the container boundary.
+
+**Credential shape.** The selected model profile's `credentialEnv` and its
+per-harness `credentialTargets` entry are forwarded **by name only** (`-e VAR`,
+never `-e VAR=value`), so docker reads the value live from the dispatching
+process's environment: the key never enters this dispatch's argv (and so never
+`ps`, a shell history, or a log), and nothing writes it to a file anywhere in the
+container. The source→target mapping happens inside the container, by the same
+`worker_spawn::harness` code that does it on the host. Host-only variables that
+name host filesystem paths (`LOOM_PI_BIN`, `LOOM_OPENCODE_BIN`, `LOOM_DAEMON_BIN`,
+…) are deliberately *not* forwarded, and neither is `CLAUDE_*`: a native
+container has no business holding a Claude token, and the Claude token pool is
+not mounted into it at all.
+
+**Resource limits and teardown** are inherited from #7430's shape, not
+reinvented: `--cpus` resolves `LOOM_SWEEP_CONTAINER_CPUS` → `runtimes.containment.cpus`
+→ the same host-wide `LOOM_SWEEP_CPU_BUDGET_CORES` budget bare-metal dispatch
+computed → no flag (unbounded); `--memory` resolves the analogous chain and is
+**always** applied, divided across in-flight sweeps
+(`LOOM_SWEEP_INFLIGHT_SWEEPS`) exactly the way `lib/memory-budget.sh` divides it
+for the Claude path. `docker run --rm` means the container and its whole
+writable layer are destroyed when the sweep's process tree ends.
+
+**Telemetry.** The dispatch writes the canonical marker to the per-sweep log
+before it execs docker — `# LOOM_DISPATCH_MODE mode=container image=<image>
+cpus=<v|none> memory=<v|none> containment=native-ephemeral` — and labels the
+container `loom.containment=native-ephemeral` alongside the existing
+`loom.sweep`/`loom.dispatch*` labels. The `containment=` token is new in #8403
+and is **appended** to the marker: `spawn-claude.sh` now emits
+`containment=claude-ephemeral` in the same position, and a pre-#8403 marker
+(which carries no token at all) still parses as containerized, with an
+unrecorded shape. `loom-daemon status`'s `CTR` column renders the shape as its
+prefix — `native-ephemeral(cpu=2,mem=4096m)`, `claude-ephemeral(unbounded)`, or
+the generic `container(...)` for a pre-#8403 marker.
+
+**What this does NOT ship.** The fleet-default flip for native workers follows
+the *same* soak criteria as #7431 (14 days, 50 sweeps, zero
+containment-attributable failures, zero saturation incidents, success rate at or
+above the trailing bare-metal baseline) rather than inventing new ones — until
+then it is opt-in per workspace. Two pieces are tracked separately because
+neither can be established from a builder worktree: **#8434** is the live
+verification (an in-container canary run, two concurrent workers' filesystems
+inspected for disjointness, and a post-run writable-layer credential scan — the
+check that tests what the *CLI* writes, not only what the dispatcher passes),
+and **#8435** is `cancel_sweep`'s container teardown, which is owed to the
+*Claude* ephemeral path identically (killing the `docker run` client does not
+stop the container dockerd owns) and so is fixed once for both shapes rather
+than branched per runtime.
 
 ### Containerized dispatch mode for Claude sweeps (issue #7429, epic #6896 Phase 3)
 
@@ -1105,12 +1387,16 @@ design" property to systemd via the container boundary instead of process
 reparenting. `loom-daemon restart --drain` (#4090/#5119) remains the
 recommended path on both supervisors and is unaffected: a containerized
 sweep is admitted into the same in-flight accounting `--drain` already polls
-to zero. **Not shipped by this issue** (explicit Phase 3 follow-up ADR-0017
-names but defers): `SweepRegistry::reconstruct`'s container-recognition
-extension (so a restarted daemon re-admits a still-running orphaned
-container instead of risking a duplicate re-dispatch), and teaching
-`cancel_sweep` to `docker stop`/`docker rm` a containerized sweep it
-explicitly cancels.
+to zero. **Cancellation no longer leaks the container** (#8435): the
+daemon's cancellation path — the explicit `cancel_sweep` verb and every
+watchdog/deadline-driven cancel, which compose the same begin/finish pair —
+label-identifies the cancelled issue's container via
+`loom.sweep.issue=<N>` + `loom.dispatch=container` and issues
+`docker stop --time <grace>` (the cancel's own grace) then `docker kill` on
+expiry; `--rm` removes the stopped container. Still deferred (the remaining
+ADR-0017 follow-up): `SweepRegistry::reconstruct`'s container-recognition
+extension, so a restarted daemon re-admits a still-running orphaned
+container instead of risking a duplicate re-dispatch.
 
 **Explicitly out of scope for this issue**: the fleet-default rollout
 decision (a separate, later Phase 3 issue). Per-sweep resource limits shipped
