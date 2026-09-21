@@ -136,12 +136,16 @@ source "$SCRIPT_DIR/pdk_root.sh"
 export_pdk_root_if_unset "$PDK_VARIANT"
 require_pdk_resolvable "$PDK_VARIANT"
 
-# Pin the PDK revision this run resolves against -- `klt lvs` writes
-# `provenance.pdk: null` (klayout-tools#1901, same gap as flow/drc.sh), so
-# the committed layout/logic_tile.lvs.json records no PDK revision of its
-# own. See flow/tool_versions.sh (issue #34, T1 checklist item 9). Only the
-# PDK half of the banner is printed here; the klt/OpenROAD half comes from
-# the flow/layout.sh invocation below, which prints the full banner.
+# Pin the PDK revision this run resolves against. On klt builds carrying
+# the klayout-tools#1901 fix the report `klt lvs` writes pins the PDK
+# revision in its own provenance block -- the committed
+# layout/logic_tile.lvs.json has done so since the 2026-09-21 re-stamp
+# (issue #41, PR #55); on older builds `klt lvs` wrote
+# `provenance.pdk: null`, and even there this banner remained where a PDK
+# swap became visible. See flow/tool_versions.sh (issue #34, T1 checklist
+# item 9). Only the PDK half of the banner is printed here; the
+# klt/OpenROAD half comes from the flow/layout.sh invocation below, which
+# prints the full banner.
 # shellcheck source=./tool_versions.sh
 source "$SCRIPT_DIR/tool_versions.sh"
 print_pdk_version_banner "$PDK_VARIANT"
@@ -252,6 +256,17 @@ GENERATED_REPORT="$LVS_BUILD_DIR/${REPORT_NAME}"
 # flow/erc.sh). A klt that predates the feature ignores the key entirely
 # (unknown request options are dropped, not rejected), so this stays
 # portable across the toolchain versions flow/tool_versions.sh warns about.
+#
+# Re-enable trigger (dated, issue #49): the mismatch this disable guards
+# against was verified upstream to be an abstracted-cell extraction
+# artifact, not a real PDN gap -- klayout-tools#2082's flat-extract
+# control measured 407/407 pfet bulks on the power net and 407/407 nfet
+# bulks on ground across the 814-device layout, and klt#2121 fixed it by
+# preserving abstracted well continuity. The recorded toolchain
+# (0.5.0+g2b7caa9939af, pinned in flow/tool_versions.sh) is the build
+# klt#2082 was filed against and predates that fix, so the disable stays
+# structurally necessary on it: a future klt bump past klt#2121 may re-
+# enable this option and expect power_connectivity.status: "match".
 cat > "$LVS_REQUEST" <<EOF
 {
   "schema": "klt.lvs.request/1",

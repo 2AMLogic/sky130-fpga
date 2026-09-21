@@ -38,12 +38,20 @@
 # so layout/logic_tile.par.json and every per-corner report under
 # measurements/timing-characterization/corners/ carry the open_pdks
 # revision they were produced against, and check mode's own diff fails if
-# the installed PDK differs. `klt drc` and `klt lvs` do NOT -- both emit
-# `provenance.pdk: null` even when invoked with `--pdk sky130A`
-# (klayout-tools#1901), so layout/logic_tile.drc.json and
-# layout/logic_tile.lvs.json record no PDK revision at all and their
-# check-mode diffs cannot notice a PDK swap. This file is the single pinned
-# source that covers them until that gap closes upstream.
+# the installed PDK differs. `klt drc` and `klt lvs` did not, before the
+# klt build carrying the klayout-tools#1901 fix: pre-fix builds wrote
+# `provenance.pdk: null` even when invoked with `--pdk sky130A`, and this
+# file was then the single pinned source covering those two reports. The
+# fixes landed: klayout-tools#1901 is closed, and klt 0.5.0 writes a real
+# `provenance.pdk.{name,version}` into both reports -- the committed
+# layout/logic_tile.drc.json and .lvs.json have pinned the PDK in-artifact
+# since the 2026-09-21 re-stamp (issue #41, PR #55). For them this banner
+# is now a double-check on top of the in-artifact pin, not their only pin;
+# the one report that still records no PDK revision is
+# layout/logic_tile.erc.json (`klt erc` writes no provenance block at all
+# and reads no PDK install, klayout-tools#2036), for which the banner --
+# plus the content-hash pins flow/erc_report_trim.py synthesizes on its
+# actual inputs -- remains the stated pin.
 
 # The klt / OpenROAD versions that produced the artifacts CURRENTLY
 # committed under layout/ and measurements/timing-characterization/ (per
@@ -64,9 +72,11 @@ RECORDED_OPENROAD_VERSION="26Q3-1278-g4421880472"
 # against -- the value `klt pdk find --pdk sky130A --format json` reports
 # as `.version`, and the value both committed provenance blocks above
 # already carry (layout/logic_tile.par.json's `provenance.pdk.version` and
-# every corners/*/*.sta.json's). Restated here so the PDK-unpinned DRC/LVS
-# evidence has a pinned source too. Update on an intentional PDK bump,
-# together with the artifacts regenerated against it.
+# every corners/*/*.sta.json's). Restated here as the single pinned source
+# for any committed report whose own `provenance.pdk` is null: once the
+# pre-fix DRC/LVS reports, now only layout/logic_tile.erc.json
+# (klayout-tools#2036). Update on an intentional PDK bump, together with
+# the artifacts regenerated against it.
 RECORDED_PDK_VERSION="open_pdks c6d73a35f524070e85faff4a6a9eef49553ebc2b"
 
 # Prints the resolved sky130A PDK revision and, if it differs from
@@ -88,10 +98,12 @@ print_pdk_version_banner() {
         {
             echo "warning: resolved ${variant} PDK (${installed_pdk:-unknown}) differs from the PDK revision the"
             echo "         currently committed artifacts were produced against (${RECORDED_PDK_VERSION})."
-            echo "         A diff below may be a PDK revision change rather than a design regression -- and for"
-            echo "         layout/logic_tile.drc.json / layout/logic_tile.lvs.json this banner is the ONLY place a"
-            echo "         PDK swap shows up at all, since klt drc/lvs write provenance.pdk: null"
-            echo "         (klayout-tools#1901). See flow/README.md's 'Toolchain versions' section (issue #34)."
+            echo "         A diff below may be a PDK revision change rather than a design regression -- most"
+            echo "         committed reports, including layout/logic_tile.drc.json / .lvs.json since the klt"
+            echo "         build carrying the klayout-tools#1901 fix, pin the PDK in their own provenance"
+            echo "         block; the exception is layout/logic_tile.erc.json (klt erc reads no PDK install,"
+            echo "         klayout-tools#2036), whose pin this banner carries. See flow/README.md's"
+            echo "         'Toolchain versions' section (issue #34)."
         } >&2
     fi
 }

@@ -47,12 +47,14 @@ no network):
 3. **Every committed evidence report pins the same PDK.** Any report JSON
    under `layout/` or `measurements/` carrying `provenance.pdk` must name
    exactly the pinned revision. A report whose `provenance.pdk` is `null`
-   is FAIL unless it is in `PDK_NULL_UPSTREAM_GAP` -- the reports produced
-   by `klt drc` / `klt lvs`, which emit `provenance.pdk: null` even when
-   invoked with `--pdk sky130A` (klayout-tools#1901) and are therefore
-   pinned by `flow/tool_versions.sh`'s run-time banner instead. Listing
-   them explicitly is what stops a *new* PDK-less report type from quietly
-   joining them.
+   is FAIL unless it is in `PDK_NULL_UPSTREAM_GAP`. Since the klt build
+   carrying the klayout-tools#1901 fix, `klt drc` / `klt lvs` write a real
+   `provenance.pdk` -- `layout/logic_tile.drc.json` / `.lvs.json` have
+   pinned it in-artifact since the 2026-09-21 re-stamp (issue #41, PR #55)
+   -- so the only live null gap is `layout/logic_tile.erc.json`
+   (klayout-tools#2036); the drc/lvs entries are retained there as
+   regression guards, not live gaps. Listing entries explicitly is what
+   stops a *new* PDK-less report type from quietly joining them.
 
 Records are append-only (`measurements/README.md`), so this script never
 edits anything -- there is no `--update` mode. When a check fails, the fix
@@ -86,17 +88,43 @@ ALLOWED_INPUT_DRIFT = {
     ),
 }
 
-# Committed reports whose `provenance.pdk` is null for a filed upstream
-# reason rather than because nobody pinned the PDK. These inherit their pin
-# from flow/tool_versions.sh's RECORDED_PDK_VERSION banner, printed by
-# flow/drc.sh and flow/lvs.sh at run time.
+# Committed reports whose `provenance.pdk` may be null without failing
+# audit check 3. Two classes, and the difference matters:
+#
+# * A **live null gap** -- `layout/logic_tile.erc.json`. `klt erc` writes no
+#   provenance block at all and reads no PDK install (klayout-tools#2036),
+#   so this report's PDK pin is genuinely inherited from
+#   flow/tool_versions.sh's RECORDED_PDK_VERSION banner.
+#
+# * A **regression guard kept by deliberate design** -- the `klt drc` /
+#   `klt lvs` entries. The committed drc/lvs reports pin the PDK
+#   in-artifact (klayout-tools#1901 was fixed upstream before klt 0.5.0;
+#   both reports have carried `provenance.pdk.{name,version}` since the
+#   2026-09-21 re-stamp, issue #41 / PR #55), so these entries do not
+#   describe today's committed bytes. They are retained, with corrected
+#   text, so a pre-fix klt build re-stamping those reports (or an upstream
+#   regression re-introducing the null) is audited as a named, explained
+#   fallback-to-banner state rather than an unknown-PDK FAIL -- the
+#   tolerance `measurements/claim-traceability.md` G-1 records ("the
+#   entries stay for as long as a null-era report could be re-stamped by a
+#   pre-fix klt build"). The alternative -- deleting the entries, making
+#   any future null a FAIL -- was considered and rejected in favor of that
+#   recorded intent (issue #49).
 PDK_NULL_UPSTREAM_GAP = {
     "layout/logic_tile.drc.json": (
-        "klt drc writes provenance.pdk: null even when given --pdk sky130A "
-        "(klayout-tools#1901); pinned by flow/drc.sh's banner instead."
+        "retained as a regression guard, not a live gap: klt drc writes a "
+        "real provenance.pdk on builds after the klayout-tools#1901 fix, "
+        "and this committed report has pinned it in-artifact since the "
+        "2026-09-21 re-stamp (issue #41, PR #55); only a pre-fix build's "
+        "re-stamp would write null again, inheriting the pin from "
+        "flow/drc.sh's banner instead."
     ),
     "layout/logic_tile.lvs.json": (
-        "klt lvs writes provenance.pdk: null (klayout-tools#1901); pinned by "
+        "retained as a regression guard, not a live gap: klt lvs writes a "
+        "real provenance.pdk on builds after the klayout-tools#1901 fix, "
+        "and this committed report has pinned it in-artifact since the "
+        "2026-09-21 re-stamp (issue #41, PR #55); only a pre-fix build's "
+        "re-stamp would write null again, inheriting the pin from "
         "flow/lvs.sh's banner instead."
     ),
     "layout/logic_tile.erc.json": (
