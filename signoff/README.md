@@ -90,8 +90,7 @@ uncited.**
   ADR-0003) and the SDF re-simulation status — pinned by content hash
   twice (envelope + manifest). `python3 measurements/
   generate-characterization-summary.py --check` must pass when this
-  citation is regenerated: the summary embeds its sources' last-commit
-  stamps, so a post-merge regeneration of it (and then of this envelope,
+  citation is regenerated: a regeneration of it (and then of this envelope,
   the manifest pin, and `tier-report.json`) is the expected cadence whenever
   an evidence source changes — same regen cadence PRs #55/#58/#59 already
   follow.
