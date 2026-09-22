@@ -31,7 +31,8 @@
   // Never auto-merge. Agents review, humans merge.
   "automerge": false,
 
-  // Create PRs as drafts — consistent with AGENTS.md PR policy
+  // Create PRs as drafts, so nothing is merge-eligible until a human marks
+  // it ready for review.
   "draftPR": true,
 
   // --- Schedule ---
