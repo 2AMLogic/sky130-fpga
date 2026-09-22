@@ -83,8 +83,8 @@
     },
 
     // Group all GitHub Actions SHA updates into one PR
-    // AGENTS.md mandates SHA pinning with inline version comments (# vX.Y.Z)
-    // Renovate preserves these comments natively when updating digests
+    // Renovate preserves inline version comments (# vX.Y.Z) natively
+    // when updating digests
     {
       "groupName": "github-actions",
       "matchManagers": ["github-actions"],
