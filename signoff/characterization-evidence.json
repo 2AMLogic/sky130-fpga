@@ -6,7 +6,7 @@
   "source": "measurements/characterization-summary.md",
   "provenance": {
     "input": {
-      "content_hash": "sha256:f9780703108af7bad58a53cfefda3533720a46915c4650b27943b36cb5910e53",
+      "content_hash": "sha256:38bd0b224a082cf7bd2c03eef8bbab44f78291f51afce4c16f1010478cbba4cb",
       "role": "characterization-record"
     }
   }

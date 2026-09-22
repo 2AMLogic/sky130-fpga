@@ -36,35 +36,32 @@ Without arguments, (re)writes `measurements/characterization-summary.md`.
 With `--check`, regenerates in memory and exits non-zero if the committed
 file would change (CI-style drift check) -- it does not touch the file.
 
-Provenance design decision -- how "Committed at" lines behave under squash
-merges (issue #57 item 4; mechanical implementation split out to #61):
+Provenance design decision -- where lineage in the summary comes from
+(issue #57 item 4; decision recorded there, mechanically implemented by
+#61):
 
-`git_last_commit()` currently bakes `git log -1` short SHAs into the
-generated summary (per-section "Committed at" bullets plus the
-at-a-glance "Derived from" cells). The repo squash-merges every PR, which
-rewrites those SHAs away on every merge, so `--check` on `origin/main`
-fails whenever a cited source's last-touching commit was squash-rewritten,
-and any PR that regenerates the summary repairs the stamps for files it
-does not touch while re-introducing the drift for the files it does. That
-is inherent to the field, not to any one regeneration.
-
-Decided: drop the git-history-derived fields, keeping only content-stable
-lineage -- the in-artifact content hashes each section already cites, plus
-the append-only records' own `record-meta` ids and `git_revision` (the
-existing "Record / git revision" lines stay). Repo-history SHA stamps are
-neither needed (the summary is a tree-relative aggregation: the sources it
-cites are the ones in the same checkout) nor stable under squash-merge.
-The alternative -- making `--check` tolerate squash-rewritten SHAs -- is
+Lineage in the generated summary comes only from content-stable
+sources: the in-artifact content hashes each section cites, plus the
+append-only records' own `record-meta` ids and `git_revision` (the
+"Record / git revision" lines). The summary deliberately carries no
+`git log`-derived "Committed at" stamps: this repo squash-merges every
+PR, which rewrites those SHAs away on every merge, so a history-stamped
+`--check` on `origin/main` failed whenever a cited source's
+last-touching commit was squash-rewritten, and any PR that regenerated
+the summary repaired the stamps for files it did not touch while
+re-introducing drift for the files it did -- inherent to the field, not
+to any one regeneration. Repo-history SHA stamps are neither needed
+(the summary is a tree-relative aggregation: the sources it cites are
+the ones in the same checkout) nor stable under squash-merge. The
+alternative -- making `--check` tolerate squash-rewritten SHAs -- was
 rejected: it would leave unreachable SHAs baked into a committed,
-hash-pinned evidence artifact (signoff/characterization-evidence.json and
-signoff/block-manifest.json item 8 pin this file by content hash), which
-is misleading provenance in exactly the place this repo's traceability
-discipline lives. The removal, the summary regeneration and the signoff
-re-pin chain land in #61.
+hash-pinned evidence artifact (signoff/characterization-evidence.json
+and signoff/block-manifest.json item 8 pin this file by content hash),
+which would be misleading provenance in exactly the place this repo's
+traceability discipline lives.
 """
 import json
 import re
-import subprocess
 import sys
 from pathlib import Path
 
@@ -97,22 +94,6 @@ def parse_record_meta(path: Path) -> dict:
     return json.loads(m.group(1))
 
 
-def git_last_commit(rel_path: str) -> str:
-    """Short commit + date that last touched `rel_path`, or a fallback string."""
-    try:
-        out = subprocess.run(
-            ["git", "log", "-1", "--format=%h %ci", "--", rel_path],
-            cwd=REPO_ROOT,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        result = out.stdout.strip()
-        return result if result else "unknown (no commit found)"
-    except Exception:
-        return "unknown (git unavailable)"
-
-
 def require(condition: bool, message: str) -> None:
     if not condition:
         raise AssertionError(f"characterization-summary generator: {message}")
@@ -130,7 +111,6 @@ def collect_drc():
         "violation_count": data["violation_count"],
         "input_hash": data["provenance"]["input"]["content_hash"],
         "deck": data["deck"],
-        "commit": git_last_commit("layout/logic_tile.drc.json"),
     }
 
 
@@ -161,7 +141,6 @@ def collect_erc():
         "gate_verdicts": gate_counts,
         "layout_gds_sha256": data["provenance"]["input"]["content_hash"],
         "klt_version": data["provenance"]["klt_version"],
-        "commit": git_last_commit("layout/logic_tile.erc.json"),
     }
 
 
@@ -203,7 +182,6 @@ def collect_lvs():
         ),
         "layout_gds_sha256": data["layout_gds_sha256"],
         "top": data["top"],
-        "commit": git_last_commit("layout/logic_tile.lvs.json"),
     }
 
 
@@ -271,7 +249,6 @@ def collect_sta_sweep():
         "fastest_corner": fastest_corner,
         "fastest_wns_spef": fastest["spef"]["worst_slack_ns"],
         "fastest_fmax_spef": fastest["spef"]["fmax_mhz"],
-        "commit": git_last_commit(str(STA_RECORD_PATH.relative_to(REPO_ROOT))),
     }
 
 
@@ -329,10 +306,6 @@ def collect_ratified_spec_row():
         "tile_spec_path": tile_spec_path,
         "adr_path": adr_path,
         "timing_target": timing_target,
-        "commit": git_last_commit("spec/tile-spec.md"),
-        "adr_commit": git_last_commit(
-            "spec/decisions/0002-tile-timing-spec-ratification.md"
-        ),
     }
 
 
@@ -365,12 +338,19 @@ def collect_sdf_resim():
         "record_id": meta["record_id"],
         "git_revision": meta["git_revision"],
         "sdf_path": sdf_path,
-        "commit": git_last_commit(str(SDF_RECORD_PATH.relative_to(REPO_ROOT))),
     }
 
 
 def rel(path: Path) -> str:
     return str(path.relative_to(REPO_ROOT))
+
+
+def hash_prefix(content_hash: str) -> str:
+    """`sha256:` + first 12 hex -- a stable lineage tag for the at-a-glance
+    "Derived from" cells. Always a prefix of the full content hash the
+    corresponding section cites, so the cell stays faithful to the
+    per-section citation below it."""
+    return content_hash[: len("sha256:") + 12]
 
 
 def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
@@ -405,17 +385,20 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
     lines.append("| --- | --- | --- | --- |")
     lines.append(
         f"| DRC | **{drc['status']}** ({drc['violation_count']} violations) "
-        f"| [`{rel(drc['path'])}`]({rel(drc['path'])}) | commit `{drc['commit']}` |"
+        f"| [`{rel(drc['path'])}`]({rel(drc['path'])}) "
+        f"| content hash `{hash_prefix(drc['input_hash'])}` |"
     )
     lines.append(
         f"| LVS | **{lvs['status']}** ({lvs['mismatch_count']} mismatches, "
         f"engine `{lvs['engine']}`) "
-        f"| [`{rel(lvs['path'])}`]({rel(lvs['path'])}) | commit `{lvs['commit']}` |"
+        f"| [`{rel(lvs['path'])}`]({rel(lvs['path'])}) "
+        f"| layout GDS hash `{hash_prefix(lvs['layout_gds_sha256'])}` |"
     )
     lines.append(
         f"| ERC (supply connectivity + antenna) | **{erc['finding_count']} findings**, "
         f"0 antenna `violate` across {erc['gate_count']} gates "
-        f"| [`{rel(erc['path'])}`]({rel(erc['path'])}) | commit `{erc['commit']}` |"
+        f"| [`{rel(erc['path'])}`]({rel(erc['path'])}) "
+        f"| layout GDS hash `{hash_prefix(erc['layout_gds_sha256'])}` |"
     )
     lines.append(
         f"| 18-corner STA sweep | **setup/hold-clean at all "
@@ -428,8 +411,7 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"| Ratified timing spec row | **RATIFIED** (ADR-0002) "
         f"| [`{rel(spec_row['tile_spec_path'])}`]({rel(spec_row['tile_spec_path'])}), "
         f"[`{rel(spec_row['adr_path'])}`]({rel(spec_row['adr_path'])}) "
-        f"| commit `{spec_row['commit']}` (tile-spec.md), "
-        f"`{spec_row['adr_commit']}` (ADR-0002) |"
+        f"| decision record ADR-0002 |"
     )
     lines.append(
         f"| SDF-generation + gate-level re-sim | **zero-delay: PASS; "
@@ -449,7 +431,6 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"- **Source**: [`{rel(drc['path'])}`]({rel(drc['path'])}) "
         f"(analysed-input hash `{drc['input_hash']}`)"
     )
-    lines.append(f"- **Committed at**: `{drc['commit']}`")
     lines.append("")
 
     lines.append("## LVS")
@@ -473,7 +454,6 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         "nothing about power/ground. The power half of the claim is ERC, "
         "below. See `layout/README.md`'s \"LVS scope, concretely\"."
     )
-    lines.append(f"- **Committed at**: `{lvs['commit']}`")
     lines.append("")
 
     lines.append("## ERC (supply connectivity + antenna)")
@@ -505,7 +485,6 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         "(7 `erc.missing_tie`, 2 `erc.unconnected_net`). See "
         "`layout/README.md`'s \"Power delivery network\"."
     )
-    lines.append(f"- **Committed at**: `{erc['commit']}`")
     lines.append("")
 
     lines.append("## 18-corner STA sweep")
@@ -545,7 +524,7 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
     )
     lines.append(
         f"- **Record / git revision**: `{sta['record_id']}`, produced at git revision "
-        f"`{sta['git_revision']}`. Committed at: `{sta['commit']}`."
+        f"`{sta['git_revision']}`."
     )
     lines.append("")
 
@@ -562,10 +541,6 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"- **Source**: [`{rel(spec_row['tile_spec_path'])}`]"
         f"({rel(spec_row['tile_spec_path'])}) (summary table), decision record "
         f"[`{rel(spec_row['adr_path'])}`]({rel(spec_row['adr_path'])})."
-    )
-    lines.append(
-        f"- **Committed at**: `{spec_row['commit']}` (tile-spec.md), "
-        f"`{spec_row['adr_commit']}` (ADR-0002)."
     )
     lines.append("")
 
@@ -588,7 +563,7 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
     )
     lines.append(
         f"- **Record / git revision**: `{sdf['record_id']}`, produced at git revision "
-        f"`{sdf['git_revision']}`. Committed at: `{sdf['commit']}`."
+        f"`{sdf['git_revision']}`."
     )
     lines.append("")
 
