@@ -2,11 +2,11 @@
   "schema_version": 1,
   "kind": "generic",
   "status": "pass",
-  "summary": "T1 item 8 aggregated characterization report, current against its committed sources (generate-characterization-summary.py --check passes): DRC clean (0 violations), LVS signal-match (topology.power_only_pruned warning, signal-connectivity scope), ERC supply connectivity 0 findings and 0 antenna violations across 232 gates, 18-corner SPEF-annotated STA setup/hold-clean at every corner (binding corner ss_n40C_1v28, SPEF WNS 15.2146 ns), timing spec row ratified (ADR-0002) with the WNS figure of record re-ratified against the post-PDN geometry (ADR-0003). The SDF-annotated gate-level re-simulation leg is still blocked by upstream klayout-tools#1890 and is recorded as BLOCKED in the same report.",
+  "summary": "T1 item 8 aggregated characterization report, current against its committed sources (generate-characterization-summary.py --check passes): DRC clean (0 violations), LVS signal-match (topology.power_only_pruned warning, signal-connectivity scope), ERC supply connectivity 0 findings and 0 antenna violations across 232 gates, 18-corner SPEF-annotated STA setup/hold-clean at every corner (binding corner ss_n40C_1v28, SPEF WNS 15.2146 ns), timing spec row ratified (ADR-0002) with the WNS figure of record re-ratified against the post-PDN geometry (ADR-0003). The SDF-annotated gate-level re-simulation leg is still BLOCKED and is recorded as such in the same report: klayout-tools#1890 is closed, but its fix (klt v0.6.0) is only a fail-loud guard on options.sdf, a raw $sdf_annotate still aborts vvp (re-tried 2026-10-08, record 20261008-233733-23e6b5e), and the remaining gap is tracked as klayout-tools#2897.",
   "source": "measurements/characterization-summary.md",
   "provenance": {
     "input": {
-      "content_hash": "sha256:38bd0b224a082cf7bd2c03eef8bbab44f78291f51afce4c16f1010478cbba4cb",
+      "content_hash": "sha256:58ba464be9b0cbcb3429a926a49be95cac30be8700f60c6f5aa12060604cc5ec",
       "role": "characterization-record"
     }
   }

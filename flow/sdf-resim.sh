@@ -39,7 +39,7 @@
 #      design's `generate`-block RTL (design/rtl/logic_tile.v's
 #      `g_slice[N].u_slice`) produces once flattened. Filed generically
 #      (no design-specific detail) against klayout-tools as
-#      https://github.com/2AMLogic/klayout-tools/issues/1890, confirmed
+#      https://github.com/2AMLogic/klayout-tools/issues/1890 (closed 2026-09-16 as a klt v0.6.0 fail-loud guard on options.sdf only -- this raw $sdf_annotate path still crashes; follow-up klayout-tools#2897), confirmed
 #      reproducing identically through `klt functional-verification`'s own
 #      `options.sdf` CLI path, not just this script's hand-wired
 #      `$sdf_annotate`. This script re-attempts leg 2 every run and treats
@@ -232,6 +232,20 @@ ROUTED_NETLIST="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.v"
 GENERATED_DEF="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.def"
 COMMITTED_DEF="$REPO_ROOT/layout/${TOP_MODULE}.def"
 
+# klt >= 0.6.0 writes stage artifacts under .klt/<stage>/run-<id>/ instead of
+# flat .klt/<stage>/ (observed with klt 0.6.0 / 0.7.0). Fall back to the
+# newest run-* directory when the flat (<= 0.5.x) path is absent. Prints the
+# flat path unchanged if nothing matches, so the callers' existing
+# "did not produce" errors still fire.
+resolve_klt_artifact() {
+    local flat="$1" dir base newest
+    if [[ -s "$flat" ]]; then echo "$flat"; return 0; fi
+    dir="$(dirname "$flat")"; base="$(basename "$flat")"
+    # shellcheck disable=SC2012
+    newest="$(ls -1dt "$dir"/run-*/"$base" 2>/dev/null | head -1 || true)"
+    echo "${newest:-$flat}"
+}
+
 cat >"$SYNTH_REQUEST" <<EOF
 {
   "schema": "klt.synthesize.request/1",
@@ -248,6 +262,7 @@ if ! klt synthesize "$SYNTH_REQUEST" --pdk sky130A --format json | tee "$SYNTH_R
     echo "error: klt synthesize failed (see $SYNTH_RESPONSE)" >&2
     exit 1
 fi
+SYNTH_NETLIST="$(resolve_klt_artifact "$SYNTH_NETLIST")"
 if [[ ! -s "$SYNTH_NETLIST" ]]; then
     echo "error: klt synthesize did not produce a netlist at $SYNTH_NETLIST" >&2
     exit 1
@@ -279,6 +294,8 @@ if [[ "$STAGE_REACHED" != "route" ]]; then
     exit 1
 fi
 
+ROUTED_NETLIST="$(resolve_klt_artifact "$ROUTED_NETLIST")"
+GENERATED_DEF="$(resolve_klt_artifact "$GENERATED_DEF")"
 if [[ ! -s "$ROUTED_NETLIST" ]]; then
     echo "error: klt place-and-route did not produce a routed netlist at $ROUTED_NETLIST" >&2
     exit 1

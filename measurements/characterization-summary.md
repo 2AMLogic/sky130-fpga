@@ -17,7 +17,7 @@ One aggregated, current snapshot of the tile's design-evidence artifacts -- klay
 | ERC (supply connectivity + antenna) | **0 findings**, 0 antenna `violate` across 232 gates | [`layout/logic_tile.erc.json`](layout/logic_tile.erc.json) | layout GDS hash `sha256:38498092805e` |
 | 18-corner STA sweep | **setup/hold-clean at all 18 corners** (binding setup corner `ss_n40C_1v28`, SPEF WNS 15.2146 ns) | [`measurements/timing-characterization/records/20260921-062500-e8a37ad.md`](measurements/timing-characterization/records/20260921-062500-e8a37ad.md) | record `20260921-062500-e8a37ad`, git revision `e8a37ad` |
 | Ratified timing spec row | **RATIFIED** (ADR-0002) | [`spec/tile-spec.md`](spec/tile-spec.md), [`spec/decisions/0002-tile-timing-spec-ratification.md`](spec/decisions/0002-tile-timing-spec-ratification.md) | decision record ADR-0002 |
-| SDF-generation + gate-level re-sim | **zero-delay: PASS; SDF-annotated: BLOCKED** (klayout-tools#1890) | [`measurements/timing-characterization/records/20260921-062530-e8a37ad.md`](measurements/timing-characterization/records/20260921-062530-e8a37ad.md) | record `20260921-062530-e8a37ad`, git revision `e8a37ad` |
+| SDF-generation + gate-level re-sim | **zero-delay: PASS; SDF-annotated: BLOCKED** (klayout-tools#1890 closed as a fail-loud guard only; capability gap tracked in klayout-tools#2897) | [`measurements/timing-characterization/records/20261008-233733-23e6b5e.md`](measurements/timing-characterization/records/20261008-233733-23e6b5e.md) | record `20261008-233733-23e6b5e`, git revision `23e6b5e` |
 
 ## DRC
 
@@ -58,9 +58,9 @@ One aggregated, current snapshot of the tile's design-evidence artifacts -- klay
 ## SDF-generation + gate-level re-simulation
 
 - **Zero-delay leg**: PASS (`sim/tb_logic_tile.v`, unmodified, run gate-level against the as-built netlist) -- functional-only, no timing claim.
-- **SDF-annotated leg**: BLOCKED by a real, generically-reproducible upstream defect in `$sdf_annotate` (crashes on escaped identifiers containing `.`/`[]`, which this design's flattened `generate`-block RTL produces) -- filed as [klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890), not worked around with a fabricated result.
-- **Source**: [`measurements/timing-characterization/records/20260921-062530-e8a37ad.md`](measurements/timing-characterization/records/20260921-062530-e8a37ad.md); post-route SDF artifact: [`measurements/timing-characterization/logic_tile_route.sdf`](measurements/timing-characterization/logic_tile_route.sdf).
-- **Record / git revision**: `20260921-062530-e8a37ad`, produced at git revision `e8a37ad641c7913495f8e9aa14d5dd4c1bf93d45`.
+- **SDF-annotated leg**: BLOCKED. klayout-tools#1890 (`$sdf_annotate` crash on escaped identifiers containing `.`/`[]`, which this design's flattened `generate`-block RTL produces) is closed, but its fix (klt v0.6.0) is only a fail-loud guard on `klt functional-verification`'s `options.sdf` path; a raw `$sdf_annotate` still aborts `vvp` identically (re-verified 2026-10-08) and the remaining capability gap is tracked generically in [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897). Not worked around with a fabricated result. The latest re-try's full `flow/sdf-resim.sh` run under klt 0.6.0 also stops at the DEF-reproducibility gate (toolchain drift); its zero-delay PASS was run by hand on a non-matching netlist, so supporting only.
+- **Source**: [`measurements/timing-characterization/records/20261008-233733-23e6b5e.md`](measurements/timing-characterization/records/20261008-233733-23e6b5e.md); post-route SDF artifact: [`measurements/timing-characterization/logic_tile_route.sdf`](measurements/timing-characterization/logic_tile_route.sdf).
+- **Record / git revision**: `20261008-233733-23e6b5e`, produced at git revision `23e6b5e0c87d2e6306a4b72aad86475dafd85c46`.
 
 ## Regenerating
 

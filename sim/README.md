@@ -65,7 +65,7 @@ the same characterized geometry, not a different one. Two legs:
 | Leg | Result |
 |---|---|
 | Zero-delay gate-level | **PASS** — `tb_logic_tile -- 4 checks, 0 failures`, against real `sky130_fd_sc_hd` standard cells. Functional-only; no timing claim. |
-| SDF-annotated (real post-route SDF, `klt place-and-route --post_route_sdf`) | **Blocked.** `$sdf_annotate` crashes `vvp` (`NULL handle passed to vpi_scan`) on this design's `generate`-block-flattened escaped identifiers — a generic, non-design-specific Icarus/`klt` defect, bisected to a minimal 15-line reproduction and filed as [klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890). Not worked around with a fabricated SDF or a fake result. |
+| SDF-annotated (real post-route SDF, `klt place-and-route --post_route_sdf`) | **Blocked.** `$sdf_annotate` crashes `vvp` (`NULL handle passed to vpi_scan`) on this design's `generate`-block-flattened escaped identifiers — a generic, non-design-specific Icarus/`klt` defect, bisected to a minimal 15-line reproduction and filed as [klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)). Not worked around with a fabricated SDF or a fake result. |
 
 Full method, provenance and the crash bisection:
 [`measurements/timing-characterization/records/20260915-133517-234b13b.md`](../measurements/timing-characterization/records/20260915-133517-234b13b.md).

@@ -89,10 +89,10 @@ netlist from that same run: zero delay **passes**; the SDF-annotated leg is
 **blocked** by a real, generically-reproducible upstream defect in
 `$sdf_annotate`'s handling of this design's `generate`-block-flattened
 escaped identifiers, filed as
-[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890)
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897))
 rather than worked around with a fabricated result. Full method and the
 crash bisection:
-[`records/20260921-062530-e8a37ad.md`](timing-characterization/records/20260921-062530-e8a37ad.md).
+[`records/20260921-062530-e8a37ad.md`](timing-characterization/records/20260921-062530-e8a37ad.md); the #72 re-try after #1890 closed is [`records/20261008-233733-23e6b5e.md`](timing-characterization/records/20261008-233733-23e6b5e.md).
 
 **What was measured.** One fixed piece of routed geometry — the committed
 `layout/logic_tile.def`, byte-identical across every run — re-timed in a
@@ -149,7 +149,7 @@ set" triple sits in one place.
 - **Not a full post-layout functional verification.** SDF-back-annotated
   gate-level re-simulation (issue #29) has a real SDF and a zero-delay
   gate-level PASS, but no SDF-annotated pass/fail result — blocked on
-  [klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890),
+  [klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)),
   see `logic_tile_route.sdf` above. `sim/` holds the functional evidence.
 - **Not silicon.** Nothing here is measured on a fabricated part.
 

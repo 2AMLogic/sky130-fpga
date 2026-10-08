@@ -165,4 +165,4 @@ other differences in `tier-report.json` are the grader's own metadata
   identifiers, klayout-tools#1890); the zero-delay leg passing is recorded
   in the characterization record but is, by the item's own text, the
   pre-layout run — so no citable envelope exists for this item until
-  #1890 closes. No result was fabricated to fill the row.
+  #1890's successor gap closes (#1890 itself closed 2026-09-16 as a fail-loud guard in klt v0.6.0 only; re-tried under #72, still blocked, now tracked as klayout-tools#2897). No result was fabricated to fill the row.

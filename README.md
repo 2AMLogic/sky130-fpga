@@ -14,7 +14,7 @@ ratified spec row ([ADR-0002](spec/decisions/0002-tile-timing-spec-ratification.
 A gate-level, SDF-annotated re-simulation of the routed tile was attempted:
 the zero-delay leg passes, but the SDF-annotated leg is blocked on a real
 upstream defect filed as
-[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890).
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)).
 See [`measurements/characterization-summary.md`](measurements/characterization-summary.md)
 for the current aggregated snapshot of this evidence, and "Current position"
 below for the full maturity-ladder detail. This is still a tile-scoped

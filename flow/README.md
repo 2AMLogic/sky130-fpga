@@ -617,7 +617,7 @@ to a minimal, from-scratch, non-sky130 15-line reproduction (any
 `[`/`]`, independent of file size) and confirmed reproducing identically
 through `klt functional-verification`'s own `options.sdf` path, not just
 this repo's hand-wired mechanism — filed generically as
-[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890).
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)). Note: klt >= 0.6.0 also moved stage artifacts under `.klt/<stage>/run-<id>/`; `flow/sdf-resim.sh` resolves both layouts, but under klt 0.6.0 / OpenROAD 26Q3-1510 its DEF-reproducibility gate fails (toolchain drift, see record `20261008-233733-23e6b5e`).
 Not worked around with a fabricated SDF or a faked result:
 `flow/sdf-resim.sh` re-attempts this leg every run and treats *reproducing
 the cited crash* as the expected, checked-in outcome — a clean pass, a
