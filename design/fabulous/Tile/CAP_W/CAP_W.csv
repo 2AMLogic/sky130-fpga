@@ -1,0 +1,6 @@
+TILE,CAP_W,,,,,,,,,,,,,,,,,
+#direction,source_name,X-offset,Y-offset,destination_name,wires
+WEST,NULL,-1,0,W1END,4,,,,,,,,,,,,,,,,,
+EAST,E1BEG,1,0,NULL,4,,,,,,,,,,,,,,,,,
+MATRIX,./CAP_W_switch_matrix.list,,,,,,,,,,,,,,,,,
+EndTILE,,,,,,,,,,,,,,,,,
