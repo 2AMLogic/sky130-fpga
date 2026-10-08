@@ -19,13 +19,13 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#67**: T1 items 1, 2, 9, 10: bind each to its audited artifact now that klayout-tools#2718 has landed
+_None._
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#68**: T1 item 5: re-run the 18-corner timing sweep under a klt sta that emits timing_status, and cite it
 
 ## PRs Awaiting Review
 
@@ -43,11 +43,14 @@ _None._
 
 Issues carrying `loom:curated`.
 
-- **#67**: T1 items 1, 2, 9, 10: bind each to its audited artifact now that klayout-tools#2718 has landed *(curated)*
+- **#68**: T1 item 5: re-run the 18-corner timing sweep under a klt sta that emits timing_status, and cite it *(curated)*
 
 ## Proposed (Architect / Hermit)
 
-_None._
+- **#74**: G5/G6: bitstream-driven functional test and format doc for the single logic tile *(architect)*
+- **#77**: spec: write decision record for the five G1 tile-description discrepancies (ADR-0004) *(architect)*
+- **#78**: Tile switch matrix: generate RTL from the FABulous description and verify it in sim/ *(architect)*
+- **#79**: Docs: README and RTL headers still say G1 is open after #73 closed it *(architect)*
 
 ## Epics
 
@@ -59,11 +62,11 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 0 |
 | Operator priority | 0 |
-| Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 0 |
+| Ready (`loom:issue`) | 0 |
+| In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
 | Curated | 1 |
-| Architect / Hermit proposals | 0 |
+| Architect / Hermit proposals | 4 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
