@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "generic",
+  "status": "pass",
+  "t1_item": 10,
+  "summary": "T1 item 10 repo hygiene: README.md, spec/tile-spec.md and LICENSE are committed and the signoff CI lane (.github/workflows/signoff.yml) re-grades this record on every push and PR. Binding covers the workflow file bytes only; README, spec and LICENSE are inspected but not hashed by this envelope.",
+  "source": ".github/workflows/signoff.yml",
+  "provenance": {
+    "input": {
+      "content_hash": "sha256:4f93c5371fae319c657c919310a489c8a7941e2c432e0e0eea48f94b01692f18",
+      "path": "../.github/workflows/signoff.yml",
+      "role": "audited-artifact"
+    }
+  }
+}

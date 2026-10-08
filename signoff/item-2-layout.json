@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "kind": "generic",
+  "status": "pass",
+  "t1_item": 2,
+  "summary": "T1 item 2 layout: the committed routed GDS layout/logic_tile.gds is the audited layout artifact (the same bytes DRC, LVS and ERC are pinned to). Binding attests which bytes were audited, not layout quality.",
+  "source": "layout/logic_tile.gds",
+  "provenance": {
+    "input": {
+      "content_hash": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f",
+      "path": "../layout/logic_tile.gds",
+      "role": "audited-artifact"
+    }
+  }
+}
