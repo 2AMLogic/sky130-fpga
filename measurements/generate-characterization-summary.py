@@ -25,9 +25,10 @@ cross-checked against each one):
   it is derived from
 - spec/tile-spec.md and
   spec/decisions/0002-tile-timing-spec-ratification.md (ratified spec row)
-- measurements/timing-characterization/records/20260921-062530-e8a37ad.md
-  (SDF generation + gate-level re-simulation, post-PDN successor of the
-  20260915-133517-234b13b record)
+- measurements/timing-characterization/records/20261008-233733-23e6b5e.md
+  (SDF generation + gate-level re-simulation: the 20261008-233733-23e6b5e
+  record, the #72 re-try after klayout-tools#1890 closed, supersedes
+  20260921-062530-e8a37ad, itself the post-PDN successor of 20260915-133517-234b13b)
 
 Usage:
     python3 measurements/generate-characterization-summary.py [--check]
@@ -69,7 +70,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_PATH = REPO_ROOT / "measurements" / "characterization-summary.md"
 
 STA_RECORD_ID = "20260921-062500-e8a37ad"
-SDF_RECORD_ID = "20260921-062530-e8a37ad"
+SDF_RECORD_ID = "20261008-233733-23e6b5e"
 # The record id ADR-0002 cites as its evidentiary source. A ratified
 # decision record is never edited, so this historical id stays fixed even
 # while a successor sweep record (see its meta's `supersedes`) becomes the
@@ -415,7 +416,8 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
     )
     lines.append(
         f"| SDF-generation + gate-level re-sim | **zero-delay: PASS; "
-        f"SDF-annotated: BLOCKED** (klayout-tools#1890) "
+        f"SDF-annotated: BLOCKED** (klayout-tools#1890 closed as a fail-loud guard only; "
+        f"capability gap tracked in klayout-tools#2897) "
         f"| [`{rel(sdf['path'])}`]({rel(sdf['path'])}) "
         f"| record `{sdf['record_id']}`, git revision `{sdf['git_revision'][:7]}` |"
     )
@@ -551,11 +553,17 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         "against the as-built netlist) -- functional-only, no timing claim."
     )
     lines.append(
-        "- **SDF-annotated leg**: BLOCKED by a real, generically-reproducible upstream "
-        "defect in `$sdf_annotate` (crashes on escaped identifiers containing `.`/`[]`, "
-        "which this design's flattened `generate`-block RTL produces) -- filed as "
-        "[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890), "
-        "not worked around with a fabricated result."
+        "- **SDF-annotated leg**: BLOCKED. klayout-tools#1890 (`$sdf_annotate` crash on "
+        "escaped identifiers containing `.`/`[]`, which this design's flattened "
+        "`generate`-block RTL produces) is closed, but its fix (klt v0.6.0) is only a "
+        "fail-loud guard on `klt functional-verification`'s `options.sdf` path; a raw "
+        "`$sdf_annotate` still aborts `vvp` identically (re-verified 2026-10-08) and the "
+        "remaining capability gap is tracked generically in "
+        "[klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897). "
+        "Not worked around with a fabricated result. The latest re-try's full "
+        "`flow/sdf-resim.sh` run under klt 0.6.0 also stops at the DEF-reproducibility "
+        "gate (toolchain drift); its zero-delay PASS was run by hand on a "
+        "non-matching netlist, so supporting only."
     )
     lines.append(
         f"- **Source**: [`{rel(sdf['path'])}`]({rel(sdf['path'])}); post-route SDF "

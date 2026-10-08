@@ -104,7 +104,7 @@ leg is blocked by a real, generically-reproducible upstream defect —
 `$sdf_annotate` crashes `vvp` (`NULL handle passed to vpi_scan`) on any
 escaped identifier containing `.`/`[]`, which is exactly what this design's
 `generate`-block RTL produces once flattened — filed as
-[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890)
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897))
 and cited, not worked around with a fabricated substitute. `sim/
 tb_lut4_slice.v` was not attempted: `lut4_slice` has no independently
 placed-and-routed layout of its own (only as a sub-instance flattened
@@ -112,7 +112,7 @@ inside the routed `logic_tile`), so a literal SDF-annotated re-run of that
 testbench would need a new physical-design artifact, out of scope here. See
 `measurements/timing-characterization/records/20260915-133517-234b13b.md`
 and `sim/README.md` for the full accounting. Still open under this item:
-the SDF-annotated pass/fail result itself (blocked on klayout-tools#1890)
+the SDF-annotated pass/fail result itself (blocked: klayout-tools#1890 closed as a guard only, re-tried under #72; tracked as klayout-tools#2897)
 and `tb_lut4_slice.v`'s own gate-level coverage.
 
 **Aggregated characterization report (T1 item 8, issue #33): in place.**
