@@ -161,3 +161,12 @@ print_tool_version_banner() {
 
     print_pdk_version_banner "${1:-sky130A}"
 }
+
+# FABulous generator release this repo's tile description targets (spec gap
+# G1). Source: PyPI `fabulous-fpga` 2.2.0 == git tag v2.2.0
+# (432bb2873b83585d5178a8ba411f38254387ce94) of
+# https://github.com/FPGA-Research-Manchester/FABulous (Apache-2.0).
+# flow/fabulous.sh installs exactly this into flow/build/fab-venv (a
+# throwaway, untracked venv); it is never installed host-wide. Bump together
+# with a re-run of `flow/fabulous.sh --update-log` and design/README.md.
+RECORDED_FABULOUS_VERSION="2.2.0"

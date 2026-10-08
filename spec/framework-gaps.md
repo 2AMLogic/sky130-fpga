@@ -32,6 +32,21 @@ FABulous generator + nextpnr's FABulous-compatible flow accept without
 error is the acceptance bar — "the toolchain parses our description," not
 yet functional correctness.
 
+**Status (2026-10-08)**: *largely closed, two caveats.* FABulous pinned at
+2.2.0 (`flow/tool_versions.sh`, `RECORDED_FABULOUS_VERSION`); minimal tile
+description under `design/fabulous/` (`fabric.csv`, `Tile/LOGIC4/`); the
+generator accepts it and `gen_model_npnr` succeeds
+(`design/fabulous/generator.log`, reproduce with `flow/fabulous.sh`; the
+schema findings - CSV column layout, `sink,source` pair lists, BEL attributes
+- are in `design/README.md`). Config-bit layout: 158 bits, of which the 68
+BEL bits match `logic_tile.v`'s `lut_init[63:0]`/`reg_sel[3:0]`. Caveats:
+(1) `nextpnr` itself was not run (not installed on the dispatch host), so the
+nextpnr half of the acceptance bar is met only up to the generated model
+files; (2) the generator needs non-logic boundary terminator tiles and the
+switch matrix is a simplified stand-in - both written up under "Discrepancies
+and deferrals" in `design/README.md` for a decision record. Spec text not
+modified.
+
 ## G2 — Tile physical design on sky130 (placement + routing)
 
 **Gap**: FABulous describes fabric structure; it does not place or route

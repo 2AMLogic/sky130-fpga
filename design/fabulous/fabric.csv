@@ -1,0 +1,21 @@
+# G1 harness fabric: 3x3 cross. LOGIC4 is the only logic tile; CAP_* are
+# non-logic boundary terminators that FABulous 2.2.0's nextpnr-model step
+# requires (see design/README.md, 'Discrepancies'). Corners are unused.
+FabricBegin,,,,,,,,,,,,,,,,,
+NULL,CAP_N,NULL,,,,,,,,,,,,,,,,,
+CAP_W,LOGIC4,CAP_E,,,,,,,,,,,,,,,,,
+NULL,CAP_S,NULL,,,,,,,,,,,,,,,,,
+FabricEnd,,,,,,,,,,,,,,,,,
+
+ParametersBegin,,,,,,,,,,,,,,,,,
+ConfigBitMode,frame_based,,,,,,,,,,,,,,,,,
+GenerateDelayInSwitchMatrix,80,,,,,,,,,,,,,,,,,
+MultiplexerStyle,generic,,,,,,,,,,,,,,,,,
+SuperTileEnable,FALSE,,,,,,,,,,,,,,,,,
+
+Tile,./Tile/LOGIC4/LOGIC4.csv,,,,,,,,,,,,,,,,,
+Tile,./Tile/CAP_N/CAP_N.csv,,,,,,,,,,,,,,,,,
+Tile,./Tile/CAP_S/CAP_S.csv,,,,,,,,,,,,,,,,,
+Tile,./Tile/CAP_E/CAP_E.csv,,,,,,,,,,,,,,,,,
+Tile,./Tile/CAP_W/CAP_W.csv,,,,,,,,,,,,,,,,,
+ParametersEnd,,,,,,,,,,,,,,,,,

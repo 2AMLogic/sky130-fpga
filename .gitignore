@@ -8,6 +8,8 @@ __pycache__/
 # sim/ harness: per-corner ngspice logs under corners/ are committed evidence
 # (append-only record trail), so they escape the *.log rule.
 !sim/*/corners/**/*.log
+# FABulous generator log (G1 evidence, reproduced by flow/fabulous.sh)
+!design/fabulous/generator.log
 sim/build/
 # synthesis / P&R scratch
 flow/build/
