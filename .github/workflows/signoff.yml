@@ -24,12 +24,20 @@
 # klt is pinned to the exact upstream commit the committed tier report was
 # graded with (its bundled copy of docs/design-evidence-tiers.md fixes the
 # item skeleton and its text, so a floating install would churn the record):
-# 2b1e55e51bb803c082e8857da44687f3e37ebfc0, "feat(signoff): pin the tier
-# report's governing checklist by content hash" (#2191). This pin is
-# independent of flow/tool_versions.sh's RECORDED_KLT_VERSION, which governs
-# the design-flow evidence (see layout/README.md's "ERC scope, concretely"
-# for the same split); bump it deliberately, together with a regenerated
+# 3a75c3ae705b7ad3803625255de93bcd982e70c6, "feat(signoff): artifact-anchored
+# generic evidence for T1 items 1, 2, 9, 10" (klayout-tools#2718, PR #2843).
+# That grader re-hashes the artifact each item 1/2/9/10 envelope names in
+# provenance.input.path, which is what lets this repo cite those four rows
+# (see signoff/README.md). This pin is independent of
+# flow/tool_versions.sh's RECORDED_KLT_VERSION, which governs the design-flow
+# evidence (see layout/README.md's "ERC scope, concretely" for the same
+# split); bump it deliberately, together with a regenerated
 # signoff/tier-report.json, when a new klt must re-grade the manifest.
+#
+# NOTE: the item-10 envelope binds the bytes of THIS file. Any edit here
+# (including to this comment) requires re-running the steps in
+# signoff/README.md ("Regenerate and verify") -- verify-pins.sh will fail
+# until the item-10 envelope and manifest pins are refreshed.
 
 name: signoff
 
@@ -53,7 +61,7 @@ jobs:
 
       - name: Install the pinned klt (klayout-tools)
         run: |
-          uv tool install "klayout-tools @ git+https://github.com/2AMLogic/klayout-tools@2b1e55e51bb803c082e8857da44687f3e37ebfc0"
+          uv tool install "klayout-tools @ git+https://github.com/2AMLogic/klayout-tools@3a75c3ae705b7ad3803625255de93bcd982e70c6"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Verify every manifest pin against the live artifacts

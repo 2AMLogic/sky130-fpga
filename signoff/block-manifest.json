@@ -2,6 +2,14 @@
   "block": "sky130-fpga",
   "kind": "digital",
   "evidence": {
+    "1": {
+      "file": "signoff/item-1-design-sources.json",
+      "content_hash": "sha256:10e9d0b61db55dc4b1cfe60f35902290e23be6d345b5b5f773310c7ef4fc6022"
+    },
+    "2": {
+      "file": "signoff/item-2-layout.json",
+      "content_hash": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f"
+    },
     "3": {
       "file": "layout/logic_tile.drc.json",
       "content_hash": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f"
@@ -13,6 +21,14 @@
     "8": {
       "file": "signoff/characterization-evidence.json",
       "content_hash": "sha256:38bd0b224a082cf7bd2c03eef8bbab44f78291f51afce4c16f1010478cbba4cb"
+    },
+    "9": {
+      "file": "signoff/item-9-testbenches.json",
+      "content_hash": "sha256:1cf49aba580cf3f8b4d05aa39dc55b99cf9219caad350e77df71a9d3f4b5f48d"
+    },
+    "10": {
+      "file": "signoff/item-10-repo-hygiene.json",
+      "content_hash": "sha256:4f93c5371fae319c657c919310a489c8a7941e2c432e0e0eea48f94b01692f18"
     },
     "11": [
       {
