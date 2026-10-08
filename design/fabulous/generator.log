@@ -1,0 +1,111 @@
+INFO | <project>/eFPGA_geometry.csv can now be imported into FABulator
+INFO | All tiles generation complete
+INFO | Bitstream specification generation complete
+INFO | Complete
+INFO | ConfigMem generation complete
+INFO | ConfigMemPath: <project>/Tile/CAP_E/CAP_E_ConfigMem.csv
+INFO | ConfigMemPath: <project>/Tile/CAP_N/CAP_N_ConfigMem.csv
+INFO | ConfigMemPath: <project>/Tile/CAP_S/CAP_S_ConfigMem.csv
+INFO | ConfigMemPath: <project>/Tile/CAP_W/CAP_W_ConfigMem.csv
+INFO | ConfigMemPath: <project>/Tile/LOGIC4/LOGIC4_ConfigMem.csv
+INFO | Execute TCL script <project>/FABulous.tcl
+INFO | FABulous fabric flow complete
+INFO | Fabric generation complete
+INFO | Found 5 config memory entries in LOGIC4_configMem.csv with a total of 158 bits
+INFO | Found fabric.csv in the project directory loading that file as the definition of the fabric
+INFO | Generate switch matrix debug signals: False
+INFO | Generated npnr model
+INFO | Generated tile CAP_E
+INFO | Generated tile CAP_N
+INFO | Generated tile CAP_S
+INFO | Generated tile CAP_W
+INFO | Generated tile LOGIC4
+INFO | Generating <project>/Tile/LOGIC4/LOGIC4_ConfigMem.v for LOGIC4
+INFO | Generating Config Memory for CAP_E
+INFO | Generating Config Memory for CAP_N
+INFO | Generating Config Memory for CAP_S
+INFO | Generating Config Memory for CAP_W
+INFO | Generating Config Memory for LOGIC4
+INFO | Generating a default configMem for LOGIC4
+INFO | Generating all tiles
+INFO | Generating bitstream specification
+INFO | Generating configMem for CAP_E
+INFO | Generating configMem for CAP_N
+INFO | Generating configMem for CAP_S
+INFO | Generating configMem for CAP_W
+INFO | Generating configMem for LOGIC4
+INFO | Generating fabric eFPGA
+INFO | Generating geometry csv file for eFPGA # file name: <project>/eFPGA_geometry.csv
+INFO | Generating geometry for eFPGA
+INFO | Generating npnr model
+INFO | Generating switch matrix for CAP_E
+INFO | Generating switch matrix for CAP_N
+INFO | Generating switch matrix for CAP_S
+INFO | Generating switch matrix for CAP_W
+INFO | Generating switch matrix for LOGIC4
+INFO | Generating tile CAP_E
+INFO | Generating tile CAP_E CAP_N CAP_S CAP_W LOGIC4
+INFO | Generating tile CAP_N
+INFO | Generating tile CAP_S
+INFO | Generating tile CAP_W
+INFO | Generating tile LOGIC4
+INFO | Generating top wrapper
+INFO | Geometry generation complete
+INFO | LOGIC4 has 158 global config bits
+INFO | LOGIC4_configMem.csv does not exist
+INFO | Loading fabric
+INFO | No config bits defined and no bitstream mapping file provided for CAP_E
+INFO | No config bits defined and no bitstream mapping file provided for CAP_N
+INFO | No config bits defined and no bitstream mapping file provided for CAP_S
+INFO | No config bits defined and no bitstream mapping file provided for CAP_W
+INFO | No config memory for CAP_E.
+INFO | No config memory for CAP_N.
+INFO | No config memory for CAP_S.
+INFO | No config memory for CAP_W.
+INFO | No config memory for X0Y1_CAP_W.
+INFO | No config memory for X1Y0_CAP_N.
+INFO | No config memory for X1Y2_CAP_S.
+INFO | No config memory for X2Y1_CAP_E.
+INFO | Output file: <project>/Fabric/eFPGA.v
+INFO | Output file: <project>/Fabric/eFPGA_top.v
+INFO | Output file: <project>/Tile/CAP_E/CAP_E.v
+INFO | Output file: <project>/Tile/CAP_E/CAP_E_ConfigMem.v
+INFO | Output file: <project>/Tile/CAP_E/CAP_E_switch_matrix.v
+INFO | Output file: <project>/Tile/CAP_N/CAP_N.v
+INFO | Output file: <project>/Tile/CAP_N/CAP_N_ConfigMem.v
+INFO | Output file: <project>/Tile/CAP_N/CAP_N_switch_matrix.v
+INFO | Output file: <project>/Tile/CAP_S/CAP_S.v
+INFO | Output file: <project>/Tile/CAP_S/CAP_S_ConfigMem.v
+INFO | Output file: <project>/Tile/CAP_S/CAP_S_switch_matrix.v
+INFO | Output file: <project>/Tile/CAP_W/CAP_W.v
+INFO | Output file: <project>/Tile/CAP_W/CAP_W_ConfigMem.v
+INFO | Output file: <project>/Tile/CAP_W/CAP_W_switch_matrix.v
+INFO | Output file: <project>/Tile/LOGIC4/LOGIC4.v
+INFO | Output file: <project>/Tile/LOGIC4/LOGIC4_ConfigMem.v
+INFO | Output file: <project>/Tile/LOGIC4/LOGIC4_switch_matrix.v
+INFO | Output file: <project>/eFPGA_geometry.csv
+INFO | Parsing LOGIC4_configMem.csv
+INFO | Reading supertile configuration: <project>/fabric.csv
+INFO | Reading tile configuration: <project>/Tile/CAP_E/CAP_E.csv
+INFO | Reading tile configuration: <project>/Tile/CAP_N/CAP_N.csv
+INFO | Reading tile configuration: <project>/Tile/CAP_S/CAP_S.csv
+INFO | Reading tile configuration: <project>/Tile/CAP_W/CAP_W.csv
+INFO | Reading tile configuration: <project>/Tile/LOGIC4/LOGIC4.csv
+INFO | Reading tile configuration: <project>/fabric.csv
+INFO | Running FABulous
+INFO | Running at: <project>
+INFO | Switch matrix generation complete
+INFO | TCL script <project>/FABulous.tcl executed successfully
+INFO | TCL script executed
+INFO | Tile generation complete
+INFO | Top wrapper generation complete
+INFO | Using models pack at: <project>/Fabric/models_pack.v
+INFO | output file: <project>/.FABulous/bel.txt
+INFO | output file: <project>/.FABulous/bel.v2.txt
+INFO | output file: <project>/.FABulous/bel.v3.txt
+INFO | output file: <project>/.FABulous/bitStreamSpec.bin
+INFO | output file: <project>/.FABulous/bitStreamSpec.csv
+INFO | output file: <project>/.FABulous/pips.txt
+INFO | output file: <project>/.FABulous/placement_estimate.txt
+INFO | output file: <project>/.FABulous/template.pcf
+WARNING | The 'run_FABulous_fabric' command is deprecated. Use 'run_fab' instead.
