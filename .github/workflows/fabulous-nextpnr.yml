@@ -65,6 +65,30 @@ jobs:
           "$RUNNER_TEMP/uv-venv/bin/pip" install --quiet "uv==${UV_VERSION}"
           echo "$RUNNER_TEMP/uv-venv/bin" >> "$GITHUB_PATH"
 
+      # FABulous shells out to `yosys` (BEL Verilog -> JSON) and the runner has
+      # none. flow/nextpnr.sh only unpacks the pinned OSS CAD Suite *after* it
+      # has run flow/fabulous.sh, so unpack it here first (same tarball, same
+      # sha256 check, same tool subset and .pin stamp nextpnr.sh writes, so
+      # nextpnr.sh reuses this tree) and put its bin/ on PATH for both steps.
+      - name: Unpack pinned OSS CAD Suite (yosys for FABulous)
+        run: |
+          source flow/tool_versions.sh
+          TGZ="flow/build/dl/$RECORDED_OSS_CAD_TARBALL"
+          mkdir -p flow/build/dl
+          if [[ ! -f "$TGZ" ]] || ! echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet -; then
+            curl -fsSL -o "$TGZ" \
+              "https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${RECORDED_OSS_CAD_TAG}/${RECORDED_OSS_CAD_TARBALL}"
+            echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet -
+          fi
+          rm -rf flow/build/oss-cad-suite
+          mkdir -p flow/build/oss-cad-suite
+          tar -xzf "$TGZ" -C flow/build/oss-cad-suite --strip-components=1 \
+            oss-cad-suite/bin oss-cad-suite/lib oss-cad-suite/libexec \
+            oss-cad-suite/share/yosys oss-cad-suite/share/nextpnr oss-cad-suite/etc
+          echo "$RECORDED_OSS_CAD_SHA256" > flow/build/oss-cad-suite/.pin
+          echo "$PWD/flow/build/oss-cad-suite/bin" >> "$GITHUB_PATH"
+          flow/build/oss-cad-suite/bin/yosys -V
+
       - name: Reproduce generator.log (flow/fabulous.sh)
         run: ./flow/fabulous.sh
 
