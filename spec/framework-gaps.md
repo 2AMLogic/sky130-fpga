@@ -79,6 +79,15 @@ DRC violations. It measures the same-index stand-in matrix (ADR-0004
 Proposed) and makes no DRC/LVS/ERC, timing or reset-compliance claim; those
 and the topology decision remain open under G2/G3/G4.
 
+*Status note (#108):* experimental DRC/LVS/ERC observations on that GDS
+(`flow/routed_checks.sh`, reports beside the GDS): DRC `clean` (0 violations),
+LVS `match` (power connectivity `match`), ERC `clean_partial` (0 findings, 0
+antenna `violate`). These are observations of the stand-in matrix, not
+signoff, and are not cited by `signoff/`. The observed track pitch and
+utilization are recorded in `layout/README.md` as a G3 item (a) *input*; the
+physical pitch remains undecided pending a decision record, and
+`spec/tile-spec.md` is unchanged. Timing (G4) remains open.
+
 **Work item**: standard-cell (or custom) implementation of the tile,
 placed and routed on sky130 using klayout-tools. Given `CLAUDE.md`'s framing
 ("a dense, regular logic tile is exactly the kind of workout `klt par`

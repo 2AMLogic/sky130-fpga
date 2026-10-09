@@ -384,7 +384,7 @@ still Proposed) synthesizes against `sky130_fd_sc_hd`, places and routes
 through OpenROAD to the `route` stage, with the matrix (`u_sm/`) and four
 BELs (`g_slice[i].u_slice/`) present in the as-built netlist and the `cfg`
 (158) and 4x4 edge ports intact. What it does NOT establish: DRC/LVS/ERC
-(not run on this GDS), characterized or extracted timing (the klt slack
+(see `flow/routed_checks.sh` below for the experimental observations), characterized or extracted timing (the klt slack
 numbers are OpenROAD estimates against a placeholder 20 ns clock with no
 I/O delays), nextpnr routability, or shared-reset compliance (the four BEL
 reset pins are independently routed through the matrix). No programmable path
@@ -888,3 +888,26 @@ mode: `measurements/*/records/` is append-only, so a failure is fixed by
 correcting the tree, by adding a new record, or — for a deliberate,
 method-neutral change — by adding a cited allowance, never by rewriting a
 published record.
+
+### `flow/routed_checks.sh` — EXPERIMENTAL DRC/LVS/ERC observations + routing-pitch measurement (G3, issue #108)
+
+Runs the pinned `klt drc`, `klt extract` + `klt lvs`, and `klt erc` (existing
+`flow/erc_supply_spec.json`, unchanged) against the **committed**
+`layout/experimental/logic_tile_routed.gds` and its committed as-built
+netlist, reusing `flow/drc_report_trim.py`, `lvs_report_trim.py`,
+`erc_report_trim.py`, `lvs_sanitize_verilog.py`, `lvs_declared_pins.py`,
+`pdk_root.sh` and `tool_versions.sh` (no copies). It never regenerates the
+layout. `flow/routed_pitch.py` additionally extracts the DEF track pitch,
+routed segments/length per layer, via counts and utilization.
+
+```
+./flow/routed_checks.sh            # rerun; diff against committed reports and
+                                   # verify the latest check-record pins them
+./flow/routed_checks.sh --update   # overwrite reports, append a check-record
+```
+
+Outputs beside the GDS: `logic_tile_routed.{drc,lvs,erc,pitch}.json` and
+append-only `check-records/*.json` (separate from `run-records/`). Verdicts
+are recorded **as found** and do not affect the exit status: a dirty result
+is a valid finding. Nothing is pruned or edited to get clean; this is an
+observation of the ADR-0004-Proposed stand-in matrix, not signoff.

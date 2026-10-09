@@ -1,0 +1,37 @@
+{
+  "inputs_sha256": {
+    "logic_tile_routed.def": "9747b1b37b7375435d4fe3ed19b8633d5033da8ccf4a7d1c9a5be7064518a8cd",
+    "logic_tile_routed.gds": "58613737e379e7a4e93d25fa0bed41f74febfbce76abe6f9cc26eef82fed7e60",
+    "logic_tile_routed.par.json": "88c7006ebd2be75d323337f23610939341475e3ffcf91bfd6e58ecdc181a4e7d",
+    "logic_tile_routed.v": "2568a2e841c20b65ee441e3a2a60882eaf04af549d62248bf2b55ee03ab66e51"
+  },
+  "issue": 108,
+  "label": "experimental observation; not signoff",
+  "reports_sha256": {
+    "logic_tile_routed.drc.json": "4396154ed6097ec0757844d084c085fbad3e9ad55f9467ae8627b1995bf0f90c",
+    "logic_tile_routed.erc.json": "24141fb2cd325ce837ef3ba65643906227b04cf9ddd5613d280b067159430554",
+    "logic_tile_routed.lvs.json": "9322f42e07dcb415a2a5bcf98480ec31e7130e0227cc16cbb0facbcfc2135264",
+    "logic_tile_routed.pitch.json": "6a207a8d34ad54a647ac649a0b35576dda6449a107cbdf84518a10baed3426d7"
+  },
+  "schema": "sky130-fpga.routed-checks-record/1",
+  "tools": {
+    "klt": "klt 0.7.0+gc857f2efb753"
+  },
+  "verdicts": {
+    "drc": {
+      "status": "clean",
+      "violation_count": 0
+    },
+    "erc": {
+      "finding_count": 0,
+      "gate_count": 549,
+      "status": "clean_partial"
+    },
+    "lvs": {
+      "error_count": 0,
+      "mismatch_count": 2,
+      "power_connectivity": "match",
+      "status": "match"
+    }
+  }
+}

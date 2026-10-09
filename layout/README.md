@@ -495,10 +495,43 @@ append-only run record for the **composed** tile `logic_tile_routed`
 4754.56 um^2 (43.7% utilization, vs. 1523.96 um^2 core for the BEL-only
 tile), wirelength 9764 um, routing reached, 0 route DRC violations, 2
 antenna violations reported by the router (the as-built netlist carries 2
-`diode_2` cells; `klt erc` has not been run on this GDS). This is an
+`diode_2` cells). This is an
 experimental measurement of the stand-in matrix for the pending topology
 decision (ADR-0004, Proposed); it is not a spec-compliant deliverable and
-carries no DRC/LVS/ERC, timing, nextpnr-routability or reset-compliance claim.
-Outstanding: ADR-0004 topology and shared-reset decisions, DRC/LVS/ERC on
-this GDS, physical-pitch characterization against the spec, and extracted
-timing (G3/G4).
+carries no timing, nextpnr-routability or reset-compliance claim.
+
+### Experimental DRC / LVS / ERC observations and routing pitch (issue #108)
+
+`flow/routed_checks.sh` runs the existing pinned checks on the committed
+experimental GDS (klt 0.7.0, sky130A open_pdks c6d73a3), recorded as
+**observations, not signoff**, in `logic_tile_routed.{drc,lvs,erc,pitch}.json`
+(+ append-only `check-records/`):
+
+| Check | Result (as found) |
+|-------|-------------------|
+| DRC (`klt drc`, sky130 deck) | `clean`, 0 violations |
+| LVS (`klt extract` + `klt lvs`, vs. committed as-built netlist) | `match`; 0 errors; 2 warning-level mismatches, the same two categories as the BEL-only report (`topology.power_only_pruned` for the tap cell, `topology.top_level_pins_anchored`); `power_connectivity: match`; 191 pins / 0 devices on each side (cells abstracted) |
+| ERC (`klt erc`, existing supply spec) | `clean_partial`, 0 findings; 549 gates, all `pass_partial` (sky130 antenna table has no met3+ entries), 0 `violate` |
+
+Caveats stated plainly: the LVS is the abstracted-cell gate-level compare (it
+verifies connectivity between cells, not transistor devices; device-body
+verification is `unchecked` in this request form), the reference netlist is
+from the same run as the GDS, and `klt erc` reports 0 antenna `violate` while
+the router's own report lists 2 antenna violations (different models; not
+reconciled here). `klt erc` also warns that the `met4` supply-spec label layer
+carries no text in this cell. The BEL-only `layout/logic_tile.*` evidence and
+signoff pins are unchanged.
+
+Observed routing pitch / utilization (`logic_tile_routed.pitch.json`, a
+**measurement**, not a pitch commitment; `spec/tile-spec.md` still defers the
+physical pitch to a decision record): router track grid (um, X/Y) li1
+0.46/0.34, met1 0.34/0.34, met2 0.46/0.46, met3 0.68/0.68, met4 0.92/0.92,
+met5 3.4/3.4. Signal routing used met1 (1036 segments, 2940 um), met2 (976,
+4399 um), met3 (275, 2127 um) and met4 (23, 299 um); li1 only as via stubs
+and met5 not at all (signal-wise). Utilization 43.66% (core 4754.56 um^2,
+die 5527.18 um^2, 667 components, 323 nets); reported wirelength 9764 um.
+The minimum signal pitch actually used is therefore the met1 0.34 um track
+grid on this stand-in matrix.
+
+Outstanding: ADR-0004 topology and shared-reset decisions, a pitch decision
+record (G3 item (a)), and extracted timing (G4).
