@@ -11,7 +11,7 @@
 # Usage:
 #   ./sim/run.sh            # build + run all testbenches, report pass/fail
 #
-# Requires Icarus Verilog (iverilog/vvp) on PATH.
+# Requires Icarus Verilog (iverilog/vvp) and python3 on PATH.
 #
 # Exit status: 0 if every testbench reports PASS with zero failures,
 # non-zero otherwise.
@@ -29,6 +29,33 @@ if ! command -v iverilog >/dev/null 2>&1 || ! command -v vvp >/dev/null 2>&1; th
     echo "error: Icarus Verilog (iverilog/vvp) not found on PATH" >&2
     exit 1
 fi
+
+# Drift guard (#99): the switch-matrix RTL and the testbench include are
+# generated from the .list file by design/gen/gen_switch_matrix.py. Regenerate
+# into the gitignored build dir and require byte-identity with the committed
+# copies, so a hand edit or stale generated file cannot leave CI green.
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "error: python3 not found on PATH (needed for the generated-RTL drift guard)" >&2
+    exit 1
+fi
+
+GEN_DIR="$BUILD_DIR/gen_check"
+mkdir -p "$GEN_DIR"
+REGEN_CMD="python3 design/gen/gen_switch_matrix.py design/fabulous/Tile/LOGIC4/LOGIC4_switch_matrix.list design/rtl/logic_tile_switch_matrix.v sim/switch_matrix_tb_gen.vh"
+python3 "$REPO_ROOT/design/gen/gen_switch_matrix.py" \
+    "$REPO_ROOT/design/fabulous/Tile/LOGIC4/LOGIC4_switch_matrix.list" \
+    "$GEN_DIR/logic_tile_switch_matrix.v" \
+    "$GEN_DIR/switch_matrix_tb_gen.vh"
+drift=0
+diff -u "$RTL_DIR/logic_tile_switch_matrix.v" "$GEN_DIR/logic_tile_switch_matrix.v" || drift=1
+diff -u "$SCRIPT_DIR/switch_matrix_tb_gen.vh" "$GEN_DIR/switch_matrix_tb_gen.vh" || drift=1
+if [[ "$drift" -ne 0 ]]; then
+    echo "error: committed generated switch-matrix files differ from generator output." >&2
+    echo "       regenerate from the repo root with:" >&2
+    echo "       $REGEN_CMD" >&2
+    exit 1
+fi
+echo "=== generated switch-matrix files match generator output ==="
 
 # name:rtl-sources (space-separated, RTL first so dependents can reference
 # already-defined modules)
