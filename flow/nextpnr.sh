@@ -7,8 +7,16 @@
 #   2. The pinned OSS CAD Suite (flow/tool_versions.sh) is downloaded to
 #      flow/build/dl/, sha256-verified, and unpacked (tool subset only) into
 #      flow/build/oss-cad-suite/. Nothing is installed host-wide.
+#      On later runs the unpacked tree is reused if its .pin stamp matches the
+#      pinned sha256 and, when the tarball is still in flow/build/dl/, the
+#      tarball re-verifies; otherwise it is re-fetched/re-extracted. The yosys
+#      and nextpnr version strings are checked against the pins on every run.
 #   3. yosys reads design/fabulous/nextpnr/top.v (+ prims.v) -> JSON, then
 #      nextpnr-generic places and routes it on the generated model.
+#   4. Two expected-FAIL probes record the fabric's known limits:
+#      top_ports.v (top-level ports; no IO BEL -> "must be PAD") and
+#      top_const.v (a tied-off LUT input; no constant driver -> "Failed to
+#      find a route ... $PACKER_GND").
 #   * writes design/fabulous/nextpnr.log (committed evidence), and
 #   * checks the FASM carries the expected LUT truth table.
 #
@@ -28,9 +36,10 @@ mkdir -p "$BUILD/dl"
 "$REPO/flow/fabulous.sh" >"$BUILD/fabulous-for-nextpnr.out" 2>&1 || {
     echo "flow/fabulous.sh failed:" >&2; tail -20 "$BUILD/fabulous-for-nextpnr.out" >&2; exit 1; }
 
+TGZ="$BUILD/dl/$RECORDED_OSS_CAD_TARBALL"
 if [[ ! -x "$OSS/bin/nextpnr-generic" ]] || \
-   [[ ! -f "$OSS/.pin" ]] || [[ "$(cat "$OSS/.pin")" != "$RECORDED_OSS_CAD_SHA256" ]]; then
-    TGZ="$BUILD/dl/$RECORDED_OSS_CAD_TARBALL"
+   [[ ! -f "$OSS/.pin" ]] || [[ "$(cat "$OSS/.pin")" != "$RECORDED_OSS_CAD_SHA256" ]] || \
+   { [[ -f "$TGZ" ]] && ! echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet - >/dev/null 2>&1; }; then
     if [[ ! -f "$TGZ" ]] || ! echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet -; then
         curl -fsSL -o "$TGZ" \
           "https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${RECORDED_OSS_CAD_TAG}/${RECORDED_OSS_CAD_TARBALL}"
@@ -65,15 +74,33 @@ echo "# --- top.fasm ---"
 cat "$W/top.fasm"
 } >"$RAW" 2>&1 || { echo "yosys/nextpnr FAILED; see $RAW" >&2; tail -20 "$RAW" >&2; exit 1; }
 
-# Expected-FAIL probe: same function with top-level ports (no IO BEL in the fabric).
-{
-echo "# --- probe (expected FAIL): top_ports.v, 4-input function on top-level ports ---"
-yosys -q -p "synth_fabulous -top top -noiopad -extra-plib $SRC/prims.v -cells-map $SRC/cells_map.v -json $W/ports.json" "$SRC/top_ports.v"
-if FAB_ROOT="$BUILD/fabulous-run" nextpnr-generic --uarch fabulous --json "$W/ports.json" \
-       -o fasm="$W/ports.fasm" 2>&1 | grep -v 'iteration #' | grep -E 'ERROR|errors'; then :; fi
-} >"$W/probe.log" 2>&1
-grep -q "must be PAD" "$W/probe.log" || { echo "IO probe did not fail as recorded" >&2; cat "$W/probe.log" >&2; exit 1; }
-cat "$W/probe.log" >>"$RAW"
+# Expected-FAIL probes. Each must fail in nextpnr with the recorded message;
+# yosys must still succeed (its output is shown if it does not).
+probe() {  # probe <name> <src.v> <expected-regex> <description> [extra yosys args]
+    local name="$1" src="$2" expect="$3" desc="$4" extra="${5:-}" plog="$W/probe-$1.log"
+    echo "# --- probe (expected FAIL): $(basename "$src"), $desc ---" >"$plog"
+    # shellcheck disable=SC2086
+    yosys -q -p "synth_fabulous -top top -noiopad -extra-plib $SRC/prims.v $extra -json $W/$name.json" \
+        "$src" >>"$plog" 2>&1 || {
+        echo "yosys failed on probe $name:" >&2; cat "$plog" >&2; exit 1; }
+    if FAB_ROOT="$BUILD/fabulous-run" nextpnr-generic --uarch fabulous --json "$W/$name.json" \
+           -o fasm="$W/$name.fasm" >"$W/probe-$name.np.log" 2>&1; then
+        echo "probe $name unexpectedly PASSED in nextpnr" >&2; exit 1
+    fi
+    grep -v 'iteration #' "$W/probe-$name.np.log" | grep -E 'ERROR|[0-9]+ errors?$|Failed to find a route' >>"$plog" || true
+    grep -q -E "$expect" "$plog" || {
+        echo "probe $name did not fail as recorded (want /$expect/)" >&2
+        cat "$plog" >&2; tail -20 "$W/probe-$name.np.log" >&2; exit 1; }
+    cat "$plog" >>"$RAW"
+}
+# No IO BEL: the same function with top-level ports cannot be packed.
+probe ports "$SRC/top_ports.v" "must be PAD" \
+    "4-input function on top-level ports" "-cells-map $SRC/cells_map.v"
+# No constant driver: top.v with u0.I1 tied to 1'b0 packs a $PACKER_GND net
+# that the router cannot reach.
+probe const "$SRC/top_const.v" 'Failed to find a route .*\$PACKER_GND' \
+    "top.v with one LUT input tied to 1'b0"
+grep -q "Routing design failed" "$W/probe-const.log"
 
 grep -q "Routing complete" "$RAW"
 grep -q "Program finished normally" "$RAW"
@@ -82,7 +109,7 @@ grep -q "A.INIT\[15:0\] = 'b0110100110010110" "$W/top.fasm"
 
 NORM="$BUILD/nextpnr-norm.log"
 sed -e "s#$BUILD/fabulous-run#<fabulous-run>#g" -e "s#$W#<run>#g" "$RAW" \
-  | grep -v -E 'iteration #|time|Time|Checksum' >"$NORM"
+  | grep -v -E 'iteration #|^Info: .*([Tt]ime|Checksum)' >"$NORM"
 
 if [[ "${1:-}" == "--update-log" ]]; then
     cp "$NORM" "$REPO/design/fabulous/nextpnr.log"

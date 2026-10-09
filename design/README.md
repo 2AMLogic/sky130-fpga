@@ -91,7 +91,9 @@ through the generated switch matrix, emitting FASM; log in `nextpnr.log`.
 Two findings from that run, both properties of the G1 harness fabric: it has
 **no IO BEL** (the same function on top-level ports fails packing: "must be
 PAD", probe recorded in `nextpnr.log`) and **no constant driver** (a
-tied-off LUT input makes `$PACKER_GND` unroutable), so the accepted design
+tied-off LUT input makes `$PACKER_GND` unroutable: "Failed to find a route
+... `$PACKER_GND`", probe `nextpnr/top_const.v` recorded in `nextpnr.log`),
+so the accepted design
 is structural, port-less and leaves unused inputs floating. Resolving that
 (IO/tie cells) is a fabric/tile-type change and is left to G5 and a decision
 record. **Not verified:** nextpnr's FASM was not turned into a bitstream or

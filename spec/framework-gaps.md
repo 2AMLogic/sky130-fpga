@@ -49,7 +49,8 @@ emits FASM (`design/fabulous/nextpnr.log`). Scope is "the model is accepted
 and a trivial design places/routes", not bitstream correctness (G5) or
 timing. Findings from the same run: the generated fabric has no IO BEL
 (top-level ports cannot be packed: "must be PAD") and no constant driver
-(tied-off pins make `$PACKER_GND` unroutable), so the accepted design is
+(tied-off pins make `$PACKER_GND` unroutable), each recorded as an
+expected-FAIL probe in the same log, so the accepted design is
 structural with no ports - recorded in `design/README.md` for the G5 owner;
 (2) the generator needs non-logic boundary terminator tiles and the
 switch matrix is a simplified stand-in - both written up under "Discrepancies

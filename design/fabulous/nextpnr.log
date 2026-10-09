@@ -74,3 +74,8 @@ Warning: Feature 'write_xaiger2' is experimental.
 ERROR: Top-level port 'y' connected to illegal port $auto$abc_ops_reintegrate.cc:696:reintegrate$241._lut.O (must be PAD)
 ERROR: Packing design failed.
 0 warnings, 2 errors
+# --- probe (expected FAIL): top_const.v, top.v with one LUT input tied to 1'b0 ---
+Warning: Feature 'write_xaiger2' is experimental.
+Warning: Failed to find a route for arc 0 of net $PACKER_GND.
+ERROR: Routing design failed.
+1 warning, 1 error

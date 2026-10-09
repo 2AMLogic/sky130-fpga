@@ -5,8 +5,9 @@
 // Instantiated structurally, with no top-level ports and no constants: the
 // generated fabric has no IO BEL (nextpnr rejects a port driven by a LUT: "must
 // be PAD") and no constant driver (a tied-off pin makes $PACKER_GND
-// unroutable). Both are findings, see design/README.md and
-// the expected-FAIL probe in design/fabulous/nextpnr.log. Unconnected LUT inputs are left floating.
+// unroutable). Both are findings, see design/README.md and the expected-FAIL
+// probes top_ports.v / top_const.v recorded in design/fabulous/nextpnr.log.
+// Unconnected LUT inputs are left floating.
 module top;
     (* keep *) wire n1;
     (* keep *) wire n2;
