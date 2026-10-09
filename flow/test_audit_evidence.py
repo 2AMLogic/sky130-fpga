@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Unit tests for supersession-graph validation in flow/audit_evidence.py
-(issue #150). stdlib only, temp trees; no committed record is touched.
+"""Unit tests for flow/audit_evidence.py: supersession-graph validation
+(issue #150) and report PDK pins incl. nested layout reports (issue #149).
+stdlib only, temp trees; no committed record is touched.
 
-    python3 flow/test_audit_evidence.py
+    python3 -I flow/test_audit_evidence.py
 """
 import hashlib
 import importlib.util
@@ -131,6 +132,57 @@ class T(unittest.TestCase):
         A.ALLOWED_INPUT_DRIFT[("20260909-225431-86f71d2", "in.txt")] = "reviewed"
         self.addCleanup(lambda: (A.ALLOWED_INPUT_DRIFT.clear(), A.ALLOWED_INPUT_DRIFT.update(orig)))
         self.assertEqual(self.run_audit().failures, [])
+
+
+def run(files):
+    with tempfile.TemporaryDirectory() as d:
+        root = Path(d)
+        for rel, doc in files.items():
+            (root / rel).parent.mkdir(parents=True, exist_ok=True)
+            (root / rel).write_text(json.dumps(doc))
+        a = A.Audit(root, PIN_PDK)
+        a.audit_report_pdk_pins()
+        return a.failures
+
+
+PIN_PDK = "abc123"
+
+
+def prov(version):
+    return {"provenance": {"pdk": {"name": "sky130", "version": version}}}
+
+
+NULL = {"provenance": {"pdk": None}}
+
+
+class ReportPins(unittest.TestCase):
+    def test_top_level_match_passes(self):
+        self.assertEqual(run({"layout/a.json": prov(PIN_PDK)}), [])
+
+    def test_top_level_wrong_fails(self):
+        f = run({"layout/a.json": prov("bad")})
+        self.assertEqual(len(f), 1)
+        self.assertIn("layout/a.json", f[0])
+
+    def test_top_level_null_fails(self):
+        self.assertEqual(len(run({"layout/a.json": NULL})), 1)
+
+    def test_nested_match_passes(self):
+        self.assertEqual(run({"layout/experimental/x.drc.json": prov(PIN_PDK)}), [])
+
+    def test_nested_wrong_fails_with_path(self):
+        f = run({"layout/experimental/x.drc.json": prov("bad")})
+        self.assertEqual(len(f), 1)
+        self.assertIn("layout/experimental/x.drc.json", f[0])
+
+    def test_nested_null_fails_unless_listed(self):
+        f = run({"layout/experimental/other.erc.json": NULL})
+        self.assertEqual(len(f), 1)
+        self.assertIn("layout/experimental/other.erc.json", f[0])
+        self.assertEqual(run({"layout/experimental/logic_tile_routed.erc.json": NULL}), [])
+
+    def test_deeper_nesting_reached(self):
+        self.assertEqual(len(run({"layout/experimental/run-records/y.json": prov("bad")})), 1)
 
 
 if __name__ == "__main__":

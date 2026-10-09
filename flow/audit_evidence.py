@@ -48,7 +48,8 @@ no network):
    pins the tree *as it was*; its successor pins the tree as it is, and is
    still checked in full.
 3. **Every committed evidence report pins the same PDK.** Any report JSON
-   under `layout/` or `measurements/` carrying `provenance.pdk` must name
+   under `layout/` (including nested directories such as
+   `layout/experimental/`, issue #149) or `measurements/` carrying `provenance.pdk` must name
    exactly the pinned revision. A report whose `provenance.pdk` is `null`
    is FAIL unless it is in `PDK_NULL_UPSTREAM_GAP`. Since the klt build
    carrying the klayout-tools#1901 fix, `klt drc` / `klt lvs` write a real
@@ -150,6 +151,17 @@ PDK_NULL_UPSTREAM_GAP = {
         "2026-09-21 re-stamp (issue #41, PR #55); only a pre-fix build's "
         "re-stamp would write null again, inheriting the pin from "
         "flow/lvs.sh's banner instead."
+    ),
+    "layout/experimental/logic_tile_routed.erc.json": (
+        "same producer and method as layout/logic_tile.erc.json (issue "
+        "#149): flow/routed_checks.sh runs klt erc on the experimental "
+        "composed tile's GDS against the same flow/erc_supply_spec.json, "
+        "klt writes no provenance block (klayout-tools#2036), and "
+        "flow/erc_report_trim.py synthesizes the null-PDK block. Its "
+        "provenance.input.content_hash pins layout/experimental/"
+        "logic_tile_routed.gds, whose sibling drc/lvs/par reports pin the "
+        "PDK in-artifact. Scoped to this one path: other experimental "
+        "reports get no exemption."
     ),
     "layout/logic_tile.erc.json": (
         "klt erc writes no provenance block at all (klayout-tools#2036) "
@@ -391,9 +403,9 @@ class Audit:
 
     def audit_report_pdk_pins(self) -> None:
         reports = sorted(
-            set(self.root.glob("layout/*.json")) | set(self.root.glob("measurements/**/*.json"))
+            set(self.root.glob("layout/**/*.json")) | set(self.root.glob("measurements/**/*.json"))
         )
-        print(f"=== committed report JSONs: {len(reports)} under layout/ + measurements/ ===")
+        print(f"=== committed report JSONs: {len(reports)} under layout/** + measurements/** ===")
         pinned = 0
         for report in reports:
             rel = report.relative_to(self.root).as_posix()
