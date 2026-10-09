@@ -75,6 +75,9 @@ frame0-3 full, frame4 30 bits, frames 5-19 empty):
 Mapping to `rtl/logic_tile.v`: `lut_init[16*i + j]` = BEL `i` `INIT[j]` =
 `ConfigBits[17*i + j]`; `reg_sel[i]` = `ConfigBits[17*i + 16]`. That is
 64 + 4 = 68 BEL bits, matching `lut_init[63:0]` and `reg_sel[3:0]`.
+A generated per-bit table of this layout (experimental as-built harness
+format, not the ratified one) is [`bitstream-format.md`](bitstream-format.md);
+`flow/gen_bitstream_format.py --check` guards it against drift.
 `flow/fabulous_summary.py` asserts this against the generator's own
 `LOGIC4.v`, ConfigMem and bitstream-spec outputs (frame-bit positions of
 BEL A: `INIT[0..15]` = 130..145, `FF` = 146).
