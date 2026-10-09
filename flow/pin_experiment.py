@@ -30,7 +30,16 @@ to design/fabulous/corpus/pin_experiment_results.txt on request.
 The pure transform/equivalence functions need only the stdlib (unit-tested by
 flow/test_pin_experiment.py). The runner needs the flow/corpus.sh toolchain.
 Usage (via flow/pin_experiment.sh):
-    pin_experiment.py [--append-record FILE] [--case fan4]
+    pin_experiment.py [--append-record FILE] [--case fan4] [--export-fixtures [DIR]]
+
+`--export-fixtures` (issue #145, opt-in, off by default) additionally preserves the
+successful `variant-distinct` trials as a separate committed experimental fixture set
+(default sim/bitstream/pin_experiment/, see flow/pin_fixtures.py) replayed by
+sim/run.sh and flow/gate-sim-bitstream.sh. Export is all-or-nothing and guarded: it
+refuses unless the distinct variant is proven equivalent, no experiment problem
+occurred, and EVERY seed's distinct trial succeeded (nextpnr route, assembly, byte
+identity with FABulous bit_gen, independent oracle with all perturbations detected).
+Baseline and consistent trials are never exported.
 """
 import argparse
 import hashlib
@@ -307,7 +316,8 @@ def sha_json(mod):
 # ------------------------------------------------------------------ runner
 def run_side(cr, side, case, seed, sd, env, model, budget, tb, snap_dir, fab_run):
     """One (side, seed) trial -> dict. Mirrors corpus_run.main's per-seed pipeline."""
-    r = dict(side=side, seed=seed, outcome="tool_error", detail="", diag=[], sha={}, bels=[], sim="")
+    r = dict(side=side, seed=seed, outcome="tool_error", detail="", diag=[], sha={}, bels=[], sim="",
+             stem=f"{case['name']}_s{seed}", dir=sd)
     rc, out = cr.nextpnr(case, seed, sd, env, model, budget)
     r["outcome"], r["detail"], r["diag"] = cr.classify(rc, out)
     if r["outcome"] != "success":
@@ -327,6 +337,65 @@ def run_side(cr, side, case, seed, sd, env, model, budget, tb, snap_dir, fab_run
         return r
     r["sim"] = info
     return r
+
+
+def export_fixtures(cr, case, seeds, rows, variants, problems, base_sha, versions, dest):
+    """Guarded, all-or-nothing export of the variant-distinct successes. Returns (ok, message)."""
+    import re
+    pf = _load_pin_fixtures()
+    if case["name"] != "fan4":
+        return False, "fixture export is only defined for the fan4 case"
+    if problems:
+        return False, "experiment problems present; nothing exported"
+    if "distinct" not in variants or not variants["distinct"].get("equivalent"):
+        return False, "distinct variant not proven equivalent to the baseline; nothing exported"
+    chosen = []
+    for seed in seeds:
+        row = [r for r in rows if r["side"] == "variant-distinct" and r["seed"] == seed]
+        if len(row) != 1 or row[0]["outcome"] != "success":
+            return False, f"variant-distinct seed {seed} is not a success; nothing exported"
+        r = row[0]
+        m = re.match(r"^(\d+) checks, (\d+) failures; (\d+)/(\d+) perturbations detected$", r["sim"])
+        if not m or m.group(2) != "0" or int(m.group(1)) <= 0 or m.group(3) != m.group(4) or m.group(3) == "0":
+            return False, f"seed {seed}: oracle verdict not clean ({r['sim']!r}); nothing exported"
+        chosen.append(r)
+    if len(chosen) != pf.EXPECTED_CASES:
+        return False, f"{len(chosen)} distinct successes, replay requires exactly {pf.EXPECTED_CASES}"
+    dest = Path(dest)
+    stage = dest.with_name(dest.name + ".staging")
+    shutil.rmtree(stage, ignore_errors=True)
+    stage.mkdir(parents=True)
+    cases = []
+    for r in chosen:
+        stem = pf.stem_for(case["name"], "distinct", r["seed"])
+        for ext in pf.EXTS:
+            src = r["dir"] / f"{r['stem']}{ext}"
+            if not src.is_file() or src.stat().st_size == 0:
+                shutil.rmtree(stage)
+                return False, f"seed {r['seed']}: expected file {src.name} missing; nothing exported"
+            shutil.copyfile(src, stage / f"{stem}{ext}")
+        cases.append(dict(stem=stem, case=case["name"], policy="distinct", seed=r["seed"],
+                          oracle=case["oracle"]))
+    var_json = json.loads((chosen[0]["dir"] / f"{case['name']}.json").read_text())
+    (stage / pf.NETLIST).write_text(json.dumps(var_json, indent=1, sort_keys=True) + "\n")
+    idx = pf.build_index(cases, cr.BSDIR, {"yosys": versions["yosys"], "nextpnr": versions["nextpnr"]},
+                         pf.sha256_file(stage / pf.NETLIST), base_sha, variants["distinct"]["sha"], stage)
+    (stage / pf.INDEX).write_text(json.dumps(idx, indent=1, sort_keys=True) + "\n")
+    try:
+        pf.verify(stage, cr.BSDIR)               # the replay gate must accept what we export
+    except pf.FixtureError as e:
+        shutil.rmtree(stage)
+        return False, f"exported set failed its own replay verification: {e}"
+    shutil.rmtree(dest, ignore_errors=True)
+    stage.rename(dest)
+    return True, f"exported {len(cases)} distinct-pin fan4 fixtures to {dest}"
+
+
+def _load_pin_fixtures():
+    spec = importlib.util.spec_from_file_location("pin_fixtures", HERE / "pin_fixtures.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
 
 
 def record(case, versions, base_sha, variants, rows, problems, expect):
@@ -367,6 +436,9 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--append-record", metavar="FILE")
     ap.add_argument("--case", default="fan4")
+    ap.add_argument("--export-fixtures", nargs="?", const="", default=None, metavar="DIR",
+                    help="opt-in: export the verified variant-distinct successes as the experimental "
+                         "fixture set (default sim/bitstream/pin_experiment/)")
     a = ap.parse_args()
     cr = _load_corpus_run()
     BUILD = cr.BUILD
@@ -433,7 +505,7 @@ def main():
         if not ok_eq:
             problems.append(f"{policy}: variant NOT equivalent to baseline; not routed: {verdict}")
         all_eq &= ok_eq
-        variants[policy] = dict(sha=sha_json(var), log=log, verdict=verdict)
+        variants[policy] = dict(sha=sha_json(var), log=log, verdict=verdict, equivalent=ok_eq)
         sides.append((f"variant-{policy}", var_dir))
         print(f"[{policy}] equivalence: {verdict}")
         print("\n".join("  " + l for l in log))
@@ -453,6 +525,12 @@ def main():
     if a.append_record:
         with open(a.append_record, "a") as f:
             f.write(record(case, versions, base_sha, variants, rows, problems, expect))
+    if a.export_fixtures is not None:
+        dest = a.export_fixtures or str(REPO / "sim" / "bitstream" / "pin_experiment")
+        ok, msg = export_fixtures(cr, case, cfgd["seeds"], rows, variants, problems, base_sha, versions, dest)
+        print(("EXPORT: " if ok else "EXPORT REFUSED: ") + msg)
+        if not ok:
+            problems.append("fixture export refused: " + msg)
     if problems:
         print("\nEXPERIMENT PROBLEMS:")
         for p in problems:

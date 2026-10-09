@@ -245,6 +245,35 @@ if [[ -f "$out_bin" ]]; then
     echo "corpus fixtures simulated: ${n_corpus}"
 fi
 
+# ---------------------------------------------------------------------------
+# Pin-experiment fixtures (issue #145 -- EXPERIMENTAL, separate from the baseline
+# corpus above). The three successful distinct-pin fan4 streams of
+# flow/pin_experiment.py, exported opt-in with `flow/pin_experiment.sh
+# --export-fixtures`, are committed under sim/bitstream/pin_experiment/ and
+# replayed here with the independent fan4 oracle, perturbation checks, assembler
+# reproduction and cfg cross-checks (sim/pin_fixture_replay.sh). Needs no mapper.
+# Missing/empty index, wrong case count, missing/drifted files, simulator errors
+# or an absent terminal verdict fail the suite.
+echo "=== unit tests for the pin-experiment fixture tooling (flow/test_pin_experiment.py, flow/test_pin_fixtures.py) ==="
+for t in test_pin_experiment test_pin_fixtures; do
+    if python3 "$REPO_ROOT/flow/$t.py" >"$BUILD_DIR/$t.log" 2>&1 && grep -q '^OK' "$BUILD_DIR/$t.log"; then
+        echo "PASS: $t ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/$t.log"), 0 failures)"
+    else
+        cat "$BUILD_DIR/$t.log" >&2
+        echo "error: $t failed" >&2
+        overall_status=1
+    fi
+done
+if [[ -f "$out_bin" ]]; then
+    echo "=== pin-experiment fixtures (experimental, sim/bitstream/pin_experiment, with perturbation checks) ==="
+    "$SCRIPT_DIR/pin_fixture_replay.sh" "$out_bin" rtl || overall_status=1
+    echo "=== pin-experiment negative tests (scratch copies; each defect MUST be rejected) ==="
+    "$SCRIPT_DIR/pin_fixture_negative.sh" "$out_bin" rtl || overall_status=1
+else
+    echo "error: ${name} did not compile; pin-experiment fixtures NOT replayed" >&2
+    overall_status=1
+fi
+
 if [[ "$overall_status" -eq 0 ]]; then
     echo "=== all testbenches PASS ==="
 else

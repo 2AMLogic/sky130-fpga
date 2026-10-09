@@ -7,7 +7,7 @@ harness switch matrix is same-index. It changes neither `corpus.json`, any
 expectation, any committed fixture, the fabric model nor the spec, and it does
 not ratify or pre-empt ADR-0004.
 
-Run: `./flow/pin_experiment.sh [--append-record design/fabulous/corpus/pin_experiment_results.txt]`
+Run: `./flow/pin_experiment.sh [--export-fixtures] [--append-record design/fabulous/corpus/pin_experiment_results.txt]`
 (same prerequisites as `flow/corpus.sh`); unit tests: `python3 flow/test_pin_experiment.py`.
 Results are appended to `pin_experiment_results.txt`; old records are never edited.
 
@@ -69,3 +69,42 @@ the corpus record (3 arcs unrouted at the budget).
   shows that mapper-side pin assignment is a confounder any routability
   evidence must control for; a pin-permuting mapper step would be a flow
   change that needs its own decision.
+
+## Replayable fixtures (issue #145)
+
+The successful `variant-distinct` streams are preserved as a separate,
+opt-in experimental fixture set so tile changes cannot silently regress the
+four-BEL fanout case. Export (needs the pinned mapper; routine replay does not):
+
+    ./flow/pin_experiment.sh --export-fixtures [DIR] [--append-record design/fabulous/corpus/pin_experiment_results.txt]
+
+Export is all-or-nothing and refuses (writing nothing) unless the distinct
+variant is exhaustively equivalent to the baseline, no experiment problem
+occurred, and every seed's distinct trial routed, assembled, matched FABulous
+`bit_gen` byte for byte and passed the independent `fan4` oracle with all
+perturbations detected. Baseline and `consistent` trials are never exported.
+The set lives in `sim/bitstream/pin_experiment/` (not the baseline corpus
+`sim/bitstream/corpus/`; `corpus.json`, its expectations and its fixtures are
+unchanged and `fan4` stays an expected route_nonconvergent corpus case):
+`fan4_distinct_s{1,2,3}.{fasm,mapped.json,bin,wiring,cfg}`, the transformed
+pre-route netlist `fan4_distinct.netlist.json`, and `index.json` (case, policy,
+seed, oracle, sha256 of every file, and the sha256 of the `fabric_spec.json` /
+`logic4_configmem.map` snapshot the streams were assembled against).
+
+Replay (`flow/pin_fixtures.py verify`, `sim/pin_fixture_replay.sh`) fails on a
+missing or empty index, a case count other than 3, a missing or drifted file,
+snapshot/map drift, a transformed netlist that no longer has one pin index per
+input net, mapped INITs that differ from the transformed netlist, a stream that
+does not reproduce from its FASM, a simulator error, or an absent terminal
+`PASS` verdict. It runs from `./sim/run.sh` (RTL) and
+`./flow/gate-sim-bitstream.sh` (zero-delay gate level, `--negative` adds the
+failure-mode checks). Tests: `python3 flow/test_pin_fixtures.py`;
+`sim/pin_fixture_negative.sh` proves a missing file, an empty index and a
+function-changing LUT INIT corruption each fail.
+
+Covered population: three seeds of one design (`fan4`), one pad assignment,
+the `distinct` pin policy, on the experimental same-index single-LOGIC4
+harness. The gate-level replay is zero delay with simulation-model loader and
+pads. This is regression evidence for an experiment, not a verification of the
+ratified fabric, not general routability, and not a timing claim; ADR-0004 and
+ADR-0005 stay Proposed and no mapper policy is adopted.

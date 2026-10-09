@@ -4,9 +4,10 @@
 # Zero-delay gate-level run of the UNMODIFIED sim/tb_logic_tile_bitstream.v
 # with both committed baseline bitstream fixtures (sim/bitstream/top_io.bin,
 # top_reg.bin) and, since issue #135, every successful routability-corpus
-# fixture listed in sim/bitstream/corpus/index.txt (one compile, reused)
-# against the committed synthesized netlist of the experimental composed tile
-# (layout/experimental/logic_tile_routed.synth.v) and the sky130_fd_sc_hd
+# fixture listed in sim/bitstream/corpus/index.txt, and, since issue #145, the
+# three experimental pin-experiment fixtures of sim/bitstream/pin_experiment/
+# (one compile, reused) against the committed synthesized netlist of the
+# experimental composed tile (layout/experimental/logic_tile_routed.synth.v) and the sky130_fd_sc_hd
 # behavioral models. The netlist replaces design/rtl/ in the DUT; the frame
 # loader and boundary pads remain SIMULATION MODELS inside the testbench.
 #
@@ -144,6 +145,12 @@ else
     echo "=== corpus fixtures replayed at gate level: ${corpus_pass}/${n_corpus} PASS ==="
 fi
 
+# ---- pin-experiment fixtures (issue #145, EXPERIMENTAL, separate from the corpus):
+# the three distinct-pin fan4 streams replayed at gate level (zero delay) with the
+# same netlist/vvp, fan4 oracle and +mutate perturbation checks.
+echo "=== pin-experiment fixtures at gate level (sim/bitstream/pin_experiment, zero delay, +mutate) ==="
+"$REPO_ROOT/sim/pin_fixture_replay.sh" "$BUILD_DIR/$TB_NAME.vvp" gate || status=1
+
 if [[ "$NEGATIVE" -eq 1 ]]; then
     echo "=== negative checks (each MUST be reported as FAIL by the same pass criterion) ==="
     # neg_verdict <label> <verdict> <log>: prints OK line and returns 0 on FUNC_FAIL;
@@ -165,6 +172,9 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
     # judged against the casc_fan oracle and wiring.
     v="$(run_vvp "$BUILD_DIR/$TB_NAME.vvp" "$CORPUS_DIR/casc2_s1.bin" "$CORPUS_DIR/casc_fan_s1.wiring" casc_fan "$BUILD_DIR/neg_wrong_corpus.log")"
     neg_check "N3 (wrong corpus bitstream vs oracle)" "$v" "$BUILD_DIR/neg_wrong_corpus.log" || status=1
+    # N4/N5: pin-experiment fixture defects (missing file, empty index, function-changing
+    # LUT INIT corruption) must fail the gate-level replay too.
+    "$REPO_ROOT/sim/pin_fixture_negative.sh" "$BUILD_DIR/$TB_NAME.vvp" gate || status=1
     # N2: corrupted netlist (scratch copy; every nand2_1 -> nor2_1).
     sed 's/sky130_fd_sc_hd__nand2_1/sky130_fd_sc_hd__nor2_1/g' "$NETLIST" >"$BUILD_DIR/corrupt.synth.v"
     if cmp -s "$NETLIST" "$BUILD_DIR/corrupt.synth.v"; then
@@ -196,4 +206,4 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
 fi
 
 if [[ "$status" -ne 0 ]]; then echo "=== gate-sim-bitstream FAILED ===" >&2; exit 1; fi
-echo "=== ${TB_NAME} PASSES gate-level, zero delay, baseline + ${n_corpus} corpus fixtures (functional observation only; no timing claim) ==="
+echo "=== ${TB_NAME} PASSES gate-level, zero delay, baseline + ${n_corpus} corpus + 3 pin-experiment fixtures (functional observation only; no timing claim) ==="
