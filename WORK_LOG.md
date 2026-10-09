@@ -4,6 +4,33 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-10-09
 
+- **PR #122**: docs: reconcile stale composed-tile status prose (#120)
+- **PR #121**: feat(sim): gate-level bitstream-driven run on composed-tile netlist (#119)
+- **PR #118**: feat(timing): experimental 18-corner STA of composed tile (G4, #113)
+- **PR #116**: feat(sim): gate-level zero-delay re-sim of composed tile (#112)
+- **PR #114**: feat(sim): experimental bitstream-driven single-LOGIC4 harness test (G5/G6, #74)
+- **PR #111**: feat(layout): experimental DRC/LVS/ERC observations + routing pitch on composed tile (G3, #108)
+- **PR #110**: ci: run flow/audit-evidence.sh on PRs (#109)
+- **PR #107**: feat(layout): experimental composed-tile physical canary (G2, #102)
+- **PR #106**: feat(lvs): re-enable LVS power connectivity under klt 0.7.0; T1 item 11 met (#69)
+- **PR #105**: Guard generated switch-matrix RTL against drift in sim/run.sh
+- **PR #104**: Verify switch-matrix RTL against FABulous; fix generator select order (#96)
+- **PR #103**: docs(readme): G1 status reflects nextpnr result (#87) and Proposed ADR-0004/0005
+- **PR #101**: ci: reproduce FABulous and nextpnr G1 logs on description/flow changes
+- **Issue #120** (closed): Docs: reconcile composed-tile status with experimental physical and bitstream evidence
+- **Issue #119** (closed): G5: run existing bitstream fixtures against the experimental composed-tile netlist
+- **Issue #113** (closed): G4: multi-corner STA of the experimental composed tile (observation, separate from BEL-only row)
+- **Issue #112** (closed): Gate-level zero-delay re-simulation of the experimental composed tile
+- **Issue #109** (closed): CI: reproduce the klt flow check modes and flow/audit-evidence.sh on pull requests
+- **Issue #108** (closed): G3: run DRC/LVS on the experimental composed-tile layout and record routing pitch
+- **Issue #102** (closed): G2: produce a separate physical canary for the composed logic tile
+- **Issue #99** (closed): Guard generated switch-matrix RTL against drift in sim/run.sh
+- **Issue #98** (closed): README: G1 status still says nextpnr has not been run (stale since #87)
+- **Issue #97** (closed): CI job to reproduce the FABulous and nextpnr G1 logs on flow/description changes
+- **Issue #96** (closed): Verify the repo switch-matrix RTL against FABulous's generated switch matrix and config-bit order
+- **Issue #74** (closed): G5/G6: bitstream-driven functional test and format doc for the single logic tile
+- **Issue #69** (closed): T1 item 11: klayout-tools#2121 has landed — re-enable LVS power connectivity and reach power_connectivity "match"
+
 - **PR #95**: ADR-0005: IO and constant handling for single-tile nextpnr flow (#92)
 - **PR #93**: feat(rtl): composed LOGIC4 tile (BELs + switch matrix), RTL-only (#90)
 - **PR #91**: G1: run pinned nextpnr on the generated LOGIC4 model (#87)
