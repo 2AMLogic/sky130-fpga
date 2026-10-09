@@ -211,19 +211,23 @@ some of it. No timing is claimed or implied by these numbers.
 This is BEL-level RTL plus a generic-cell derived netlist. It does **not**
 implement:
 
-- Physical layout, routing pitch, and inter-tile / demo-fabric assembly of
-  the switch matrix (`spec/tile-spec.md`'s "4 general-purpose routing tracks
-  per tile edge" target). Switch-matrix *RTL* now exists -- see below.
+- A ratified physical layout, a decided routing pitch, and inter-tile /
+  demo-fabric assembly of the switch matrix (`spec/tile-spec.md`'s "4
+  general-purpose routing tracks per tile edge" target). Switch-matrix *RTL*
+  now exists -- see below -- and an *experimental* composed-tile layout exists
+  under `layout/experimental/` (see "Composed tile RTL (#90)" below).
 - sky130 standard-cell mapping (liberty-mapped netlist) —
   `design/netlist/logic_tile_netlist.v` here is a generic-cell netlist only.
   A liberty-mapped netlist is now produced (as scratch, not committed under
   `design/`) by `flow/layout.sh`'s own `klt synthesize` step on the way to
   the committed GDS under `layout/` — see `flow/README.md` and
   `layout/README.md` (`spec/framework-gaps.md` item G2).
-- DRC/LVS signoff and timing characterization (`measurements/`,
-  `spec/framework-gaps.md` items G3–G4) — physical design/layout itself
-  (item G2) now has a first pass under `layout/`, with DRC/LVS/timing
-  explicitly deferred to those follow-on items.
+- Signoff-grade DRC/LVS and ratified timing characterization of anything
+  beyond the BEL-only `logic_tile` (`measurements/`,
+  `spec/framework-gaps.md` items G3–G4). The BEL-only `logic_tile` has its
+  layout, DRC/LVS and 18-corner timing under `layout/` and
+  `measurements/timing-characterization/`; the composed tile has only the
+  experimental observations listed under "Composed tile RTL (#90)" below.
 
 ## Composed tile RTL (#90)
 
@@ -241,9 +245,29 @@ made distinguishable (each BEL reads a different edge, each edge carries a
 distinct value, and the output-mux sweep runs under two BEL-output patterns),
 so cross-BEL index swaps in the composition are caught.
 
-**RTL only: no layout, no DRC/LVS, no timing** for the composed tile. The
-signed-off, timing-characterized module remains BEL-only `logic_tile`.
-Follow-ons (separate issues, not part of #90): `klt par` of the composed
-tile; an STA sweep of it plus a decision record extending the ratified timing
-row; and #74 (bitstream load path), which can target this module's `cfg`.
-See `spec/framework-gaps.md` G2/G4.
+**Status of the composed tile.** The *signed-off*, timing-characterized
+module remains the BEL-only `logic_tile`; nothing about the composed tile is
+ratified or cited by `signoff/`. Since #90, **experimental** observations
+(stand-in same-index matrix, ADR-0004/0005 Proposed) have been committed:
+
+- Layout (#102): `layout/experimental/logic_tile_routed.{gds,def}`, produced
+  by `flow/layout_routed.sh`; routing reached, 0 route DRC violations.
+- Physical checks (#108): `flow/routed_checks.sh` -> DRC `clean`, LVS `match`,
+  ERC `clean_partial`, in `layout/experimental/logic_tile_routed.{drc,lvs,erc,pitch}.json`
+  (observations, not signoff; see `layout/README.md`).
+- Timing (#113): 18-corner extracted-parasitics STA under
+  `measurements/timing-characterization-experimental/`
+  (`./flow/sta-sweep.sh --routed`). All 18 corners are `constrained`; 17 meet
+  the 20 ns reference and `ss_n40C_1v28` does not (WNS -4.6838 ns). This is
+  an observation, not a ratified timing result, and the binding path is not
+  yet identified (#117).
+- Simulation (#74, #112, #119): the bitstream load path targets this
+  module's `cfg` (`flow/fasm_to_bitstream.py`, `sim/tb_logic_tile_bitstream.v`),
+  and zero-delay gate-level re-runs against the synthesized netlist are
+  recorded in `sim/logic_tile_routed_gate_results.txt` and
+  `sim/logic_tile_bitstream_gate_results.txt` (see `sim/README.md`).
+
+Still open: the ADR-0004/0005 decisions and a ratified fabric, a pitch
+decision record, path-level diagnosis of the timing result (#117) and a
+decision record before any composed-tile timing is promoted, and inter-tile
+coverage. See `spec/framework-gaps.md` G2-G6.
