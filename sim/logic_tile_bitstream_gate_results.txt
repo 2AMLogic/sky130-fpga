@@ -56,3 +56,26 @@
     N1 top_io.bin judged against the reg oracle/wiring -> FAIL (139651 checks, 4474 failures)
     N2 nand2_1 -> nor2_1 netlist copy -> FAIL for both fixtures (comb: 182 failures, reg: 6404 failures)
   Not covered: corpus fixtures (RTL-level only), ratified fabric, inter-tile routing, timing.
+
+2026-10-09  sim/tb_logic_tile_bitstream.v  (gate-level, zero delay, +mutate; corpus replay, issue #135)
+  Why     : extend the gate-level run from the two baseline fixtures to every successful
+            routability-corpus fixture indexed in sim/bitstream/corpus/index.txt (11), using the
+            same compiled vvp, loader, wiring manifests and independent oracles as the RTL run.
+  Netlist : layout/experimental/logic_tile_routed.synth.v  sha256 0e7d4c702b06c7f4a3272cc60a95f4e1ec96c2fec7d74da66727738534a99f22
+  TB      : sim/tb_logic_tile_bitstream.v (unmodified) sha256 7ba602d25d9d55d9a8e2c92a72db5f13b8f8d8d720cea337ce0e01a264e94b7b
+  Runner  : flow/gate-sim-bitstream.sh                     sha256 b6dddb2f110eb084d85182769fefd4e5050e57ed48a258ab98c5e69d64e3061b
+  Tool    : Icarus Verilog 13.0 (stable); sky130_fd_sc_hd.v sha256 12d5d6448ccf265c544d88402d5c10ab6de9bee8b8cde48eee1f31ea8c3c3e45
+  Command : ./flow/gate-sim-bitstream.sh --negative   (exit 0)
+  Results : baseline comb/reg unchanged (5409 / 139651 checks, 0 failures). Corpus, all PASS with
+            loaded cfg == recorded .cfg and all perturbations detected:
+      quad4_s1..s3      83201 checks, 0 failures, 52/52
+      casc2_s1..s3      10049 checks, 0 failures, 24/24
+      casc_fan_s1..s3   64705 checks, 0 failures, 54/54
+      regcasc_s1,s3    313273 checks, 0 failures, 36/36
+    Check counts are those of the corpus oracles; no four-state loopback X issue was observed.
+  Negatives: N1 (top_io.bin vs reg oracle) FAIL; N2 (nand2_1 -> nor2_1 netlist) FAIL for both baseline
+    fixtures; N3 (casc2_s1.bin vs casc_fan oracle/wiring) FAIL (64705 checks, 1248 failures).
+  Failure modes verified on scratch copies via GATE_SIM_CORPUS_DIR: empty/missing index, unrecognised
+    oracle, missing fixture file each exit 1.
+  Not covered: fan4 (expected routing failure, no bitstream), ratified fabric, inter-tile routing,
+    timing, the real frame-loader/pad hardware.

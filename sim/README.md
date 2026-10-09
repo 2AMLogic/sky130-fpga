@@ -317,12 +317,19 @@ but the PDK models are not available in `rtl-sim.yml`, so it is deliberately
 **Label: experimental same-index switch matrix (ADR-0004/0005 Proposed),
 zero-delay, functional observation only.** `./flow/gate-sim-bitstream.sh`
 runs `sim/tb_logic_tile_bitstream.v` **unmodified**, once per committed
-fixture (`sim/bitstream/top_io.bin`, `top_reg.bin`, with `+mutate`), against
+fixture (the baseline `sim/bitstream/top_io.bin`, `top_reg.bin`, plus, since
+issue #135, every successful routability-corpus fixture listed in
+`sim/bitstream/corpus/index.txt`, each with its own independent oracle and
+`+mutate`; one compile is reused), against
 the synthesized netlist `layout/experimental/logic_tile_routed.synth.v` plus
 the `sky130_fd_sc_hd` behavioral models instead of `design/rtl/`. It exits
 nonzero if iverilog or the PDK models are missing, on any compile or
 simulation error, or if a PASS line is absent; `--negative` additionally shows
-that a wrong bitstream-vs-oracle pairing and a corrupted netlist copy both FAIL.
+that wrong bitstream-vs-oracle pairings (baseline N1, corpus N3: `casc2_s1.bin`
+vs the `casc_fan` oracle) and a corrupted netlist copy all FAIL. An empty or
+missing index, a missing fixture file, an unrecognised oracle, or a loaded cfg
+differing from the recorded `.cfg` is an error. Expected routing failures have
+no bitstream and are not simulated.
 Evidence: `sim/logic_tile_bitstream_gate_results.txt` (append-only).
 
 Non-claims: the FABulous frame loader and the boundary pads / CAP loopback

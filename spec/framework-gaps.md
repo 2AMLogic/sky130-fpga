@@ -293,7 +293,8 @@ matrix, CAP loop-backs, scratch pad overlay); ADR-0004/0005 are Proposed, so
 it is not conformance to the ratified Wilton-class population and does not
 satisfy the "inter-tile routing across the demo grid" part of the work item.
 Details: `sim/README.md` ("Bitstream-driven harness test"). Zero-delay
-gate-level re-runs of the same bitstreams against the synthesized composed-tile
+gate-level re-runs of the same bitstreams (and, since #135, every successful
+routability-corpus fixture) against the synthesized composed-tile
 netlist (#119, `flow/gate-sim-bitstream.sh`, evidence
 `sim/logic_tile_bitstream_gate_results.txt`) are likewise experimental,
 functional-only observations. Still open: the ratified fabric and inter-tile

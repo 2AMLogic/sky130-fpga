@@ -2,7 +2,9 @@
 # flow/gate-sim-bitstream.sh   (issue #119, EXPERIMENTAL, observation-only)
 #
 # Zero-delay gate-level run of the UNMODIFIED sim/tb_logic_tile_bitstream.v
-# with both committed bitstream fixtures (sim/bitstream/top_io.bin, top_reg.bin)
+# with both committed baseline bitstream fixtures (sim/bitstream/top_io.bin,
+# top_reg.bin) and, since issue #135, every successful routability-corpus
+# fixture listed in sim/bitstream/corpus/index.txt (one compile, reused)
 # against the committed synthesized netlist of the experimental composed tile
 # (layout/experimental/logic_tile_routed.synth.v) and the sky130_fd_sc_hd
 # behavioral models. The netlist replaces design/rtl/ in the DUT; the frame
@@ -13,7 +15,8 @@
 # claim, no inter-tile claim.
 #
 # Usage:
-#   ./flow/gate-sim-bitstream.sh              # both fixtures, must PASS
+#   ./flow/gate-sim-bitstream.sh              # baseline + corpus fixtures, must PASS
+#   GATE_SIM_CORPUS_DIR=<dir> overrides the corpus dir (scratch failure-mode tests)
 #   ./flow/gate-sim-bitstream.sh --negative   # also prove wrong results FAIL
 # Exit: nonzero on missing iverilog/vvp, missing PDK models, compile error,
 # simulation error, missing PASS line, or (with --negative) a negative case
@@ -27,6 +30,8 @@ BUILD_DIR="$SCRIPT_DIR/build/gate-sim-bitstream"
 TB_NAME="tb_logic_tile_bitstream"
 NETLIST="$REPO_ROOT/layout/experimental/logic_tile_routed.synth.v"
 BS_DIR="$REPO_ROOT/sim/bitstream"
+CORPUS_DIR="${GATE_SIM_CORPUS_DIR:-$BS_DIR/corpus}"
+RECOGNISED_ORACLES=" comb reg quad4 casc2 fan4 casc_fan regcasc "
 NEGATIVE=0
 [[ "${1:-}" == "--negative" ]] && NEGATIVE=1
 
@@ -90,6 +95,46 @@ for entry in "comb:top_io" "reg:top_reg"; do
     fi
 done
 
+# ---- routability-corpus fixtures (issue #135): replay every indexed successful
+# fixture against the same netlist/vvp with the same independent oracles.
+# Expected routing failures have no bitstream and are not in the index.
+INDEX="$CORPUS_DIR/index.txt"
+n_corpus=0
+corpus_pass=0
+if [[ ! -s "$INDEX" ]]; then
+    echo "error: corpus index missing or empty: $INDEX" >&2; status=1
+else
+    while read -r stem oracle extra; do
+        [[ -z "$stem" ]] && continue
+        n_corpus=$((n_corpus + 1))
+        if [[ -n "$extra" || -z "$oracle" || "$RECOGNISED_ORACLES" != *" $oracle "* ]]; then
+            echo "error: [$stem] corpus index entry invalid or oracle '${oracle:-}' unrecognised" >&2; status=1; continue
+        fi
+        missing=0
+        for ext in bin wiring cfg; do
+            [[ -s "$CORPUS_DIR/$stem.$ext" ]] || { echo "error: [$stem] missing corpus file $CORPUS_DIR/$stem.$ext" >&2; missing=1; }
+        done
+        [[ "$missing" -eq 0 ]] || { status=1; continue; }
+        log="$BUILD_DIR/${TB_NAME}_corpus_${stem}.log"
+        if run_one "$BUILD_DIR/$TB_NAME.vvp" "$CORPUS_DIR/$stem.bin" "$CORPUS_DIR/$stem.wiring" "$oracle" "$log"; then
+            sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$log" | cut -d= -f2)"
+            rec_cfg="$(tr -d '\n' < "$CORPUS_DIR/$stem.cfg")"
+            if [[ -z "$sim_cfg" || "$sim_cfg" != "$rec_cfg" ]]; then
+                echo "corpus [$oracle] $stem: FAIL (loaded cfg '$sim_cfg' != recorded '$rec_cfg')" >&2; status=1
+            else
+                corpus_pass=$((corpus_pass + 1))
+                echo "corpus [$oracle] $stem: PASS ($(grep -m1 '^PASS' "$log" | sed 's/^PASS: //'); cfg == recorded)"
+            fi
+        else
+            echo "corpus [$oracle] $stem: FAIL (see $log)" >&2
+            tail -n 15 "$log" >&2 || true
+            status=1
+        fi
+    done < "$INDEX"
+    [[ "$n_corpus" -gt 0 ]] || { echo "error: corpus index has no entries: $INDEX" >&2; status=1; }
+    echo "=== corpus fixtures replayed at gate level: ${corpus_pass}/${n_corpus} PASS ==="
+fi
+
 if [[ "$NEGATIVE" -eq 1 ]]; then
     echo "=== negative checks (each MUST be reported as FAIL by the same pass criterion) ==="
     # N1: wrong program for the oracle -- top_io bitstream judged as the registered design.
@@ -97,6 +142,13 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
         echo "error: negative N1 (wrong bitstream vs oracle) was ACCEPTED" >&2; status=1
     else
         echo "negative N1 OK: top_io.bin judged against the reg oracle -> $(grep -m1 -E '^(FAIL|PASS)' "$BUILD_DIR/neg_wrong_bitstream.log" || echo 'no PASS line')"
+    fi
+    # N3: wrong program for a corpus case with internal routing -- casc2_s1.bin
+    # judged against the casc_fan oracle and wiring.
+    if run_one "$BUILD_DIR/$TB_NAME.vvp" "$CORPUS_DIR/casc2_s1.bin" "$CORPUS_DIR/casc_fan_s1.wiring" casc_fan "$BUILD_DIR/neg_wrong_corpus.log"; then
+        echo "error: negative N3 (wrong corpus bitstream vs oracle) was ACCEPTED" >&2; status=1
+    else
+        echo "negative N3 OK: casc2_s1.bin judged against the casc_fan oracle -> $(grep -m1 -E '^(FAIL|PASS)' "$BUILD_DIR/neg_wrong_corpus.log" || echo 'no PASS line')"
     fi
     # N2: corrupted netlist (scratch copy; every nand2_1 -> nor2_1).
     sed 's/sky130_fd_sc_hd__nand2_1/sky130_fd_sc_hd__nor2_1/g' "$NETLIST" >"$BUILD_DIR/corrupt.synth.v"
@@ -123,4 +175,4 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
 fi
 
 if [[ "$status" -ne 0 ]]; then echo "=== gate-sim-bitstream FAILED ===" >&2; exit 1; fi
-echo "=== ${TB_NAME} PASSES gate-level, zero delay, both fixtures (functional observation only; no timing claim) ==="
+echo "=== ${TB_NAME} PASSES gate-level, zero delay, baseline + ${n_corpus} corpus fixtures (functional observation only; no timing claim) ==="
