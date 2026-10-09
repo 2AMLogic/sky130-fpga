@@ -310,6 +310,25 @@ completion. Needs only Icarus Verilog and the sky130A cell models (no `klt`),
 but the PDK models are not available in `rtl-sim.yml`, so it is deliberately
 **not** wired into CI and not part of `./sim/run.sh`.
 
+## Bitstream-driven gate-level coverage (issue #119, EXPERIMENTAL)
+
+**Label: experimental same-index switch matrix (ADR-0004/0005 Proposed),
+zero-delay, functional observation only.** `./flow/gate-sim-bitstream.sh`
+runs `sim/tb_logic_tile_bitstream.v` **unmodified**, once per committed
+fixture (`sim/bitstream/top_io.bin`, `top_reg.bin`, with `+mutate`), against
+the synthesized netlist `layout/experimental/logic_tile_routed.synth.v` plus
+the `sky130_fd_sc_hd` behavioral models instead of `design/rtl/`. It exits
+nonzero if iverilog or the PDK models are missing, on any compile or
+simulation error, or if a PASS line is absent; `--negative` additionally shows
+that a wrong bitstream-vs-oracle pairing and a corrupted netlist copy both FAIL.
+Evidence: `sim/logic_tile_bitstream_gate_results.txt` (append-only).
+
+Non-claims: the FABulous frame loader and the boundary pads / CAP loopback
+network remain **simulation models** in the testbench, not hardware in the
+netlist; no SDF/timing/parasitics; no ratified-fabric (Wilton-class) claim; no
+inter-tile claim; not formal equivalence. Like `gate-sim-routed.sh` it needs
+the PDK models, so it is **not** part of the PDK-free `./sim/run.sh` or CI.
+
 ## Out of scope here
 
 Bitstream-level verification of the *ratified* fabric (the Wilton-class

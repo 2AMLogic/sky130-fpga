@@ -1,0 +1,40 @@
+# Append-only evidence record (issue #119). Add new dated entries below; do not edit old ones.
+# LABEL: experimental same-index switch matrix (ADR-0004/0005 Proposed), zero-delay, functional
+#   observation only.
+# Scope: the committed bitstream fixtures sim/bitstream/top_io.bin and top_reg.bin, loaded by the
+#   UNMODIFIED sim/tb_logic_tile_bitstream.v, driving the synthesized netlist of the experimental
+#   composed tile (layout/experimental/logic_tile_routed.synth.v) with sky130_fd_sc_hd behavioral models.
+# Non-claims: the FABulous frame loader and the boundary pads/CAP loopbacks remain SIMULATION MODELS
+#   in the testbench (no frame-loader or pad hardware exists in the netlist); no SDF/timing/parasitic
+#   content; not the ratified Wilton-class fabric; no inter-tile routing; not formal equivalence; not
+#   G5/G6 completion; no spec/ file changed.
+# Reproduce: ./flow/gate-sim-bitstream.sh --negative   (iverilog 13 + sky130A cell models; no klt needed)
+
+2026-10-09  sim/tb_logic_tile_bitstream.v  (gate-level, zero delay, +mutate)
+  Netlist : layout/experimental/logic_tile_routed.synth.v  sha256 0e7d4c702b06c7f4a3272cc60a95f4e1ec96c2fec7d74da66727738534a99f22
+  TB      : sim/tb_logic_tile_bitstream.v (unmodified)      sha256 1f79ed848cd290fdaa4213bc1463fe5b0f49e1f920f913ae7b687dfbf6678510
+  Fixtures: sim/bitstream/top_io.bin   sha256 63e1c5662c92ddccdb9f9b6ecd0cde170ee8c8f62dd7eab54b8f8d7dac67dcde
+            sim/bitstream/top_reg.bin  sha256 d275a9410873714bb4f6f8f25df3a66a5d49b8a7073286a75fb2bab4dfcf111e
+            sim/bitstream/logic4_configmem.map sha256 ea7fbba65ec017841c89fc4c13944717c257d288257dc6718f144ccb70af7abd
+            sim/bitstream/top_io.wiring  sha256 f22f8e3b4f6e06064c449a1658f9f99991195e5d3c82f62b0fa166fbbc1cf444
+            sim/bitstream/top_reg.wiring sha256 d4206bff82527feb86de2aa14d941469b08a16b296f2e71767b4bb58a1bad857
+  Runner  : flow/gate-sim-bitstream.sh                     sha256 da81c240a552e908e7ab74ef941978d7d4c8078c837f5b3ea60aedea13034c79
+  Models  : ~/.volare/sky130A/libs.ref/sky130_fd_sc_hd/verilog primitives.v sha256 7d4b1441d06b0f2b9662befa675a0484d77149e04eb42a5f1fa2d4cfded7b2ce
+            sky130_fd_sc_hd.v sha256 12d5d6448ccf265c544d88402d5c10ab6de9bee8b8cde48eee1f31ea8c3c3e45
+            (zero-delay run; no -gspecify, no SDF)
+  Tool    : Icarus Verilog 13.0 (stable)
+  Command : ./flow/gate-sim-bitstream.sh --negative   (exit 0)
+  Results :
+    PASS: tb_logic_tile_bitstream[comb] (5409 checks, 0 failures; 26/26 perturbations detected)
+    PASS: tb_logic_tile_bitstream[reg] (139651 checks, 0 failures; 27/27 perturbations detected)
+    Check counts and perturbation counts are identical to the RTL run (sim/logic_tile_bitstream_results.txt).
+    Loaded cfg equals the recorded sim/bitstream/*.cfg for both designs (CFG lines):
+      comb 000aa00002a000c1800000034cb0000000008080
+      reg  003002a0001a00018000000000025a580001aaaa
+    CAP loopbacks settled at zero delay; no gate-level settling failure was observed.
+  Negative checks (the runner must report failure; both did):
+    N1 top_io.bin judged against the reg oracle/wiring -> FAIL (139651 checks, 4474 failures)
+    N2 scratch copy of the netlist with every nand2_1 replaced by nor2_1 -> FAIL for both fixtures
+       (comb: 182 failures, reg: 6404 failures)
+  Not covered: ratified fabric, inter-tile routing, timing, tile types other than LOGIC4, the real
+    frame-loader/pad hardware.
