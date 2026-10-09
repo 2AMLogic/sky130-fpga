@@ -923,3 +923,31 @@ append-only `check-records/*.json` (separate from `run-records/`). Verdicts
 are recorded **as found** and do not affect the exit status: a dirty result
 is a valid finding. Nothing is pruned or edited to get clean; this is an
 observation of the ADR-0004-Proposed stand-in matrix, not signoff.
+
+### `flow/sta-sweep.sh --routed` — EXPERIMENTAL composed-tile 18-corner STA (G4, issue #113)
+
+Stand-in matrix, ADR-0004 Proposed -- observation, not spec. The same script
+and 18 ratified corners as the BEL-only sweep above, re-targeted with
+`--routed` (combinable with `--update`) at
+`layout/experimental/logic_tile_routed.{def,gds}`; results land in
+`measurements/timing-characterization-experimental/` (see its README for what
+is and is not claimed), and the BEL-only paths, requests and gate are
+unchanged. Differences, all additive and only active under `--routed`:
+
+- `input_delay_ns`/`output_delay_ns` = 0 are added to every `klt sta`
+  request, otherwise port-to-port paths are unconstrained.
+- `flow/sta_sanitize_names.py def-sanitize-hier` also rewrites plain
+  (unescaped) `u_sm/...` hierarchy names, which the composed tile has and
+  the BEL-only DEF never did; without it OpenSTA drops ~1500 SPEF records and
+  `annotation_complete` is false (the sweep refuses such a run).
+- the envelope gate runs `flow/sta_envelope_check.py --observation`: exact
+  corner set, decks, complete annotation and single-corner cross-check are
+  still required, but non-negative slack is not -- the verdict is recorded
+  as found.
+
+Check mode (`./flow/sta-sweep.sh --routed`) regenerates everything and diffs
+it against the committed files (about 2.5 minutes, single-process). It reads
+only the committed experimental DEF/GDS and does not re-run synthesis or
+place-and-route (`flow/layout_routed.sh` owns those; its artifacts already
+include the DEF and GDS the SPEF is extracted from, so no SPEF step was needed
+there).

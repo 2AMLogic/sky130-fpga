@@ -127,7 +127,7 @@ def _fmax_consistent(wns: float, fmax: float) -> bool:
     return math.isclose(fmax, 1000.0 / remaining, rel_tol=rel_tol)
 
 
-def check(envelope: dict, cross_check_dir=None) -> list:
+def check(envelope: dict, cross_check_dir=None, observation=False) -> list:
     failures = []
 
     def fail(message: str) -> None:
@@ -175,25 +175,36 @@ def check(envelope: dict, cross_check_dir=None) -> list:
             fail(f"{where}: deck.name is {deck.get('name')!r}")
         if not _is_sha256(deck.get("content_hash")):
             fail(f"{where}: deck.content_hash is not a sha256 pin")
-        if entry.get("timing_status") != "constrained":
-            fail(f"{where}: timing_status is {entry.get('timing_status')!r}, not 'constrained'")
         setup = entry.get("worst_slack_ns")
         hold = entry.get("worst_hold_slack_ns")
-        if not _is_number(setup) or setup < 0:
-            fail(f"{where}: worst_slack_ns is {setup!r} (must be a number >= 0)")
-        if not _is_number(hold) or hold < 0:
-            fail(f"{where}: worst_hold_slack_ns is {hold!r} (must be a number >= 0)")
-        for key in ("setup_violation_count", "hold_violation_count"):
-            if entry.get(key) != 0:
-                fail(f"{where}: {key} is {entry.get(key)!r}, not 0")
-        for key in ("total_negative_slack_ns", "total_negative_hold_slack_ns"):
-            if entry.get(key) != 0:
-                fail(f"{where}: {key} is {entry.get(key)!r}, not 0")
+        if observation:
+            # Issue #113: experimental observation. The verdict is recorded
+            # as found (a violating or unconstrained corner is publishable),
+            # but the numbers must still be real measurements: a status of
+            # "constrained" is required before any slack is read, because
+            # the unconstrained sentinel (1e+39) is not a measurement.
+            if entry.get("timing_status") not in ("constrained", "unconstrained"):
+                fail(f"{where}: timing_status is {entry.get('timing_status')!r}")
+        else:
+            if entry.get("timing_status") != "constrained":
+                fail(f"{where}: timing_status is {entry.get('timing_status')!r}, not 'constrained'")
+            if not _is_number(setup) or setup < 0:
+                fail(f"{where}: worst_slack_ns is {setup!r} (must be a number >= 0)")
+            if not _is_number(hold) or hold < 0:
+                fail(f"{where}: worst_hold_slack_ns is {hold!r} (must be a number >= 0)")
+            for key in ("setup_violation_count", "hold_violation_count"):
+                if entry.get(key) != 0:
+                    fail(f"{where}: {key} is {entry.get(key)!r}, not 0")
+            for key in ("total_negative_slack_ns", "total_negative_hold_slack_ns"):
+                if entry.get(key) != 0:
+                    fail(f"{where}: {key} is {entry.get(key)!r}, not 0")
         annotation = entry.get("spef_annotation") or {}
         if annotation.get("annotation_complete") is not True:
             fail(f"{where}: spef_annotation.annotation_complete is not true")
         fmax = entry.get("fmax_mhz")
-        if _is_number(setup) and _is_number(fmax):
+        if observation:
+            pass
+        elif _is_number(setup) and _is_number(fmax):
             if not _fmax_consistent(setup, fmax):
                 fail(
                     f"{where}: fmax_mhz {fmax} is inconsistent with a "
@@ -233,6 +244,7 @@ def main(argv: list) -> int:
     args = argv[1:]
     cross_check_dir = None
     expect = None
+    observation = False
     positional = []
     while args:
         arg = args.pop(0)
@@ -240,6 +252,8 @@ def main(argv: list) -> int:
             cross_check_dir = args.pop(0)
         elif arg == "--expect-corners" and args:
             expect = [c for c in args.pop(0).split(",") if c]
+        elif arg == "--observation":
+            observation = True
         elif arg.startswith("--"):
             positional = []
             break
@@ -248,7 +262,7 @@ def main(argv: list) -> int:
     if len(positional) != 1:
         print(
             f"usage: {argv[0]} <envelope.json> [--cross-check <corners-dir>] "
-            "[--expect-corners c1,c2,...]",
+            "[--expect-corners c1,c2,...] [--observation]",
             file=sys.stderr,
         )
         return 2
@@ -262,13 +276,21 @@ def main(argv: list) -> int:
         )
     with open(positional[0], encoding="utf-8") as f:
         envelope = json.load(f)
-    failures += check(envelope, cross_check_dir)
+    failures += check(envelope, cross_check_dir, observation)
 
     if failures:
         print(f"sta envelope check FAILED for {positional[0]}:", file=sys.stderr)
         for message in failures:
             print(f"  - {message}", file=sys.stderr)
         return 1
+    if observation:
+        statuses = sorted({str(c.get("timing_status")) for c in envelope["corners"]})
+        print(
+            f"sta observation envelope ok (structure only, verdicts NOT gated): "
+            f"{len(envelope['corners'])} corners, timing_status {statuses}, "
+            "SPEF annotation complete"
+        )
+        return 0
     binding = min(envelope["corners"], key=lambda c: c["worst_slack_ns"])
     print(
         f"sta envelope ok: {len(envelope['corners'])}/{len(RATIFIED_CORNERS)} ratified "

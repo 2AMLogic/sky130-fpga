@@ -86,6 +86,27 @@ ALLOWED_INPUT_DRIFT = {
         "to the extraction, the corner list, the SDC, the report trimming or "
         "the diff logic, so it cannot move this record's numbers."
     ),
+    ("20261008-234741-dc615b4", "flow/sta-sweep.sh"): (
+        "issue #113 added an opt-in --routed target (experimental composed tile) to the script. Default (BEL-only) target is unchanged: same "
+        "paths, requests, sanitizer mode and gate. Verified by re-running the "
+        "default check mode: every per-corner metric reproduced; the only "
+        "diffs are the SPEF *VERSION header / spef_sha256 from the installed "
+        "klt build, which predate this change (toolchain drift)."
+    ),
+    ("20261008-234741-dc615b4", "flow/sta_sanitize_names.py"): (
+        "issue #113 added a def-sanitize-hier mode used only by --routed. Default (BEL-only) target is unchanged: same "
+        "paths, requests, sanitizer mode and gate. Verified by re-running the "
+        "default check mode: every per-corner metric reproduced; the only "
+        "diffs are the SPEF *VERSION header / spef_sha256 from the installed "
+        "klt build, which predate this change (toolchain drift)."
+    ),
+    ("20261008-234741-dc615b4", "flow/sta_envelope_check.py"): (
+        "issue #113 added an opt-in --observation flag used only by --routed. Default (BEL-only) target is unchanged: same "
+        "paths, requests, sanitizer mode and gate. Verified by re-running the "
+        "default check mode: every per-corner metric reproduced; the only "
+        "diffs are the SPEF *VERSION header / spef_sha256 from the installed "
+        "klt build, which predate this change (toolchain drift)."
+    ),
 }
 
 # Committed reports whose `provenance.pdk` may be null without failing
