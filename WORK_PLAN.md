@@ -7,7 +7,7 @@ This roadmap is generated from the current GitHub label state by the Loom Guide 
 
 Judge-approved PRs stuck under a `loom:operator` merge-risk hold — implementation work is done, only a human merge decision is missing.
 
-_None._
+- **#132**: ci: reproduce routability-corpus fixtures with flow/corpus.sh (#129)
 
 ## Operator Priority
 
@@ -25,19 +25,19 @@ _None._
 
 Issues currently being built (`loom:building`).
 
-- **#115**: G5: bounded single-tile routability corpus to inform ADR-0004
+- **#137**: Routability: isolate LUT pin-index assignment in the single-tile fanout failure
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#142**: Routability: opt-in LUT pin-index experiment for fan4 (#137)
 
 ## Approved (Awaiting Merge)
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
-_None._
+- **#132**: ci: reproduce routability-corpus fixtures with flow/corpus.sh (#129)
 
 ## Proposed
 
@@ -47,7 +47,8 @@ _None._
 
 ## Proposed (Architect / Hermit)
 
-_None._
+- **#140**: G5: replay committed streams through the integrated FABulous-generated tile *(architect)*
+- **#141**: Verification: require completed functional rejection in gate bitstream negative controls *(architect)*
 
 ## Epics
 
@@ -57,13 +58,13 @@ _None._
 
 | Tier | Count |
 |------|-------|
-| Operator merge-risk holds | 0 |
+| Operator merge-risk holds | 1 |
 | Operator priority | 0 |
 | Ready (`loom:issue`) | 0 |
 | In Progress (`loom:building`) | 1 |
-| PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 0 |
+| PRs awaiting review | 1 |
+| Approved PRs awaiting merge | 1 |
 | Curated | 0 |
-| Architect / Hermit proposals | 0 |
+| Architect / Hermit proposals | 2 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->

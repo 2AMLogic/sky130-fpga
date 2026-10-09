@@ -4,6 +4,21 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-10-09
 
+- **PR #139**: G5: replay routability corpus against composed-tile gate netlist
+- **PR #138**: G5: verify generated FABulous ConfigMem RTL against recorded configuration map
+- **PR #134**: G6: generate as-built harness bitstream-format table with drift check
+- **PR #133**: ci: run zero-delay gate-level re-sims on PRs (#130)
+- **PR #128**: G5: bounded single-tile routability corpus to inform ADR-0004 (#115)
+- **PR #127**: docs: single-source README status claims and add drift check (#125)
+- **PR #126**: sim: RTL mutation check proving the testbenches can fail (#124)
+- **Issue #135** (closed): G5: replay the routability corpus against the composed-tile gate netlist
+- **Issue #136** (closed): G5: verify generated FABulous ConfigMem RTL against the recorded configuration map
+- **Issue #131** (closed): G6: generate the as-built harness bitstream-format table from the config-bit map with a drift check
+- **Issue #94** (closed): Guard telemetry: retain rm-scope-unresolved-var containment check
+- **Issue #130** (closed): CI: run the zero-delay gate-level bitstream and routed re-sims on pull requests
+- **Issue #115** (closed): G5: bounded single-tile routability corpus to inform ADR-0004
+- **Issue #125** (closed): Docs: single-source README/framework-gaps status claims and add a drift check
+- **Issue #124** (closed): Verification: RTL mutation check proving the sim/ testbenches can fail
 - **PR #122**: docs: reconcile stale composed-tile status prose (#120)
 - **PR #121**: feat(sim): gate-level bitstream-driven run on composed-tile netlist (#119)
 - **PR #118**: feat(timing): experimental 18-corner STA of composed tile (G4, #113)
