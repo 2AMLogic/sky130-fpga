@@ -1,0 +1,11 @@
+quad4_s1 quad4
+quad4_s2 quad4
+quad4_s3 quad4
+casc2_s1 casc2
+casc2_s2 casc2
+casc2_s3 casc2
+casc_fan_s1 casc_fan
+casc_fan_s2 casc_fan
+casc_fan_s3 casc_fan
+regcasc_s1 regcasc
+regcasc_s3 regcasc

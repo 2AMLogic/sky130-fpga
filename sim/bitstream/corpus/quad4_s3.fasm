@@ -1,0 +1,136 @@
+# routing for net '$PACKER_GND'
+
+
+# routing for net '$PACKER_VCC'
+
+
+# routing for net 'z'
+
+
+# routing for net 'y'
+
+
+# routing for net 'w'
+
+
+# routing for net 'v'
+
+
+# routing for net 'd'
+
+
+# routing for net 'c'
+
+
+# routing for net 'b'
+
+
+# routing for net 'a'
+
+
+# routing for net '$abc$326$aiger$o0'
+
+X1Y1.LC_O.S1BEG0
+X1Y1.S1BEG0.S1END0
+X1Y2.S1END0.IOD_I
+
+# routing for net '$abc$326$aiger$o2'
+
+X1Y1.LB_O.S1BEG2
+X1Y1.S1BEG2.S1END2
+X1Y2.S1END2.IOB_I
+
+# routing for net '$abc$326$aiger$o3'
+
+X1Y1.LD_O.S1BEG1
+X1Y1.S1BEG1.S1END1
+X1Y2.S1END1.IOA_I
+
+# routing for net '$abc$326$aiger$o1'
+
+X1Y1.LA_O.S1BEG3
+X1Y1.S1BEG3.S1END3
+X1Y2.S1END3.IOC_I
+
+# routing for net '$abc$326$iopadmap$d'
+
+X1Y0.IOD_O.S1BEG3
+X1Y0.S1BEG3.S1END3
+X1Y1.S1END3.LA_I3
+X1Y1.S1END3.LB_I3
+X1Y1.S1END3.LC_I3
+X1Y1.S1END3.LD_I3
+
+# routing for net '$abc$326$iopadmap$c'
+
+X1Y0.IOC_O.S1BEG2
+X1Y0.S1BEG2.S1END2
+X1Y1.S1END2.LA_I2
+X1Y1.S1END2.LB_I2
+X1Y1.S1END2.LC_I2
+X1Y1.S1END2.LD_I2
+
+# routing for net '$abc$326$iopadmap$b'
+
+X1Y0.IOB_O.S1BEG1
+X1Y0.S1BEG1.S1END1
+X1Y1.S1END1.LA_I1
+X1Y1.S1END1.LB_I1
+X1Y1.S1END1.LC_I1
+X1Y1.S1END1.LD_I1
+
+# routing for net '$abc$326$iopadmap$a'
+
+X1Y0.IOA_O.S1BEG0
+X1Y0.S1BEG0.S1END0
+X1Y1.S1END0.LA_I0
+X1Y1.S1END0.LB_I0
+X1Y1.S1END0.LC_I0
+X1Y1.S1END0.LD_I0
+
+# config for cell '$PACKER_GND_DRV'
+
+
+# config for cell '$PACKER_VCC_DRV'
+
+
+# config for cell '$iopadmap$top.z._io'
+
+
+# config for cell '$iopadmap$top.y._io'
+
+
+# config for cell '$iopadmap$top.w._io'
+
+
+# config for cell '$iopadmap$top.v._io'
+
+
+# config for cell '$iopadmap$top.d._io'
+
+
+# config for cell '$iopadmap$top.c._io'
+
+
+# config for cell '$iopadmap$top.b._io'
+
+
+# config for cell '$iopadmap$top.a._io'
+
+
+# config for cell '$auto$abc_ops_reintegrate.cc:696:reintegrate$329._lut'
+
+X1Y1.C.INIT[15:0] = 'b0111110100101000
+
+# config for cell '$auto$abc_ops_reintegrate.cc:696:reintegrate$328._lut'
+
+X1Y1.B.INIT[15:0] = 'b1111100010001000
+
+# config for cell '$auto$abc_ops_reintegrate.cc:696:reintegrate$327._lut'
+
+X1Y1.D.INIT[15:0] = 'b0110100110010110
+
+# config for cell '$abc$326$lut$aiger$o1._lut'
+
+X1Y1.A.INIT[15:0] = 'b1110111011100000
+

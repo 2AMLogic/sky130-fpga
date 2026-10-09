@@ -156,6 +156,13 @@ target" from "(a sparse/Wilton-class switch box, not a full crossbar)" to:
 **Disposition: operator decision required** (A recommended for now; B or C
 to be chosen once routability evidence exists).
 
+*Supporting evidence (informational; added by #115, does not alter the status,
+options, recommendation or disposition above).* A bounded, experimental
+single-tile mapping corpus on the as-implemented harness (not the ratified
+population, no inter-tile or timing content) is recorded in
+`design/fabulous/corpus/README.md`, with an append-only result record in
+`design/fabulous/corpus/results.txt`. Reproduce with `flow/corpus.sh`.
+
 ## Item 4: BEL behaviour follows ratified RTL, not stock FABulous
 
 **Departure.** The stock FABulous `LUT4c_frame_config_dffesr` has a carry

@@ -1,0 +1,166 @@
+{
+ "cells": [
+  {
+   "bel": "X1Y1/C",
+   "ff": "0",
+   "init": "1001011001101001",
+   "type": "lut4_ff_bel"
+  },
+  {
+   "bel": "X1Y1/D",
+   "ff": "0",
+   "init": "1100011011000110",
+   "type": "lut4_ff_bel"
+  }
+ ],
+ "nets": [
+  {
+   "pins": [
+    "X1Y0/A.O",
+    "X1Y1/C.I0"
+   ],
+   "pips": [
+    "X1Y0.IOA_O.S1BEG0",
+    "X1Y0.S1BEG0.S1END0",
+    "X1Y1.S1END0.LC_I0"
+   ]
+  },
+  {
+   "pins": [
+    "X1Y0/B.O",
+    "X1Y1/C.I1"
+   ],
+   "pips": [
+    "X1Y0.IOB_O.S1BEG1",
+    "X1Y0.S1BEG1.S1END1",
+    "X1Y1.S1END1.LC_I1"
+   ]
+  },
+  {
+   "pins": [
+    "X1Y0/C.O",
+    "X1Y1/C.I2"
+   ],
+   "pips": [
+    "X1Y0.IOC_O.S1BEG2",
+    "X1Y0.S1BEG2.S1END2",
+    "X1Y1.S1END2.LC_I2"
+   ]
+  },
+  {
+   "pins": [
+    "X1Y0/D.O",
+    "X1Y1/C.I3"
+   ],
+   "pips": [
+    "X1Y0.IOD_O.S1BEG3",
+    "X1Y0.S1BEG3.S1END3",
+    "X1Y1.S1END3.LC_I3"
+   ]
+  },
+  {
+   "pins": [
+    "X1Y1/C.O",
+    "X1Y1/D.I2"
+   ],
+   "pips": [
+    "X1Y1.E1BEG1.E1END1",
+    "X1Y1.LC_O.E1BEG1",
+    "X1Y1.W1END2.LD_I2",
+    "X2Y1.E1END1.W1BEG2",
+    "X2Y1.W1BEG2.W1END2"
+   ]
+  },
+  {
+   "pins": [
+    "X1Y1/D.I0",
+    "X1Y2/A.O"
+   ],
+   "pips": [
+    "X1Y1.N1END0.LD_I0",
+    "X1Y2.IOA_O.N1BEG0",
+    "X1Y2.N1BEG0.N1END0"
+   ]
+  },
+  {
+   "pins": [
+    "X1Y1/D.I1",
+    "X1Y2/B.O"
+   ],
+   "pips": [
+    "X1Y1.N1END1.LD_I1",
+    "X1Y2.IOB_O.N1BEG1",
+    "X1Y2.N1BEG1.N1END1"
+   ]
+  },
+  {
+   "pins": [
+    "X1Y1/D.O",
+    "X1Y2/C.I"
+   ],
+   "pips": [
+    "X1Y1.LD_O.S1BEG3",
+    "X1Y1.S1BEG3.S1END3",
+    "X1Y2.S1END3.IOC_I"
+   ]
+  }
+ ],
+ "ports": [
+  {
+   "dir": "input",
+   "name": "a",
+   "pad": [
+    "X1Y0",
+    "A"
+   ]
+  },
+  {
+   "dir": "input",
+   "name": "b",
+   "pad": [
+    "X1Y0",
+    "B"
+   ]
+  },
+  {
+   "dir": "input",
+   "name": "c",
+   "pad": [
+    "X1Y0",
+    "C"
+   ]
+  },
+  {
+   "dir": "input",
+   "name": "d",
+   "pad": [
+    "X1Y0",
+    "D"
+   ]
+  },
+  {
+   "dir": "input",
+   "name": "e",
+   "pad": [
+    "X1Y2",
+    "A"
+   ]
+  },
+  {
+   "dir": "input",
+   "name": "f",
+   "pad": [
+    "X1Y2",
+    "B"
+   ]
+  },
+  {
+   "dir": "output",
+   "name": "y",
+   "pad": [
+    "X1Y2",
+    "C"
+   ]
+  }
+ ]
+}

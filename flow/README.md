@@ -231,6 +231,21 @@ committed fixtures only (no mapping tool). Experimental single-LOGIC4 harness
 coverage; see `sim/README.md`. `python3 flow/test_fasm_to_bitstream.py` runs the
 assembler/decoder unit tests (stdlib only).
 
+### `flow/corpus.sh` - bounded single-tile routability corpus (issue #115)
+
+EXPERIMENTAL decision evidence for ADR-0004 item 3. Runs `flow/bitstream.sh`
+(pinned toolchain, model, baseline fixtures), then `flow/corpus_run.py`:
+every (case, seed) of `design/fabulous/corpus/corpus.json` is synthesized,
+topology-checked, mapped with the pinned nextpnr, and classified (`success`,
+`route_fail`, `route_nonconvergent`, `capacity_packing`; synthesis, topology
+and tool problems fail the run and are never reported as unroutability). Each
+success is assembled, byte-compared with FABulous `bit_gen genBitstream` and
+simulated against an independent oracle; any deviation from the recorded
+`expect` fails the run with an evidence-review message. `--update` rewrites
+`sim/bitstream/corpus/`; `--append-record FILE` appends a dated record. Needs
+the `flow/nextpnr.sh` prerequisites plus Icarus Verilog. See
+`design/fabulous/corpus/README.md`.
+
 ### `flow/synth.sh` — generic-cell netlist (T1 item 1 follow-up)
 
 `flow/synth.sh` derives a **generic-cell** (technology-independent) netlist

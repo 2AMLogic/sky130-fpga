@@ -1,0 +1,8 @@
+# Harness pin-to-pad constraints for casc2.v (issue #115 corpus; pads from flow/nextpnr_io_overlay.py).
+set_io a X1Y0/A
+set_io b X1Y0/B
+set_io c X1Y0/C
+set_io d X1Y0/D
+set_io e X1Y2/A
+set_io f X1Y2/B
+set_io y X1Y2/C

@@ -331,6 +331,22 @@ netlist; no SDF/timing/parasitics; no ratified-fabric (Wilton-class) claim; no
 inter-tile claim; not formal equivalence. Like `gate-sim-routed.sh` it needs
 the PDK models, so it is **not** part of the PDK-free `./sim/run.sh` or CI.
 
+## Routability corpus fixtures (issue #115, EXPERIMENTAL)
+
+`sim/bitstream/corpus/` holds the assembled streams (`<case>_s<seed>.{fasm,
+mapped.json,bin,wiring,cfg}`, plus `index.txt` = "stem oracle") of every case
+of the bounded single-tile mapping corpus (`design/fabulous/corpus/`) that the
+pinned yosys/nextpnr flow routed. `./sim/run.sh` re-assembles each from its
+FASM (`flow/fasm_to_bitstream.py check sim/bitstream/corpus --snapshot-dir
+sim/bitstream`), loads it through the same frame-loader model and runs
+`tb_logic_tile_bitstream.v` with the case's oracle (`quad4`, `casc2`,
+`casc_fan`, `regcasc`) and perturbation checks. Probes that did not route have
+no fixture and no PASS. Mapping/regeneration, outcome classification and the
+decision table are in `design/fabulous/corpus/README.md` (`flow/corpus.sh`).
+Recorded append-only in `sim/logic_tile_bitstream_results.txt`. Same scope
+limits as the #74 harness: as-implemented same-index fabric, pad overlay, no
+inter-tile routing, no timing.
+
 ## Out of scope here
 
 Bitstream-level verification of the *ratified* fabric (the Wilton-class

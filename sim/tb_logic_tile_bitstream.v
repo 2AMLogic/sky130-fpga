@@ -14,7 +14,10 @@
 //   +bin=<frame stream>   FABulous bit_gen output
 //   +map=<file>           "cfg_index frame_position" per line (from ConfigMem.v)
 //   +wiring=<file>        pad/loopback/placement manifest derived from the FASM
-//   +design=comb|reg      which mapped design's functional spec is the oracle
+//   +design=comb|reg|quad4|casc2|fan4|casc_fan|regcasc
+//                         which mapped design's functional spec is the oracle
+//                         (comb/reg: issue #74; the rest: issue #115 corpus,
+//                         design/fabulous/corpus/*.v)
 //   +mutate               also flip each used routing-select bit, and LUT/FF
 //                         bits of each used BEL; every flip must be DETECTED
 //   +expect_reject        the loader must reject +bin (malformed-input test)
@@ -82,12 +85,14 @@ module tb_logic_tile_bitstream;
     function integer in_slot(input [8*8-1:0] nm);
         begin
             in_slot = (nm == "a") ? 0 : (nm == "b") ? 1 : (nm == "c") ? 2 :
-                      (nm == "d") ? 3 : (nm == "en") ? 4 : (nm == "rst") ? 5 : -1;
+                      (nm == "d") ? 3 : (nm == "en") ? 4 : (nm == "rst") ? 5 :
+                      (nm == "e") ? 6 : (nm == "f") ? 7 : -1;
         end
     endfunction
     function integer out_slot(input [8*8-1:0] nm);
         begin
-            out_slot = (nm == "y") ? 0 : (nm == "w") ? 1 : (nm == "q") ? 2 : -1;
+            out_slot = (nm == "y") ? 0 : (nm == "w") ? 1 : (nm == "q") ? 2 :
+                       (nm == "v") ? 3 : (nm == "z") ? 4 : -1;
         end
     endfunction
 
@@ -96,11 +101,17 @@ module tb_logic_tile_bitstream;
 
     // input track network: pad / CAP loopback / unused
     integer t;
-    always @(pad_in or tout or unused) begin
+    // The CAP loopback carries a 100 ps transport delay (issue #115): a perturbed
+    // configuration can close a combinational cycle through the loopbacks, which
+    // with zero delay never advances simulation time (the run would hang). With
+    // the delay a cycle oscillates in simulated time and the checks see it.
+    // `flush` forces the loopbacks to 0 (see flush_loops).
+    reg flush = 1'b0;
+    always @(pad_in or tout or unused or flush) begin
         for (t = 0; t < 16; t = t + 1)
             case (tin_kind[t])
                 1:       tin[t] = pad_in[tin_arg[t]];
-                2:       tin[t] = tout[tin_arg[t]];
+                2:       tin[t] <= #0.1 (flush ? 1'b0 : tout[tin_arg[t]]);
                 default: tin[t] = unused[t];
             endcase
     end
@@ -270,6 +281,19 @@ module tb_logic_tile_bitstream;
     endtask
 
     // ------------------------------------------------------ harness utilities
+    // Between perturbations: restore the loaded configuration and break any X (or stale
+    // value) a perturbed configuration left circulating. An unconnected LUT pin defaults
+    // to a switch-matrix track that can be the loopback of the BEL's own output, a
+    // don't-care cycle (replicated INIT) that nonetheless holds an X forever in
+    // simulation once an X (e.g. an unclocked flop selected by a reg_sel flip) enters it.
+    reg [157:0] clean_cfg;
+    task flush_loops;
+        begin
+            cfg = clean_cfg;
+            flush = 1'b1; #1; flush = 1'b0; #1;
+        end
+    endtask
+
     task pulse;
         begin clk = 1'b1; #5; clk = 1'b0; #5; end
     endtask
@@ -344,9 +368,90 @@ module tb_logic_tile_bitstream;
         end
     endtask
 
+    // ------------------------------- oracles 3-6: routability corpus (issue #115)
+    // Written from the corpus sources design/fabulous/corpus/*.v, exhaustive over
+    // every input vector. pad slots: a b c d en rst e f = 0..7; outputs y w q v z = 0..4
+    task run_corpus_comb;
+        integer v;
+        reg a, b, c, d, e, f, t;
+        begin
+            for (v = 0; v < 64; v = v + 1) begin
+                {f, e, d, c, b, a} = v[5:0];
+                pad_in[0] = a; pad_in[1] = b; pad_in[2] = c; pad_in[3] = d; pad_in[6] = e; pad_in[7] = f;
+                #1;
+                t = a ^ b ^ c ^ d;
+                case (design_name)
+                    "quad4": begin
+                        chk(pad_out(0) === (a ^ b ^ c ^ d),       "y = a^b^c^d");
+                        chk(pad_out(1) === ((a & b) | (c & d)),   "w = ab|cd");
+                        chk(pad_out(4) === ((a | b) & (c | d)),   "z = (a|b)&(c|d)");
+                        chk(pad_out(3) === (a ? (b ^ c) : d),     "v = a ? b^c : d");
+                    end
+                    "fan4": begin
+                        chk(pad_out(0) === (a ^ b),               "y = a^b");
+                        chk(pad_out(1) === (a & c),               "w = a&c");
+                        chk(pad_out(4) === (a | d),               "z = a|d");
+                        chk(pad_out(3) === (a ^ (c & d)),         "v = a^(c&d)");
+                    end
+                    "casc2": chk(pad_out(0) === ((t & e) ^ f),    "y = ((a^b^c^d)&e)^f");
+                    "casc_fan": begin
+                        chk(pad_out(0) === (t & e),               "y = t&e");
+                        chk(pad_out(1) === (t | e),               "w = t|e");
+                        chk(pad_out(4) === (t ^ e),               "z = t^e");
+                    end
+                    default: chk(1'b0, "unknown corpus design");
+                endcase
+            end
+        end
+    endtask
+
+    //   @(posedge clk)  q <= rst ? 0 : (en ? ((a^b^c^d)&e) : q)
+    task run_regcasc;
+        integer s, v, i;
+        reg a, b, c, d, e, en, rst, expect_q, refq;
+        begin
+            for (s = 0; s < 2; s = s + 1)
+                for (v = 0; v < 128; v = v + 1) begin
+                    // establish state s through the programmed fabric
+                    pad_in[3] = 0; pad_in[6] = 1;
+                    if (s == 0) begin
+                        pad_in[0] = 1; pad_in[1] = 0; pad_in[2] = 0; pad_in[4] = 0; pad_in[5] = 1;
+                    end else begin
+                        pad_in[0] = 1; pad_in[1] = 0; pad_in[2] = 0; pad_in[4] = 1; pad_in[5] = 0;
+                    end
+                    #1; pulse;
+                    chk(pad_out(2) === s[0], "established state");
+                    {rst, en, e, d, c, b, a} = v[6:0];
+                    pad_in[0] = a; pad_in[1] = b; pad_in[2] = c; pad_in[3] = d; pad_in[6] = e;
+                    pad_in[4] = en; pad_in[5] = rst;
+                    #1;
+                    chk(pad_out(2) === s[0], "q holds until the clock edge");
+                    pulse;
+                    expect_q = rst ? 1'b0 : en ? ((a ^ b ^ c ^ d) & e) : s[0];
+                    chk(pad_out(2) === expect_q, "q after edge");
+                end
+            refq = 1'b0;
+            pad_in[5] = 1; pad_in[4] = 0; #1; pulse;
+            for (i = 0; i < 300; i = i + 1) begin
+                {rst, en, e, d, c, b, a} = $random;
+                rst = (($random & 7) == 0);
+                pad_in[0] = a; pad_in[1] = b; pad_in[2] = c; pad_in[3] = d; pad_in[6] = e;
+                pad_in[4] = en; pad_in[5] = rst;
+                #1;
+                chk(pad_out(2) === refq, "random: q before edge");
+                pulse;
+                if (rst) refq = 1'b0; else if (en) refq = (a ^ b ^ c ^ d) & e;
+                chk(pad_out(2) === refq, "random: q after edge");
+            end
+        end
+    endtask
+
     task run_design;
         begin
-            if (is_comb) run_comb; else run_reg;
+            if (is_comb) run_comb;
+            else if (design_name == "reg") run_reg;
+            else if (design_name == "regcasc") run_regcasc;
+            else run_corpus_comb;
         end
     endtask
 
@@ -363,7 +468,7 @@ module tb_logic_tile_bitstream;
     endtask
 
     // ------------------------------------------------------------------ main
-    integer i, m, det, surv, nmut;
+    integer i, m, det, surv, nmut, nper;
     reg [157:0] saved_cfg;
     reg need_ok;
 
@@ -384,8 +489,19 @@ module tb_logic_tile_bitstream;
         read_map;
         read_manifest;
         // the oracle needs these ports to be wired by the mapping
-        need_ok = is_comb ? (&slot_wired_in[3:0] && slot_wired_out[0] && slot_wired_out[1])
-                          : (&slot_wired_in[2:0] && slot_wired_in[4] && slot_wired_in[5] && slot_wired_out[2]);
+        case (design_name)
+            "comb":     need_ok = &slot_wired_in[3:0] && slot_wired_out[0] && slot_wired_out[1];
+            "reg":      need_ok = &slot_wired_in[2:0] && slot_wired_in[4] && slot_wired_in[5] && slot_wired_out[2];
+            "quad4",
+            "fan4":     need_ok = &slot_wired_in[3:0] && slot_wired_out[0] && slot_wired_out[1] &&
+                                  slot_wired_out[3] && slot_wired_out[4];
+            "casc2":    need_ok = &slot_wired_in[3:0] && slot_wired_in[6] && slot_wired_in[7] && slot_wired_out[0];
+            "casc_fan": need_ok = &slot_wired_in[3:0] && slot_wired_in[6] && slot_wired_out[0] &&
+                                  slot_wired_out[1] && slot_wired_out[4];
+            "regcasc":  need_ok = &slot_wired_in[3:0] && slot_wired_in[4] && slot_wired_in[5] &&
+                                  slot_wired_in[6] && slot_wired_out[2];
+            default:    need_ok = 1'b0;
+        endcase
         if (!need_ok) begin $display("FAIL: tb_logic_tile_bitstream[%0s]: manifest lacks required ports", design_name); $finish; end
 
         load_bitstream;
@@ -410,22 +526,33 @@ module tb_logic_tile_bitstream;
         // (2) deliberate perturbation of the loaded configuration must be detected
         det = 0; surv = 0; nmut = 0;
         if (do_mutate) begin
-            saved_cfg = cfg;
+            saved_cfg = cfg; clean_cfg = cfg;
             for (m = 0; m < nsel; m = m + 1) begin     // every used routing-select bit
+                flush_loops;
                 cfg = saved_cfg ^ (158'b1 << sel_list[m]);
                 cur_fail = 0; run_all_env(2); nmut = nmut + 1;
                 if (cur_fail > 0) det = det + 1;
                 else begin surv = surv + 1; $display("  SURVIVED: flip of routing-select cfg[%0d]", sel_list[m]); end
             end
-            for (m = 0; m < nbel; m = m + 1) begin     // LUT bits 0,1 and reg_sel of every used BEL
-                for (i = 0; i < 3; i = i + 1) begin
-                    cfg = saved_cfg ^ (158'b1 << (17*bel_list[m] + ((i == 2) ? 16 : i)));
+            for (m = 0; m < nbel; m = m + 1) begin
+                // comb/reg (#74): LUT bits 0,1 and reg_sel of every used BEL.
+                // corpus designs (#115): the whole LUT table inverted, and reg_sel. A single
+                // LUT entry can be legitimately unobservable (e.g. an entry only read while
+                // EN=0 on a flop BEL) and which entry that is depends on the placement.
+                nper = (is_comb || design_name == "reg") ? 3 : 2;
+                for (i = 0; i < nper; i = i + 1) begin
+                    flush_loops;
+                    if (nper == 3)
+                        cfg = saved_cfg ^ (158'b1 << (17*bel_list[m] + ((i == 2) ? 16 : i)));
+                    else
+                        cfg = saved_cfg ^ ((i == 0) ? (158'hFFFF << (17*bel_list[m]))
+                                                    : (158'b1 << (17*bel_list[m] + 16)));
                     cur_fail = 0; run_all_env(2); nmut = nmut + 1;
                     if (cur_fail > 0) det = det + 1;
                     else begin surv = surv + 1; $display("  SURVIVED: flip of BEL %0d cfg bit %0d", bel_list[m], (i == 2) ? 16 : i); end
                 end
             end
-            cfg = saved_cfg;
+            flush_loops;
             fails = fails + surv;
             // restored configuration still passes
             cur_fail = 0; run_all_env(1); fails = fails + cur_fail;

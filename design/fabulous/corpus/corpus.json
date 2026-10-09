@@ -1,0 +1,53 @@
+{
+  "_comment": "Bounded single-tile routability corpus (issue #115). EXPERIMENTAL: harness fabric as implemented (same-index switch matrix, 4 tracks/edge, CAP loopbacks, scratch pad overlay), not the ratified population. 'expect' is the recorded outcome per seed; any deviation (either direction) makes flow/corpus.sh fail with an evidence-review message. 'baseline' cases must succeed.",
+  "seeds": [1, 2, 3],
+  "route_budget_s": 60,
+  "cases": [
+    {
+      "name": "base_io", "baseline": true, "mode": "comb", "oracle": "comb",
+      "src": "design/fabulous/nextpnr/top_io.v", "pcf": "design/fabulous/nextpnr/top_io.pcf",
+      "fixture": "sim/bitstream/top_io",
+      "seeds": [0],
+      "topology": {"luts": 2, "ffs": 0, "internal_nets": 0, "max_internal_fanout": 0, "max_input_fanout": 2},
+      "expect": {"0": "success"}
+    },
+    {
+      "name": "base_reg", "baseline": true, "mode": "reg", "oracle": "reg",
+      "src": "design/fabulous/nextpnr/top_reg.v", "pcf": "design/fabulous/nextpnr/top_reg.pcf",
+      "fixture": "sim/bitstream/top_reg",
+      "seeds": [0],
+      "topology": {"luts": 1, "ffs": 1, "internal_nets": 1, "max_internal_fanout": 1, "max_input_fanout": 1},
+      "expect": {"0": "success"}
+    },
+    {
+      "name": "quad4", "mode": "comb", "oracle": "quad4",
+      "src": "design/fabulous/corpus/quad4.v", "pcf": "design/fabulous/corpus/quad4.pcf",
+      "topology": {"luts": 4, "ffs": 0, "internal_nets": 0, "max_internal_fanout": 0, "max_input_fanout": 4},
+      "expect": {"1": "success", "2": "success", "3": "success"}
+    },
+    {
+      "name": "casc2", "mode": "comb", "oracle": "casc2",
+      "src": "design/fabulous/corpus/casc2.v", "pcf": "design/fabulous/corpus/casc2.pcf",
+      "topology": {"luts": 2, "ffs": 0, "internal_nets": 1, "max_internal_fanout": 1, "max_input_fanout": 1},
+      "expect": {"1": "success", "2": "success", "3": "success"}
+    },
+    {
+      "name": "fan4", "mode": "comb", "oracle": "fan4",
+      "src": "design/fabulous/corpus/fan4.v", "pcf": "design/fabulous/corpus/fan4.pcf",
+      "topology": {"luts": 4, "ffs": 0, "internal_nets": 0, "max_internal_fanout": 0, "max_input_fanout": 4},
+      "expect": {"1": "route_nonconvergent", "2": "route_nonconvergent", "3": "route_nonconvergent"}
+    },
+    {
+      "name": "casc_fan", "mode": "comb", "oracle": "casc_fan",
+      "src": "design/fabulous/corpus/casc_fan.v", "pcf": "design/fabulous/corpus/casc_fan.pcf",
+      "topology": {"luts": 4, "ffs": 0, "internal_nets": 1, "max_internal_fanout": 3, "max_input_fanout": 3},
+      "expect": {"1": "success", "2": "success", "3": "success"}
+    },
+    {
+      "name": "regcasc", "mode": "reg", "oracle": "regcasc",
+      "src": "design/fabulous/corpus/regcasc.v", "pcf": "design/fabulous/corpus/regcasc.pcf",
+      "topology": {"luts": 2, "ffs": 1, "internal_nets": 2, "max_internal_fanout": 1, "max_input_fanout": 1},
+      "expect": {"1": "success", "2": "route_nonconvergent", "3": "success"}
+    }
+  ]
+}
