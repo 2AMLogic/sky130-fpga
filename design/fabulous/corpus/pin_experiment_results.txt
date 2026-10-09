@@ -1,0 +1,47 @@
+
+2026-10-09  flow/pin_experiment.sh @ 5a4419f  case fan4  (completed)
+  Tools   : yosys Yosys 0.69+260, nextpnr-0.11.1-54-g861c57be (pins: flow/tool_versions.sh)
+  Fixed   : source sha256 0f17c79613fea242, pcf sha256 db504db827ce37fe, router nextpnr default, seeds/budget as corpus.json
+  Baseline netlist sha256 993e6da9f8f4cdef
+  Variant consistent: netlist sha256 1c7ee31dc6677874
+    Equivalence: EQUIVALENT: 4 cells compared over all connected-net assignments (unconnected/undriven pins proven don't-care); 4 outputs over all 2^4 input vectors
+    Transformation log:
+      cell $abc$251$lut$aiger$o0._lut: identity (already aligned); $abc$251$iopadmap$a:I0->I0, $abc$251$iopadmap$c:I1->I1, $abc$251$iopadmap$d:I2->I2; unconnected I3->I3; INIT 0110101001101010 -> 0110101001101010
+      cell $abc$251$lut$aiger$o2._lut: identity (already aligned); $abc$251$iopadmap$a:I0->I0, $abc$251$iopadmap$c:I1->I1; unconnected I2->I2, I3->I3; INIT 1000100010001000 -> 1000100010001000
+      cell $abc$251$lut$aiger$o3._lut: identity (already aligned); $abc$251$iopadmap$a:I0->I0, $abc$251$iopadmap$b:I1->I1; unconnected I2->I2, I3->I3; INIT 0110011001100110 -> 0110011001100110
+      cell $auto$abc_ops_reintegrate.cc:696:reintegrate$252._lut: $abc$251$iopadmap$a:I0->I0, $abc$251$iopadmap$d:I1->I2; unconnected I2->I1, I3->I3; INIT 1110111011101110 -> 1111101011111010
+      net $abc$251$iopadmap$a (id 10, LUT fanout 4) -> pin index I0
+      net $abc$251$iopadmap$c (id 11, LUT fanout 2) -> pin index I1
+      net $abc$251$iopadmap$d (id 12, LUT fanout 2) -> pin index I2
+      net $abc$251$iopadmap$b (id 18, LUT fanout 1) -> pin index I1
+      negative control (permuted connections, INIT unchanged): rejected: equivalence check could not complete: output depends on an unconnected pin
+  Variant distinct: netlist sha256 d98c4b2915df0d15
+    Equivalence: EQUIVALENT: 4 cells compared over all connected-net assignments (unconnected/undriven pins proven don't-care); 4 outputs over all 2^4 input vectors
+    Transformation log:
+      cell $abc$251$lut$aiger$o0._lut: identity (already aligned); $abc$251$iopadmap$a:I0->I0, $abc$251$iopadmap$c:I1->I1, $abc$251$iopadmap$d:I2->I2; unconnected I3->I3; INIT 0110101001101010 -> 0110101001101010
+      cell $abc$251$lut$aiger$o2._lut: identity (already aligned); $abc$251$iopadmap$a:I0->I0, $abc$251$iopadmap$c:I1->I1; unconnected I2->I2, I3->I3; INIT 1000100010001000 -> 1000100010001000
+      cell $abc$251$lut$aiger$o3._lut: $abc$251$iopadmap$a:I0->I0, $abc$251$iopadmap$b:I1->I3; unconnected I2->I1, I3->I2; INIT 0110011001100110 -> 0101010110101010
+      cell $auto$abc_ops_reintegrate.cc:696:reintegrate$252._lut: $abc$251$iopadmap$a:I0->I0, $abc$251$iopadmap$d:I1->I2; unconnected I2->I1, I3->I3; INIT 1110111011101110 -> 1111101011111010
+      net $abc$251$iopadmap$a (id 10, LUT fanout 4) -> pin index I0
+      net $abc$251$iopadmap$c (id 11, LUT fanout 2) -> pin index I1
+      net $abc$251$iopadmap$d (id 12, LUT fanout 2) -> pin index I2
+      net $abc$251$iopadmap$b (id 18, LUT fanout 1) -> pin index I3
+      negative control (permuted connections, INIT unchanged): rejected: equivalence check could not complete: output depends on an unconnected pin
+  baseline            seed 1: route_nonconvergent [router did not converge within the wall-clock budget; 3 arcs still unrouted at the last progress report]   (corpus.json recorded expectation: route_nonconvergent)
+  variant-consistent  seed 1: route_nonconvergent [router did not converge within the wall-clock budget; 3 arcs still unrouted at the last progress report]
+  variant-distinct    seed 1: success
+      BELs X1Y1/A=LUT, X1Y1/B=LUT, X1Y1/C=LUT, X1Y1/D=LUT
+      fasm 5d114f1814676994  bin 00ed50f11c6f554f
+      functional oracle: 61697 checks, 0 failures; 38/38 perturbations detected
+  baseline            seed 2: route_nonconvergent [router did not converge within the wall-clock budget; 3 arcs still unrouted at the last progress report]   (corpus.json recorded expectation: route_nonconvergent)
+  variant-consistent  seed 2: route_nonconvergent [router did not converge within the wall-clock budget; 3 arcs still unrouted at the last progress report]
+  variant-distinct    seed 2: success
+      BELs X1Y1/A=LUT, X1Y1/B=LUT, X1Y1/C=LUT, X1Y1/D=LUT
+      fasm bbcbeb6dd6be8185  bin 48d11061eed54110
+      functional oracle: 61697 checks, 0 failures; 38/38 perturbations detected
+  baseline            seed 3: route_nonconvergent [router did not converge within the wall-clock budget; 3 arcs still unrouted at the last progress report]   (corpus.json recorded expectation: route_nonconvergent)
+  variant-consistent  seed 3: route_nonconvergent [router did not converge within the wall-clock budget; 3 arcs still unrouted at the last progress report]
+  variant-distinct    seed 3: success
+      BELs X1Y1/A=LUT, X1Y1/B=LUT, X1Y1/C=LUT, X1Y1/D=LUT
+      fasm e6719fcdd1e395f7  bin 45b5cd4c8274b324
+      functional oracle: 61697 checks, 0 failures; 38/38 perturbations detected
