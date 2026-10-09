@@ -2,6 +2,26 @@
 
 Chronological record of merged pull requests and closed issues, maintained by the Loom Guide role. Newest entries appear first.
 
+### 2026-10-09
+
+- **PR #95**: ADR-0005: IO and constant handling for single-tile nextpnr flow (#92)
+- **PR #93**: feat(rtl): composed LOGIC4 tile (BELs + switch matrix), RTL-only (#90)
+- **PR #91**: G1: run pinned nextpnr on the generated LOGIC4 model (#87)
+- **PR #89**: ci: run RTL testbench suite on pull requests
+- **PR #88**: Generate LOGIC4 switch-matrix RTL and verify in sim/
+- **PR #84**: spec: ADR-0004 for the five G1 tile-description discrepancies
+- **PR #83**: docs: README and RTL headers no longer say G1 is open (#79)
+- **PR #81**: feat(timing): cite a multi-corner klt sta envelope for T1 item 5 (#68)
+- **Issue #92** (closed): Decision record: IO and constant-driver handling for the single-tile nextpnr bitstream flow
+- **Issue #90** (closed): Compose the tile: instantiate the switch matrix with the BELs and verify the composed RTL in sim/
+- **Issue #87** (closed): G1 follow-up: run nextpnr on the generated LOGIC4 model (startable subset of #74)
+- **Issue #86** (closed): CI: run sim/run.sh testbenches on every PR and main push
+- **Issue #85** (closed): CI: run the existing tile RTL regression suite on pull requests
+- **Issue #79** (closed): Docs: README and RTL headers still say G1 is open after #73 closed it
+- **Issue #78** (closed): Tile switch matrix: generate RTL from the FABulous description and verify it in sim/
+- **Issue #77** (closed): spec: write decision record for the five G1 tile-description discrepancies (ADR-0004)
+- **Issue #68** (closed): T1 item 5: re-run the 18-corner timing sweep under a klt sta that emits timing_status, and cite it
+
 ### 2026-10-08
 
 - **PR #76**: feat(design): pin FABulous 2.2.0 and commit LOGIC4 tile description (G1)
