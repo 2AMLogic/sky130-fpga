@@ -155,6 +155,15 @@ the `flow/sdf-resim.sh` leg was not re-examined.
 
 ## Current contents
 
+### `flow/nextpnr.sh` - nextpnr on the generated LOGIC4 model (G1, issue #87)
+
+Runs `flow/fabulous.sh`, then pinned yosys + `nextpnr-generic --uarch fabulous`
+(YosysHQ OSS CAD Suite tarball, sha256-verified, unpacked into the untracked
+`flow/build/oss-cad-suite/`; pins in `flow/tool_versions.sh`) on
+`design/fabulous/nextpnr/top.v`, and diffs the normalized log against the
+committed `design/fabulous/nextpnr.log` (`--update-log` rewrites it). Needs
+network on first run (~750 MB download); nothing is installed host-wide.
+
 ### `flow/synth.sh` — generic-cell netlist (T1 item 1 follow-up)
 
 `flow/synth.sh` derives a **generic-cell** (technology-independent) netlist

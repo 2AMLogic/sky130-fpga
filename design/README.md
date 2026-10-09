@@ -83,10 +83,22 @@ BEL A: `INIT[0..15]` = 130..145, `FF` = 146).
 switch-matrix / config-mem / fabric / top-wrapper / bitstream-spec /
 nextpnr-model / geometry generation, exit 0); the BEL is cycle-equivalent to
 `rtl/lut4_slice.v` over 20000 random cycles (iverilog).
-**Not verified:** nextpnr itself was not run (`nextpnr-generic` is not on this
-host and installing it host-wide is not allowed); "accepted by nextpnr's
-FABulous-compatible flow" is therefore only established at the level of the
-generated nextpnr model files (`gen_model_npnr` succeeded). No bitstream was
+**nextpnr (issue #87):** `flow/nextpnr.sh` (pinned yosys + nextpnr-generic
+`--uarch fabulous`, OSS CAD Suite 2026-10-08 under `flow/build/`, not
+host-wide) loads the generated model, places two LOGIC4 BELs (one carrying
+the 4-input parity function, INIT `16'h6996`) and routes the net between them
+through the generated switch matrix, emitting FASM; log in `nextpnr.log`.
+Two findings from that run, both properties of the G1 harness fabric: it has
+**no IO BEL** (the same function on top-level ports fails packing: "must be
+PAD", probe recorded in `nextpnr.log`) and **no constant driver** (a
+tied-off LUT input makes `$PACKER_GND` unroutable: "Failed to find a route
+... `$PACKER_GND`", probe `nextpnr/top_const.v` recorded in `nextpnr.log`),
+so the accepted design
+is structural, port-less and leaves unused inputs floating. Resolving that
+(IO/tie cells) is a fabric/tile-type change and is left to G5 and a decision
+record. **Not verified:** nextpnr's FASM was not turned into a bitstream or
+simulated.
+No bitstream was
 assembled or simulated (G5), and no timing claim is made: the
 `GenerateDelayInSwitchMatrix,80` value is FABulous's placeholder constant.
 

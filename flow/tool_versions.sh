@@ -197,3 +197,16 @@ print_tool_version_banner() {
 # throwaway, untracked venv); it is never installed host-wide. Bump together
 # with a re-run of `flow/fabulous.sh --update-log` and design/README.md.
 RECORDED_FABULOUS_VERSION="2.2.0"
+
+# yosys + nextpnr-generic (FABulous `fabulous` viaduct uarch) used by
+# flow/nextpnr.sh (issue #87, G1 caveat 1). Pinned as the YosysHQ OSS CAD
+# Suite nightly below (yosys 0.69+260 dcd59343b, nextpnr-0.11.1-54-g861c57be),
+# unpacked into the untracked flow/build/oss-cad-suite -- never installed
+# host-wide (the host `yosys` under ~/.local/bin is a different build and is
+# deliberately not used). The tarball is verified against the sha256 below.
+# Bump together with a re-run of `flow/nextpnr.sh --update-log`.
+RECORDED_OSS_CAD_TAG="2026-10-08"
+RECORDED_OSS_CAD_TARBALL="oss-cad-suite-linux-x64-20261008.tgz"
+RECORDED_OSS_CAD_SHA256="8fa59d93d6cadbbee352077c059f2c5b72cda301e4508d9064a23d1ec11579c7"
+RECORDED_NEXTPNR_VERSION="nextpnr-0.11.1-54-g861c57be"
+RECORDED_YOSYS_VERSION="0.69+260"
