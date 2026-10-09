@@ -4,6 +4,17 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-10-09
 
+- **PR #151**: Evidence audit: validate supersession graphs before exempting stale hashes
+- **PR #152**: fix(flow): audit nested layout reports for PDK provenance (#149)
+- **PR #147**: Replay distinct-pin fan4 fixtures in RTL and gate suites (#145)
+- **PR #146**: Gate-sim negative controls: require completed functional rejection (#141)
+- **PR #142**: Routability: opt-in LUT pin-index experiment for fan4 (#137)
+- **Issue #150** (closed): Evidence audit: validate supersession graphs before exempting stale hashes
+- **Issue #149** (closed): Evidence audit: include nested experimental layout reports
+- **Issue #145** (closed): G5: preserve successful pin-aligned fan4 streams for RTL and gate replay
+- **Issue #144** (closed): Guard telemetry: retain raw-field body literal-at check
+- **Issue #141** (closed): Verification: require completed functional rejection in gate bitstream negative controls
+- **Issue #137** (closed): Routability: isolate LUT pin-index assignment in the single-tile fanout failure
 - **PR #139**: G5: replay routability corpus against composed-tile gate netlist
 - **PR #138**: G5: verify generated FABulous ConfigMem RTL against recorded configuration map
 - **PR #134**: G6: generate as-built harness bitstream-format table with drift check
