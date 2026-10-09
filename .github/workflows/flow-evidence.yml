@@ -20,6 +20,10 @@ on:
       - 'design/rtl/logic_tile.v'
       - 'layout/**'
       - 'measurements/**'
+      - 'README.md'
+      - 'spec/framework-gaps.md'
+      - 'spec/decisions/**'
+      - 'signoff/tier-report.json'
       - '.github/workflows/flow-evidence.yml'
 
 permissions:
@@ -34,3 +38,8 @@ jobs:
 
       - name: Audit claim-to-harness evidence
         run: ./flow/audit-evidence.sh
+
+      - name: Check README/framework-gaps status claims
+        run: |
+          python3 flow/test_check_status_claims.py
+          python3 flow/check_status_claims.py

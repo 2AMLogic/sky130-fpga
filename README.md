@@ -7,21 +7,24 @@ PDK — designed by AI agents driving
 open-source yosys + nextpnr flow.
 
 **Status: tile design and physical implementation landed; bitstream-level
-verification of the ratified fabric not yet done (only an experimental
-single-tile harness test exists).** The logic tile's RTL is implemented
-and BEL-level tested, its routed layout is DRC/LVS-clean, and its timing has
-been characterized across all 18 `sky130_fd_sc_hd` PVT corners with a
-ratified spec row ([ADR-0002](spec/decisions/0002-tile-timing-spec-ratification.md)).
-A gate-level, SDF-annotated re-simulation of the routed tile was attempted:
-the zero-delay leg passes, but the SDF-annotated leg is blocked on a real
-upstream defect filed as
-[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)).
-See [`measurements/characterization-summary.md`](measurements/characterization-summary.md)
-for the current aggregated snapshot of this evidence, and "Current position"
-below for the full maturity-ladder detail. This is still a tile-scoped
-canary, not a fabric: bitstream-level verification of the demonstration
-fabric has not been done (an experimental single-tile harness test exists,
-see "Current position").
+verification of the ratified fabric not yet done.** This is a tile-scoped
+canary, not a fabric. Each row is a pointer to the committed evidence; the
+machine-checkable cells carry a marker that `flow/check_status_claims.py`
+verifies against its source on every PR (see `flow/README.md`). Aggregated
+snapshot: [`measurements/characterization-summary.md`](measurements/characterization-summary.md);
+full per-issue narrative: ["Current position" in `spec/framework-gaps.md`](spec/framework-gaps.md#current-position-moved-from-readme).
+
+| Rung | State | Detail |
+|---|---|---|
+| Tile layout DRC | clean <!-- status-claim: drc=clean --> | [`layout/logic_tile.drc.json`](layout/logic_tile.drc.json) |
+| Tile layout LVS | match <!-- status-claim: lvs=match --> | [`layout/logic_tile.lvs.json`](layout/logic_tile.lvs.json) |
+| Timing characterization | setup/hold-clean at all 18 `sky130_fd_sc_hd` corners <!-- status-claim: corner-count=18 -->; binding corner `ss_n40C_1v28` <!-- status-claim: binding-corner=ss_n40C_1v28 -->; ratified ([ADR-0002](spec/decisions/0002-tile-timing-spec-ratification.md)) | [`measurements/characterization-summary.md`](measurements/characterization-summary.md) |
+| Gate-level SDF re-simulation | zero-delay passes; SDF-annotated blocked upstream ([klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) guard only, gap [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)) | [`measurements/README.md`](measurements/README.md) |
+| FABulous tile description / nextpnr | accepted by the pinned generator and nextpnr (not a bitstream-correctness or timing claim) | G1 in [`spec/framework-gaps.md`](spec/framework-gaps.md) |
+| [ADR-0004](spec/decisions/0004-g1-tile-description-discrepancies.md) (G1 discrepancies) | Proposed <!-- status-claim: adr-0004=Proposed --> | pending operator ratification |
+| [ADR-0005](spec/decisions/0005-nextpnr-io-and-constant-handling.md) (nextpnr IO/constants) | Proposed <!-- status-claim: adr-0005=Proposed --> | pending operator ratification |
+| Bitstream-level verification | experimental single-tile harness only; ratified fabric not verified (G5, G6 not closed) | `sim/README.md` |
+| klt T1 evidence tier | 9 <!-- status-claim: t1-met=9 --> of 11 <!-- status-claim: t1-items=11 --> items met | [`signoff/tier-report.json`](signoff/tier-report.json) |
 
 **Built agent-native.** Every specification, decision record, testbench, and
 line of documentation here is produced by AI agents working from a ratified
@@ -87,48 +90,10 @@ what FABulous provides are tracked in
 Maturity ladder: framework evaluated → tile spec ratified → tile RTL +
 fabric description passing bitstream-level tests → tile layout
 DRC/LVS-clean → tile timing characterized → demonstration fabric assembled
-and re-verified → shuttle seat → measured silicon. **Current position:**
-framework evaluated and tile spec ratified; tile RTL is implemented
-(`design/rtl/lut4_slice.v`, `design/rtl/logic_tile.v`) and the tile layout is
-DRC/LVS-clean (`layout/logic_tile.drc.json`: `status: "clean"`;
-`layout/logic_tile.lvs.json`: `status: "match"`). Separately, **experimental**
-(not ratified, not signoff) observations exist for the composed tile with the
-stand-in same-index matrix: a routed layout in `layout/experimental/`
-(issue #102), DRC `clean` / LVS `match` / ERC `clean_partial` (#108), and an
-18-corner extracted-parasitics STA in
-`measurements/timing-characterization-experimental/` (#113; 17 corners meet the
-20 ns reference, `ss_n40C_1v28` does not, binding path undiagnosed, #117).
-**Timing characterization
-has landed on `main`** — evidence is recorded under
-`measurements/timing-characterization/records/20260909-225431-86f71d2.md` and
-corner-specific STA reports under `measurements/timing-characterization/corners/`.
-[G1](spec/framework-gaps.md#g1--pin-down-the-exact-fabulous-tilefabric-description-schema)
-(FABulous tile/fabric description schema) is largely closed: FABulous 2.2.0 is
-pinned and a tile description is committed under `design/fabulous/` (the
-generator accepts it, and pinned `nextpnr` loads the generated model, places
-and routes a trivial design, and emits FASM — issue #87, log in
-`design/fabulous/nextpnr.log`; this is "the model is accepted", not a
-bitstream-correctness or timing claim). Two open decision records are
-Proposed, pending operator ratification:
-[ADR-0004](spec/decisions/0004-g1-tile-description-discrepancies.md) (G1
-tile-description discrepancies) and
-[ADR-0005](spec/decisions/0005-nextpnr-io-and-constant-handling.md) (IO and
-constant handling for the nextpnr flow). The
-**bitstream-level-tests rung is only started, as an experiment** (issue #74):
-a bitstream produced by the pinned yosys/nextpnr/FABulous flow for a
-combinational and a registered example (EN/SR routed) is loaded through a
-model of the FABulous frame interface into the composed single-LOGIC4 tile
-RTL, and the mapped functions are checked in `./sim/run.sh`
-(`tb_logic_tile_bitstream`, see `sim/README.md`). This is a **harness
-observation** on the G1 harness fabric as implemented (same-index matrix,
-CAP loop-backs, scratch pad overlay), not conformance to the ratified
-Wilton-class routing population (ADR-0004/0005 remain Proposed), and it is not
-a timing claim. [G5](spec/framework-gaps.md#g5--bitstream-level-functional-verification-rtltile-description-correctness)
-(bitstream-level functional verification of the ratified fabric, inter-tile
-routing) and
-[G6](spec/framework-gaps.md#g6--bitstream-format-documentation)
-(bitstream format documentation; the harness's serialized format is described
-in `sim/README.md`) are **not closed**.
+and re-verified → shuttle seat → measured silicon.
+**Current position:** see the Status table above; the detailed narrative
+(experimental observations, issue references) lives in
+[`spec/framework-gaps.md`](spec/framework-gaps.md#current-position-moved-from-readme).
 
 ## Repo layout
 
