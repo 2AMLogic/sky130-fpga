@@ -297,6 +297,46 @@ pre-signoff *estimate*, not a characterization), and Monte Carlo. See
 `layout/README.md` for the full list of what the committed artifacts do and
 do not claim.
 
+### `flow/layout_routed.sh` — EXPERIMENTAL composed-tile physical canary (G2, issue #102)
+
+Additive sibling of `flow/layout.sh` for the composed tile
+`design/rtl/logic_tile_routed.v` (4x `lut4_slice` + generated
+`logic_tile_switch_matrix`, flat 158-bit `cfg`). It reuses
+`flow/par_request.py`, `flow/par_report_trim.py` and
+`flow/gds_canonicalize.py`, but has its own build directory
+(`flow/build/routed/`) and artifact namespace (`layout/experimental/`); the
+BEL-only `flow/layout.sh`, `layout/logic_tile.*` and the signoff pins are
+untouched.
+
+```
+./flow/layout_routed.sh            # regenerate, compare every artifact, and
+                                   # verify the latest run record pins them
+./flow/layout_routed.sh --update   # overwrite artifacts, append a run record
+```
+
+Artifacts under `layout/experimental/`, all from one run:
+`logic_tile_routed.gds` (canonicalized), `.def`, `.v` (klt's as-built
+netlist), `.synth.v` (yosys netlist fed to place-and-route), `.par.json`
+(trimmed report; `flow/layout_routed.sh` additionally drops the nested
+`power.placed.def_path` local path) and `run-records/*.json` (append-only:
+source and artifact sha256, tool versions, synthesis/P&R metrics, and a
+structural analysis of the as-built netlist computed by
+`flow/layout_routed_record.py` -- port widths, matrix/BEL hierarchy
+prefixes, and a cell-level combinational-cycle SCC check).
+
+What it establishes: the composed RTL (same-index stand-in matrix, ADR-0004
+still Proposed) synthesizes against `sky130_fd_sc_hd`, places and routes
+through OpenROAD to the `route` stage, with the matrix (`u_sm/`) and four
+BELs (`g_slice[i].u_slice/`) present in the as-built netlist and the `cfg`
+(158) and 4x4 edge ports intact. What it does NOT establish: DRC/LVS/ERC
+(not run on this GDS), characterized or extracted timing (the klt slack
+numbers are OpenROAD estimates against a placeholder 20 ns clock with no
+I/O delays), nextpnr routability, or shared-reset compliance (the four BEL
+reset pins are independently routed through the matrix). No programmable path
+was pruned; the cycle check found no intra-tile cycle because matrix BEL
+inputs select only from tile inputs and BEL outputs only reach tile outputs,
+but inter-tile abutment loops are invisible to a single-tile run.
+
 ### `flow/drc.sh` — DRC clean report (T1 item 3)
 
 `flow/drc.sh` runs a full sky130 foundry-rule-deck DRC check (`klt drc`,

@@ -425,3 +425,22 @@ timestamp fields — see `flow/gds_canonicalize.py`) before diffing/committing,
 so the reproducibility check compares actual layout content, not merge
 wall-clock time. Filed upstream as a klayout-tools tool gap:
 https://github.com/2AMLogic/klayout-tools/issues/1367.
+
+## Experimental: composed-tile physical canary (`layout/experimental/`, issue #102)
+
+Separate from everything above, `layout/experimental/` holds a routed GDS,
+routed DEF, as-built netlist, synthesized netlist, trimmed P&R report and an
+append-only run record for the **composed** tile `logic_tile_routed`
+(4 BELs + same-index stand-in switch matrix + flat 158-bit cfg), produced by
+`flow/layout_routed.sh` (see `flow/README.md`). Observed (klt 0.7.0, OpenROAD
+26Q3-1510): synthesized area 1979.4 um^2 (149 cells), die 5527.18 um^2, core
+4754.56 um^2 (43.7% utilization, vs. 1523.96 um^2 core for the BEL-only
+tile), wirelength 9764 um, routing reached, 0 route DRC violations, 2
+antenna violations reported by the router (the as-built netlist carries 2
+`diode_2` cells; `klt erc` has not been run on this GDS). This is an
+experimental measurement of the stand-in matrix for the pending topology
+decision (ADR-0004, Proposed); it is not a spec-compliant deliverable and
+carries no DRC/LVS/ERC, timing, nextpnr-routability or reset-compliance claim.
+Outstanding: ADR-0004 topology and shared-reset decisions, DRC/LVS/ERC on
+this GDS, physical-pitch characterization against the spec, and extracted
+timing (G3/G4).
