@@ -25,7 +25,10 @@ no network):
 2. **Every hash a *current* record pins still describes the committed
    file.** Each `provenance.inputs[]` entry's `content_hash` is recomputed.
    A mismatch is a FAIL unless either (a) the record has been **superseded**
-   -- some other record's `record-meta` names it in `supersedes` -- or (b)
+   -- some other record's `record-meta` names it in `supersedes`, and the
+   supersession graph is structurally valid (see `_build_supersession`:
+   unique ids, no self-edges, no cycles, no unknown targets, one successor
+   per record, chain ends in a surviving current record) -- or (b)
    it is in `ALLOWED_INPUT_DRIFT` below, an explicit, commit-cited allowance
    for a change already reviewed as method-neutral. An input whose `role`
    marks it as not committed (regenerated scratch) is allowed to be absent,
@@ -205,20 +208,109 @@ class Audit:
         if not records:
             self.fail("no characterization records found at all")
             return
-        # Pass 1: build the supersession map, so a record's disposition does
-        # not depend on whether its successor sorts before or after it.
-        for record in records:
-            meta = self._read_meta(record)
-            if not meta:
-                continue
-            successor = meta.get("record_id")
-            supersedes = meta.get("supersedes")
-            for old in [supersedes] if isinstance(supersedes, str) else (supersedes or []):
-                if old:
-                    self.superseded_by[old] = successor
+        # Pass 1: validate identities and the supersession graph, then derive
+        # exemptions from the structurally valid part only, so a record's
+        # disposition does not depend on sort order and malformed metadata
+        # can never exempt anything.
+        self._build_supersession(records)
         # Pass 2: audit.
         for record in records:
             self._audit_record(record)
+
+    def _build_supersession(self, records: list) -> None:
+        """Populate self.superseded_by from a validated supersession graph.
+
+        Policy (issue #150). An old record is exempt from input-hash drift
+        only if following its successors reaches a *surviving current record*
+        (one no record supersedes) through well-formed declarations. Defects
+        are FAILs with record-specific messages and exempt nothing:
+
+        * missing / non-string / empty `record_id` in an otherwise readable
+          header;
+        * duplicate `record_id` (every claimant is reported; ambiguous ids
+          take no part in the graph);
+        * `supersedes` that is not a string or list of strings, or has an
+          empty entry;
+        * self-supersession;
+        * a `supersedes` target that is no record's id;
+        * conflicting declarations: several records superseding the same old
+          record. Resolved deterministically by rejection, not by last-write
+          -wins: all declarers are named (sorted) and the old record gets no
+          exemption until the metadata is reconciled;
+        * cycles (no surviving current record in the chain).
+
+        No timestamp ordering is applied and no record is ever rewritten.
+        """
+        claimed: dict = {}  # record_id -> [rel paths]
+        declared: list = []  # (rel, record_id, [targets])
+        for record in records:
+            rel = record.relative_to(self.root).as_posix()
+            meta = self._read_meta(record)
+            if not isinstance(meta, dict):
+                continue  # reported by _audit_record
+            rid = meta.get("record_id")
+            if not isinstance(rid, str) or not rid.strip():
+                self.fail(f"{rel}: record-meta has a missing or invalid record_id -- "
+                          f"supersession identity is undefined")
+                continue
+            claimed.setdefault(rid, []).append(rel)
+            sup = meta.get("supersedes")
+            if sup is None or sup == [] or sup == "":
+                targets = []
+            elif isinstance(sup, str):
+                targets = [sup]
+            elif isinstance(sup, list) and all(isinstance(t, str) and t.strip() for t in sup):
+                targets = list(sup)
+            else:
+                self.fail(f"{rel}: record {rid}: `supersedes` must be a record_id string or a "
+                          f"list of non-empty record_id strings, got {sup!r}")
+                continue
+            declared.append((rel, rid, targets))
+
+        ambiguous = set()
+        for rid, rels in sorted(claimed.items()):
+            if len(rels) > 1:
+                ambiguous.add(rid)
+                self.fail(f"duplicate record_id {rid!r} claimed by {', '.join(sorted(rels))}")
+
+        by_old: dict = {}  # old id -> sorted list of declaring successor ids
+        for rel, rid, targets in declared:
+            if rid in ambiguous:
+                continue
+            for old in targets:
+                if old == rid:
+                    self.fail(f"{rel}: record {rid} supersedes itself")
+                elif old not in claimed:
+                    self.fail(f"{rel}: record {rid} supersedes unknown record_id {old!r}")
+                elif old in ambiguous:
+                    self.fail(f"{rel}: record {rid} supersedes {old!r}, whose record_id is "
+                              f"duplicated -- target is ambiguous")
+                else:
+                    by_old.setdefault(old, []).append(rid)
+
+        unique: dict = {}
+        for old, succs in sorted(by_old.items()):
+            succs = sorted(set(succs))
+            if len(succs) > 1:
+                self.fail(f"conflicting supersession of {old!r}: declared by "
+                          f"{', '.join(succs)} -- reconcile so exactly one record supersedes it")
+            else:
+                unique[old] = succs[0]
+
+        for old in sorted(unique):
+            seen = [old]
+            cur = unique[old]
+            while cur in unique and cur not in seen:
+                seen.append(cur)
+                cur = unique[cur]
+            if cur in seen:
+                cycle = seen[seen.index(cur):] + [cur]
+                self.fail(f"supersession cycle {' -> '.join(cycle)}: no surviving current "
+                          f"record; {old!r} is not exempted")
+                continue
+            if cur in by_old:  # head itself has a conflicted successor
+                continue
+            self.superseded_by[old] = unique[old]
 
     def _read_meta(self, record: Path):
         match = _RECORD_META_RE.search(record.read_text())
@@ -241,7 +333,9 @@ class Audit:
             self.fail(f"{rel}: record-meta is not valid JSON ({exc})")
             return
 
-        record_id = meta.get("record_id", rel)
+        record_id = meta.get("record_id")
+        if not isinstance(record_id, str) or not record_id.strip():
+            record_id = rel  # identity failure already reported in pass 1
         successor = self.superseded_by.get(record_id)
         print(f"--- {rel}{f'  [superseded by {successor}]' if successor else ''}")
 
