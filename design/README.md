@@ -154,9 +154,10 @@ Regenerate from the repo root (also rewrites the testbench include):
 It is a purely combinational module with a flat 90-bit `cfg` (per-sink select
 fields, layout documented in the generated comments; a select value >= fan-in
 drives 0). Jump wires `J_EN_BEGn`/`J_SR_BEG0` loop to their `_END` inside the
-module. It is verified by `sim/tb_switch_matrix.v` (469 checks). It is not yet
-instantiated by `logic_tile.v`; the BEL-level tile and the matrix are separate
-modules, and composing them is part of later assembly work.
+module. It is verified by `sim/tb_switch_matrix.v` (469 checks). It is not
+instantiated by `logic_tile.v` (which stays BEL-only and byte-unchanged so the
+committed layout, timing records and signoff hashes remain valid); composition
+is done by the separate module below.
 
 Mux fan-in (45 sinks, 90 config bits): 8 sinks fan-in 1 (BEL EN/SR, no config),
 21 sinks fan-in 4 (16 LUT inputs, 4 `J_EN_BEG`, `J_SR_BEG0`; 2 bits each),
@@ -187,3 +188,23 @@ implement:
   `spec/framework-gaps.md` items G3–G4) — physical design/layout itself
   (item G2) now has a first pass under `layout/`, with DRC/LVS/timing
   explicitly deferred to those follow-on items.
+
+## Composed tile RTL (#90)
+
+`rtl/logic_tile_routed.v` instantiates the 4 `lut4_slice` BELs and
+`logic_tile_switch_matrix` behind one flat **158-bit `cfg`** port
+(`cfg[17*i +: 16]` = BEL `i` truth table, `cfg[17*i+16]` = BEL `i` `reg_sel`,
+`cfg[157:68]` = matrix selects, per the layout table above), plus `clk`,
+4 edges x 4 track inputs (`{n,e,s,w}_in`) and 4 x 4 track outputs
+(`{n,e,s,w}_out`). `ce`/`rst` are not ports: they are BEL `EN`/`SR` pins
+reached through the matrix from tracks, as in the FABulous description.
+`sim/tb_logic_tile_routed.v` (534 checks, in `./sim/run.sh`) covers
+track->LUT-input routing for every BEL/pin/edge, the track->LUT->FF->track
+path with EN/SR from tracks, and every output-track mux code.
+
+**RTL only: no layout, no DRC/LVS, no timing** for the composed tile. The
+signed-off, timing-characterized module remains BEL-only `logic_tile`.
+Follow-ons (separate issues, not part of #90): `klt par` of the composed
+tile; an STA sweep of it plus a decision record extending the ratified timing
+row; and #74 (bitstream load path), which can target this module's `cfg`.
+See `spec/framework-gaps.md` G2/G4.
