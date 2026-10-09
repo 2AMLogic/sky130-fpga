@@ -41,6 +41,7 @@ jobs:
           {
             echo "oss_tarball=${RECORDED_OSS_CAD_TARBALL}"
             echo "oss_sha256=${RECORDED_OSS_CAD_SHA256}"
+            echo "uv_version=${RECORDED_UV_VERSION}"
           } >> "$GITHUB_OUTPUT"
 
       # nextpnr.sh downloads this tarball into flow/build/dl/ and verifies the
@@ -51,12 +52,17 @@ jobs:
           path: flow/build/dl
           key: oss-cad-${{ steps.pins.outputs.oss_tarball }}-${{ steps.pins.outputs.oss_sha256 }}
 
-      - name: Install runner prerequisites (uv, iverilog)
+      # python3-tk: FABulous 2.2.0 imports tkinter at module load
+      # (fabulous_repl.py), and flow/fabulous.sh builds its venv on the
+      # runner's system python3, which ships without tkinter.
+      - name: Install runner prerequisites (uv, iverilog, python3-tk)
+        env:
+          UV_VERSION: ${{ steps.pins.outputs.uv_version }}
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends iverilog
+          sudo apt-get install -y --no-install-recommends iverilog python3-tk
           python3 -m venv "$RUNNER_TEMP/uv-venv"
-          "$RUNNER_TEMP/uv-venv/bin/pip" install --quiet uv
+          "$RUNNER_TEMP/uv-venv/bin/pip" install --quiet "uv==${UV_VERSION}"
           echo "$RUNNER_TEMP/uv-venv/bin" >> "$GITHUB_PATH"
 
       - name: Reproduce generator.log (flow/fabulous.sh)
