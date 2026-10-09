@@ -1,0 +1,8 @@
+# Harness pin-to-pad constraints for top_reg.v (pads from nextpnr_io_overlay.py).
+# clk has no pad: it is the BEL's implicit UserCLK, a runtime harness input.
+set_io a X1Y0/A
+set_io b X1Y0/B
+set_io c X1Y0/C
+set_io en X1Y2/A
+set_io rst X1Y2/B
+set_io q X1Y2/C

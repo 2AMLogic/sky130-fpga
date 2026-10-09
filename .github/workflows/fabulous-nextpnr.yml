@@ -21,6 +21,9 @@ on:
       - 'flow/fabulous_summary.py'
       - 'flow/nextpnr.sh'
       - 'flow/nextpnr_io_overlay.py'
+      - 'flow/bitstream.sh'
+      - 'flow/fasm_to_bitstream.py'
+      - 'sim/bitstream/**'
       - 'flow/tool_versions.sh'
       - '.github/workflows/fabulous-nextpnr.yml'
 
@@ -95,8 +98,15 @@ jobs:
       - name: Reproduce nextpnr.log (flow/nextpnr.sh)
         run: ./flow/nextpnr.sh
 
-      - name: Confirm committed logs are untouched
-        run: git diff --exit-code -- design/fabulous
+      # Issue #74 (experimental single-LOGIC4 harness): regenerate the
+      # bitstream fixtures from the pinned mapper and require byte identity
+      # with sim/bitstream/ (flow/bitstream.sh also checks FABulous's own
+      # bit_gen against the assembler).
+      - name: Reproduce bitstream fixtures (flow/bitstream.sh)
+        run: ./flow/bitstream.sh
+
+      - name: Confirm committed logs and fixtures are untouched
+        run: git diff --exit-code -- design/fabulous sim/bitstream
 
       - name: Upload raw and normalized logs
         if: always()

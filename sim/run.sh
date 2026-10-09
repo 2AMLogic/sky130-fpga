@@ -11,7 +11,9 @@
 # Usage:
 #   ./sim/run.sh            # build + run all testbenches, report pass/fail
 #
-# Requires Icarus Verilog (iverilog/vvp) and python3 on PATH.
+# Requires Icarus Verilog (iverilog/vvp) and python3 on PATH (no mapping tool:
+# the bitstream fixtures under sim/bitstream/ are committed; flow/bitstream.sh
+# regenerates and verifies them).
 #
 # Exit status: 0 if every testbench reports PASS with zero failures,
 # non-zero otherwise.
@@ -95,6 +97,86 @@ for entry in "${TESTBENCHES[@]}"; do
         overall_status=1
     fi
 done
+
+# ---------------------------------------------------------------------------
+# Bitstream-driven harness test (issue #74, G5/G6 -- EXPERIMENTAL single-LOGIC4
+# harness coverage, see sim/README.md). A bitstream produced by the pinned
+# yosys/nextpnr/FABulous flow (committed under sim/bitstream/ together with its
+# FASM, routed-netlist summary and generated-spec snapshot) is loaded through a
+# model of the FABulous frame interface into the 158-bit cfg of
+# logic_tile_routed; no mapping tool is needed here. Regenerating/verifying the
+# fixtures against the pinned mapper is flow/bitstream.sh.
+BS_DIR="$SCRIPT_DIR/bitstream"
+BS_TOOL="$REPO_ROOT/flow/fasm_to_bitstream.py"
+
+echo "=== bitstream assembler unit tests (flow/test_fasm_to_bitstream.py) ==="
+if python3 "$REPO_ROOT/flow/test_fasm_to_bitstream.py" >"$BUILD_DIR/test_fasm_to_bitstream.log" 2>&1 \
+   && grep -q '^OK' "$BUILD_DIR/test_fasm_to_bitstream.log"; then
+    echo "PASS: test_fasm_to_bitstream ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_fasm_to_bitstream.log"), 0 failures)"
+else
+    cat "$BUILD_DIR/test_fasm_to_bitstream.log" >&2
+    echo "error: assembler unit tests failed" >&2
+    overall_status=1
+fi
+
+echo "=== bitstream fixtures reproduce from committed FASM (flow/fasm_to_bitstream.py check) ==="
+if ! python3 "$BS_TOOL" check "$BS_DIR"; then
+    echo "error: committed sim/bitstream fixtures drifted from the assembler output" >&2
+    overall_status=1
+fi
+
+name=tb_logic_tile_bitstream
+out_bin="$BUILD_DIR/${name}.out"
+echo "=== building ${name} ==="
+if ! iverilog -g2012 -Wall -I "$SCRIPT_DIR" -o "$out_bin" \
+        "$RTL_DIR/lut4_slice.v" "$RTL_DIR/logic_tile_switch_matrix.v" "$RTL_DIR/logic_tile_routed.v" \
+        "$SCRIPT_DIR/${name}.v" 2>&1 | tee "$BUILD_DIR/${name}.log.compile"; then
+    echo "error: compile failed for ${name}" >&2
+    overall_status=1
+else
+    # design-name : fixture stem
+    for entry in "comb:top_io" "reg:top_reg"; do
+        dname="${entry%%:*}"; stem="${entry#*:}"
+        bs_args=(+bin="$BS_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" +wiring="$BS_DIR/$stem.wiring" +design="$dname")
+        log_file="$BUILD_DIR/${name}_${dname}.log"
+        echo "=== running ${name} [${dname}] (bitstream sim/bitstream/$stem.bin, with perturbation checks) ==="
+        if ! vvp "$out_bin" "${bs_args[@]}" +mutate | tee "$log_file"; then
+            echo "error: simulation run failed for ${name} [${dname}]" >&2
+            overall_status=1
+            continue
+        fi
+        if ! grep -q "^PASS: ${name}\[${dname}\]" "$log_file"; then
+            echo "error: ${name} [${dname}] did not report PASS (see $log_file)" >&2
+            overall_status=1
+        fi
+        # three independent reads of the same stream must agree on the tile vector:
+        # the simulation loader, the python decoder, and the assembler's own record.
+        sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$log_file" | cut -d= -f2)"
+        py_cfg="$(python3 "$BS_TOOL" decode "$BS_DIR/$stem.bin" --snapshot "$BS_DIR/fabric_spec.json")"
+        rec_cfg="$(tr -d '\n' < "$BS_DIR/$stem.cfg")"
+        if [[ -z "$sim_cfg" || "$sim_cfg" != "$py_cfg" || "$sim_cfg" != "$rec_cfg" ]]; then
+            echo "error: [${dname}] loaded cfg mismatch: sim=$sim_cfg python=$py_cfg recorded=$rec_cfg" >&2
+            overall_status=1
+        else
+            echo "cfg cross-check [${dname}]: simulation loader == python decoder == recorded cfg ($sim_cfg)"
+        fi
+        # malformed streams must be rejected by the loader (the generator
+        # overwrites the same file names each run)
+        python3 "$SCRIPT_DIR/bitstream_corrupt.py" "$BS_DIR/$stem.bin" "$BUILD_DIR/bitstream_bad_${dname}" >/dev/null
+        nrej=0; nbad=0
+        for bad in "$BUILD_DIR/bitstream_bad_${dname}"/*.bin; do
+            nbad=$((nbad + 1))
+            if vvp "$out_bin" +bin="$bad" +map="$BS_DIR/logic4_configmem.map" +wiring="$BS_DIR/$stem.wiring" \
+                   +design="$dname" +expect_reject | grep -q "^PASS: ${name}\[${dname}\] loader rejected"; then
+                nrej=$((nrej + 1))
+            else
+                echo "error: loader accepted malformed stream $(basename "$bad") [${dname}]" >&2
+                overall_status=1
+            fi
+        done
+        echo "loader malformed-input rejections [${dname}]: ${nrej}/${nbad}"
+    done
+fi
 
 if [[ "$overall_status" -eq 0 ]]; then
     echo "=== all testbenches PASS ==="
