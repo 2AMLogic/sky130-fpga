@@ -1,7 +1,8 @@
 # Zero-delay gate-level re-sims on pull requests (issue #130).
 #
 # Runs flow/gate-sim-bitstream.sh --negative (#119) and flow/gate-sim-routed.sh
-# (#112): the UNMODIFIED sim/tb_logic_tile_bitstream.v and
+# (#112; #135 extends the former to replay every indexed routability-corpus
+# fixture in sim/bitstream/corpus/index.txt): the UNMODIFIED sim/tb_logic_tile_bitstream.v and
 # sim/tb_logic_tile_routed.v against the committed synthesized netlist
 # layout/experimental/logic_tile_routed.synth.v and the sky130_fd_sc_hd
 # behavioral Verilog models. A broken netlist, RTL/fixture drift or a wrong
