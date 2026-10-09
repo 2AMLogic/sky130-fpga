@@ -198,9 +198,12 @@ implement:
 4 edges x 4 track inputs (`{n,e,s,w}_in`) and 4 x 4 track outputs
 (`{n,e,s,w}_out`). `ce`/`rst` are not ports: they are BEL `EN`/`SR` pins
 reached through the matrix from tracks, as in the FABulous description.
-`sim/tb_logic_tile_routed.v` (534 checks, in `./sim/run.sh`) covers
+`sim/tb_logic_tile_routed.v` (1046 checks, in `./sim/run.sh`) covers
 track->LUT-input routing for every BEL/pin/edge, the track->LUT->FF->track
-path with EN/SR from tracks, and every output-track mux code.
+path with EN/SR from tracks, and every output-track mux code. The BELs are
+made distinguishable (each BEL reads a different edge, each edge carries a
+distinct value, and the output-mux sweep runs under two BEL-output patterns),
+so cross-BEL index swaps in the composition are caught.
 
 **RTL only: no layout, no DRC/LVS, no timing** for the composed tile. The
 signed-off, timing-characterized module remains BEL-only `logic_tile`.

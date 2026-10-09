@@ -6,10 +6,13 @@
 // Cases (config bit positions per design/README.md and the generated matrix
 // header comments):
 //   1. track -> LUT input routing: every (BEL, pin, edge) combination,
-//      pass-through LUT, observed on BEL outputs routed to N tracks.
+//      pass-through LUT, observed on BEL outputs routed to N tracks. Each
+//      BEL reads a different edge and every edge carries a distinct value,
+//      so BELs are distinguishable from each other.
 //   2. registered path: track -> LUT -> FF (EN and SR from tracks) -> track.
 //   3. track-driver muxes: all 16 output tracks x all 8 select codes
-//      (4 BEL outputs, 3 other-edge tracks, unused code 7 -> 0).
+//      (4 BEL outputs, 3 other-edge tracks, unused code 7 -> 0), under two
+//      BEL-output patterns that give every BEL a unique signature.
 
 `default_nettype none
 `timescale 1ns/1ps
@@ -88,37 +91,40 @@ module tb_logic_tile_routed;
         end
     endfunction
 
-    integer n, k, d, t, code, pol, i, v;
+    integer n, k, d, t, code, pol, i, v, pb;
     reg [15:0] mask;
     reg [3:0] bel;
+    reg [3:0] pat;
 
     initial begin
         for (i = 0; i < 4; i = i + 1) tin[i] = 4'h0;
 
         // ---- 1. track -> LUT input routing ------------------------------
+        // BEL n's pins all select edge (d+n)%4, so the four BELs read four
+        // different edges. Bit k is driven with a one-hot / one-cold pattern
+        // across the edges (every edge distinct from every other), and the
+        // other bits of each edge carry the complement, so a wrong BEL, edge
+        // or pin index flips at least one observed BEL output.
         for (d = 0; d < 4; d = d + 1)
             for (k = 0; k < 4; k = k + 1) begin
                 cfg = 158'd0;
                 for (i = 0; i < 16; i = i + 1) mask[i] = i[k];
                 for (n = 0; n < 4; n = n + 1) begin
                     set_lut(n, mask, 1'b0);
-                    for (i = 0; i < 4; i = i + 1) set_lutin(n, i, d);
+                    for (i = 0; i < 4; i = i + 1) set_lutin(n, i, (d + n) % 4);
                     set_trk(0, n, n);   // N1BEG<n> <- BEL n output
                 end
-                // other pins of each BEL read the same edge, other index;
-                // drive a distinct pattern on every track bit.
-                for (pol = 0; pol < 2; pol = pol + 1) begin
-                    for (i = 0; i < 4; i = i + 1)
-                        tin[i] = pol ? 4'b0101 : 4'b1010;
-                    // drive track bit k of edge d independently of others
-                    for (v = 0; v < 2; v = v + 1) begin
-                        tin[d][k] = v[0];
-                        #1;
-                        // LUT input pin k of BEL n reads <d>1END<k> (pin k
-                        // mux has same-index tracks), so out = tin[d][k]
-                        for (n = 0; n < 4; n = n + 1)
-                            check("route track->LUT->N out", n_out[n], tin[d][k]);
+                for (v = 0; v < 8; v = v + 1) begin
+                    // pat[e] = value of bit k on edge e
+                    pat = (v < 4) ? (4'b0001 << v) : ~(4'b0001 << (v - 4));
+                    for (i = 0; i < 4; i = i + 1) begin
+                        tin[i] = pat[i] ? 4'b0000 : 4'b1111;
+                        tin[i][k] = pat[i];
                     end
+                    #1;
+                    // LUT input pin k of BEL n reads <(d+n)%4>1END<k>
+                    for (n = 0; n < 4; n = n + 1)
+                        check("route track->LUT->N out", n_out[n], pat[(d + n) % 4]);
                 end
             end
 
@@ -165,23 +171,27 @@ module tb_logic_tile_routed;
         check("reg_sel=0 combinational", w_out[0], 1'b0);
 
         // ---- 3. track-driver mux: all tracks x all codes ----------------
-        cfg = 158'd0;
-        set_lut(0, 16'hFFFF, 1'b0);  // BEL A = 1
-        set_lut(1, 16'h0000, 1'b0);  // BEL B = 0
-        set_lut(2, 16'hFFFF, 1'b0);  // BEL C = 1
-        set_lut(3, 16'h0000, 1'b0);  // BEL D = 0
-        bel = 4'b0101;
-        for (code = 0; code < 8; code = code + 1)
-            for (pol = 0; pol < 2; pol = pol + 1) begin
-                for (d = 0; d < 4; d = d + 1)
-                    for (t = 0; t < 4; t = t + 1) set_trk(d, t, code);
-                for (i = 0; i < 4; i = i + 1)
-                    tin[i] = pol ? 4'b1001 ^ (4'b0001 << i) : 4'b0110 ^ (4'b0001 << i);
-                #1;
-                for (d = 0; d < 4; d = d + 1)
-                    for (t = 0; t < 4; t = t + 1)
-                        check("track mux", tout[d][t], exp_trk(d, t, code, bel));
-            end
+        // Run under two BEL-output patterns (0101, 0011) so that every BEL
+        // has a unique signature across the pair (A=11 B=01 C=10 D=00 for
+        // pattern bits [0101,0011]); a BEL-index swap on the outputs or on
+        // the truth-table slices is then visible.
+        for (pb = 0; pb < 2; pb = pb + 1) begin
+            cfg = 158'd0;
+            bel = pb ? 4'b0011 : 4'b0101;  // bel[n] = BEL n output (n=0 is A)
+            for (n = 0; n < 4; n = n + 1)
+                set_lut(n, bel[n] ? 16'hFFFF : 16'h0000, 1'b0);
+            for (code = 0; code < 8; code = code + 1)
+                for (pol = 0; pol < 2; pol = pol + 1) begin
+                    for (d = 0; d < 4; d = d + 1)
+                        for (t = 0; t < 4; t = t + 1) set_trk(d, t, code);
+                    for (i = 0; i < 4; i = i + 1)
+                        tin[i] = pol ? 4'b1001 ^ (4'b0001 << i) : 4'b0110 ^ (4'b0001 << i);
+                    #1;
+                    for (d = 0; d < 4; d = d + 1)
+                        for (t = 0; t < 4; t = t + 1)
+                            check("track mux", tout[d][t], exp_trk(d, t, code, bel));
+                end
+        end
 
         if (errors == 0)
             $display("PASS: tb_logic_tile_routed (%0d checks, 0 failures)", checks);
