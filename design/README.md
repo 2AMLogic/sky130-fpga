@@ -92,6 +92,9 @@ assembled or simulated (G5), and no timing claim is made: the
 
 ### Discrepancies and deferrals (for a decision record - spec NOT edited)
 
+Decision record: [ADR-0004](../spec/decisions/0004-g1-tile-description-discrepancies.md)
+(Proposed, pending operator ratification) covers items 1-5 below.
+
 1. **`ce` is not a config field.** The issue text lists `lut_init`, `reg_sel`,
    `ce` as configuration fields; in `logic_tile.v` `ce[3:0]` (and `rst`) are
    runtime ports. They are BEL `EN`/`SR` pins reached via jump wires, so the
