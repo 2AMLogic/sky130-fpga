@@ -2,6 +2,15 @@
 
 Chronological record of merged pull requests and closed issues, maintained by the Loom Guide role. Newest entries appear first.
 
+### 2026-10-08
+
+- **PR #76**: feat(design): pin FABulous 2.2.0 and commit LOGIC4 tile description (G1)
+- **PR #75**: docs(measurements): re-try SDF-annotated leg after klayout-tools#1890 closed; still BLOCKED (#72)
+- **PR #71**: feat(signoff): bind T1 items 1, 2, 9, 10 to audited artifacts
+- **Issue #73** (closed): G1: pin FABulous and commit a tile description for the logic tile
+- **Issue #72** (closed): Re-run the SDF-annotated gate-level leg now that klayout-tools#1890 is closed
+- **Issue #67** (closed): T1 items 1, 2, 9, 10: bind each to its audited artifact now that klayout-tools#2718 has landed
+
 ### 2026-09-22
 
 - **PR #64**: feat: drop git-history-derived stamps from the characterization summary
