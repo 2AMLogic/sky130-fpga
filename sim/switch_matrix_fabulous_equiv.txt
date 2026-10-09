@@ -1,0 +1,17 @@
+# Append-only evidence record (issue #96). Add new dated entries below; do not edit old ones.
+# Reproduce: flow/fabulous.sh   (FABulous 2.2.0, iverilog)
+
+2026-10-09  design/fabulous/tb_switch_matrix_equiv.v
+  DUT   : design/rtl/logic_tile_switch_matrix.v (gen/gen_switch_matrix.py)
+  REF   : FABulous-generated Tile/LOGIC4/LOGIC4_switch_matrix.v (scratch, not committed)
+  config: repo cfg[89:0] == tile ConfigBits[157:68]
+  Initial run (generator emitting .list file order): FAIL -- 536689 failures /
+    1343744 checks. Cause: FABulous orders sinks by output-port order and sources
+    by input-port order, not .list order. Fix: generator now uses FABulous order
+    (generator fixed; FABulous output untouched); sim/tb_switch_matrix.v and
+    sim/tb_logic_tile_routed.v hand-coded layouts updated to the corrected order.
+  After fix:
+    PASS: switch_matrix_fabulous_equiv -- 1343744 checks (1024 select>=fan-in cases: repo==0, FABulous==X), 0 failures
+  Coverage: 20000 random in-range configs/inputs on all 40 non-jump sinks; per-field
+    sweep of every select value of all 16 mux-7 fields (incl. 7) and 21 mux-4 fields.
+  Other sim/run.sh results unchanged in check counts: tb_switch_matrix 469, tb_logic_tile_routed 1046.

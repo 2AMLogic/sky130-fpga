@@ -9,7 +9,9 @@
 #     evidence; ANSI/paths normalized), and
 #   * runs flow/fabulous_summary.py to print the emitted file list and
 #     config-bit layout, and an iverilog equivalence run of the FABulous BEL
-#     against design/rtl/lut4_slice.v.
+#     against design/rtl/lut4_slice.v, and a differential iverilog run of the
+#     FABulous switch matrix against design/rtl/logic_tile_switch_matrix.v
+#     (generated output stays in flow/build/, never committed).
 #
 # Usage: flow/fabulous.sh [--update-log]
 #   default       run, print summary, diff the normalized log against the
@@ -68,6 +70,16 @@ iverilog -g2005 -o "$BUILD/bel_tb" \
     "$REPO/design/rtl/lut4_slice.v"
 vvp "$BUILD/bel_tb" | tee "$BUILD/bel_tb.out"
 grep -q '^PASS' "$BUILD/bel_tb.out"
+
+# Switch-matrix differential check (issue #96): the FABulous-generated
+# LOGIC4_switch_matrix.v lives only in the gitignored scratch dir ($RUN).
+echo "=== switch-matrix equivalence (iverilog) ==="
+iverilog -g2005 -o "$BUILD/sm_tb" \
+    "$REPO/design/fabulous/tb_switch_matrix_equiv.v" \
+    "$RUN/Tile/LOGIC4/LOGIC4_switch_matrix.v" \
+    "$REPO/design/rtl/logic_tile_switch_matrix.v"
+vvp "$BUILD/sm_tb" | tee "$BUILD/sm_tb.out"
+grep -q '^PASS: switch_matrix_fabulous_equiv' "$BUILD/sm_tb.out"
 
 if [[ "${1:-}" == "--update-log" ]]; then
     cp "$NORM" "$REPO/design/fabulous/generator.log"

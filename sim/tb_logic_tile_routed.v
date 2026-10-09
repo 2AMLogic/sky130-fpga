@@ -59,17 +59,17 @@ module tb_logic_tile_routed;
     endtask
     // LUT input pin k of BEL n selects edge d (0..3 = N,E,S,W)
     task set_lutin(input integer n, input integer k, input integer d);
-        begin cfg[68 + 2*(4*n+k) +: 2] = d[1:0]; end
+        begin cfg[68 + 48 + 2*(4*n+k) +: 2] = d[1:0]; end
     endtask
     // output track (edge d, index t) select code
     task set_trk(input integer d, input integer t, input integer code);
-        begin cfg[68 + 32 + 3*(4*d+t) +: 3] = code[2:0]; end
+        begin cfg[68 + 3*(4*d+t) +: 3] = code[2:0]; end
     endtask
     task set_en(input integer n, input integer d);
-        begin cfg[68 + 80 + 2*n +: 2] = d[1:0]; end
+        begin cfg[68 + 82 + 2*n +: 2] = d[1:0]; end
     endtask
     task set_sr(input integer d);
-        begin cfg[68 + 88 +: 2] = d[1:0]; end
+        begin cfg[68 + 80 +: 2] = d[1:0]; end
     endtask
 
     // expected source for output track (d,t) with code, given BEL outputs
@@ -77,13 +77,13 @@ module tb_logic_tile_routed;
                      input [3:0] bel);
         integer j, dd, found;
         begin
-            if (code < 4) exp_trk = bel[code];
+            if (code >= 3 && code < 7) exp_trk = bel[code - 3];
             else if (code == 7) exp_trk = 1'b0;
             else begin
                 found = 0; exp_trk = 1'b0;
                 for (dd = 0; dd < 4; dd = dd + 1) begin
                     if (dd != d) begin
-                        if (found == code - 4) exp_trk = tin[dd][t];
+                        if (found == code) exp_trk = tin[dd][t];
                         found = found + 1;
                     end
                 end
@@ -112,7 +112,7 @@ module tb_logic_tile_routed;
                 for (n = 0; n < 4; n = n + 1) begin
                     set_lut(n, mask, 1'b0);
                     for (i = 0; i < 4; i = i + 1) set_lutin(n, i, (d + n) % 4);
-                    set_trk(0, n, n);   // N1BEG<n> <- BEL n output
+                    set_trk(0, n, 3 + n);   // N1BEG<n> <- BEL n output
                 end
                 for (v = 0; v < 8; v = v + 1) begin
                     // pat[e] = value of bit k on edge e
@@ -134,7 +134,7 @@ module tb_logic_tile_routed;
             set_lut(n, 16'hAAAA, 1'b1);  // out = in0, registered
             set_lutin(n, 0, 0);          // pin0 <- N1END0
             set_en(n, 1);                // EN_n <- E1END<n>
-            set_trk(3, n, n);            // W1BEG<n> <- BEL n output
+            set_trk(3, n, 3 + n);            // W1BEG<n> <- BEL n output
         end
         set_sr(2);                       // SR <- S1END0
         tin[0] = 4'b0000; tin[1] = 4'b1111; tin[2] = 4'b0000; tin[3] = 4'b0000;

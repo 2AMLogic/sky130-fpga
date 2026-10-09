@@ -166,6 +166,33 @@ instantiated by `logic_tile.v` (which stays BEL-only and byte-unchanged so the
 committed layout, timing records and signoff hashes remain valid); composition
 is done by the separate module below.
 
+**Config-bit / select order (#96, verified against FABulous 2.2.0).** FABulous
+does not use `.list` file order: it orders mux sinks by the switch-matrix
+module's output-port declaration order and each sink's sources by its
+input-port declaration order. The generator applies the same canonical order
+(`sink_rank`/`src_rank` in `gen/gen_switch_matrix.py`), so
+`cfg[k]` == tile `ConfigBits[68 + k]` == the FABulous switch matrix's local
+`ConfigBits[k]`:
+
+| `cfg` bits | Field |
+|---|---|
+| `[3k +: 3]`, k = 0..15 | `N1BEG0..3`, `E1BEG0..3`, `S1BEG0..3`, `W1BEG0..3` (k = 4*dir + idx, dir N,E,S,W) |
+| `[48 + 2*(4*bel+p) +: 2]` | `L{A..D}_I{0..3}` (bel A..D, pin p) |
+| `[80 +: 2]`, `[82 + 2i +: 2]` | `J_SR_BEG0`, `J_EN_BEG0..3` |
+| none | `L?_EN`, `L?_SR` (fan-in 1) |
+
+Select value = index in the sink's source list ordered N1END0..3, E1END0..3,
+S1END0..3, W1END0..3, LA_O..LD_O (own-edge track omitted for track drivers:
+e.g. `N1BEG0`: 0..2 = E,S,W `END0`, 3..6 = `LA_O..LD_O`; `W1BEG0`: 0..2 = N,E,S
+`END0`). A select of 7 on a fan-in-7 mux is defined as 0 in the repo RTL; the
+FABulous module indexes out of range and yields X (the testbench checks
+repo==0 and FABulous==X). Before #96 the generator used `.list` file order,
+which differed from FABulous in both field order and source order (the
+differential testbench failed massively); the generator was corrected, not
+the FABulous output. Evidence: `design/fabulous/tb_switch_matrix_equiv.v`,
+run by `flow/fabulous.sh` (FABulous side generated into gitignored
+`flow/build/`), record in `sim/switch_matrix_fabulous_equiv.txt`.
+
 Mux fan-in (45 sinks, 90 config bits): 8 sinks fan-in 1 (BEL EN/SR, no config),
 21 sinks fan-in 4 (16 LUT inputs, 4 `J_EN_BEG`, `J_SR_BEG0`; 2 bits each),
 16 sinks fan-in 7 (the N/E/S/W track drivers; 3 bits each, codes 7 unused).

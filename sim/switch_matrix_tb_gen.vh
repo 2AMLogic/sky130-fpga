@@ -11,276 +11,276 @@ wire [NSNK-1:0] snk;
 logic_tile_switch_matrix dut (
     .cfg(cfg),
     .N1END0(src[0]),
-    .E1END0(src[1]),
-    .S1END0(src[2]),
-    .W1END0(src[3]),
-    .N1END1(src[4]),
+    .N1END1(src[1]),
+    .N1END2(src[2]),
+    .N1END3(src[3]),
+    .E1END0(src[4]),
     .E1END1(src[5]),
-    .S1END1(src[6]),
-    .W1END1(src[7]),
-    .N1END2(src[8]),
-    .E1END2(src[9]),
+    .E1END2(src[6]),
+    .E1END3(src[7]),
+    .S1END0(src[8]),
+    .S1END1(src[9]),
     .S1END2(src[10]),
-    .W1END2(src[11]),
-    .N1END3(src[12]),
-    .E1END3(src[13]),
-    .S1END3(src[14]),
+    .S1END3(src[11]),
+    .W1END0(src[12]),
+    .W1END1(src[13]),
+    .W1END2(src[14]),
     .W1END3(src[15]),
     .LA_O(src[16]),
     .LB_O(src[17]),
     .LC_O(src[18]),
     .LD_O(src[19]),
-    .LA_I0(snk[0]),
-    .LA_I1(snk[1]),
-    .LA_I2(snk[2]),
-    .LA_I3(snk[3]),
-    .LB_I0(snk[4]),
-    .LB_I1(snk[5]),
-    .LB_I2(snk[6]),
-    .LB_I3(snk[7]),
-    .LC_I0(snk[8]),
-    .LC_I1(snk[9]),
-    .LC_I2(snk[10]),
-    .LC_I3(snk[11]),
-    .LD_I0(snk[12]),
-    .LD_I1(snk[13]),
-    .LD_I2(snk[14]),
-    .LD_I3(snk[15]),
-    .LA_EN(snk[16]),
-    .LA_SR(snk[17]),
-    .LB_EN(snk[18]),
-    .LB_SR(snk[19]),
-    .LC_EN(snk[20]),
-    .LC_SR(snk[21]),
-    .LD_EN(snk[22]),
-    .LD_SR(snk[23]),
-    .N1BEG0(snk[24]),
-    .N1BEG1(snk[25]),
-    .N1BEG2(snk[26]),
-    .N1BEG3(snk[27]),
-    .E1BEG0(snk[28]),
-    .E1BEG1(snk[29]),
-    .E1BEG2(snk[30]),
-    .E1BEG3(snk[31]),
-    .S1BEG0(snk[32]),
-    .S1BEG1(snk[33]),
-    .S1BEG2(snk[34]),
-    .S1BEG3(snk[35]),
-    .W1BEG0(snk[36]),
-    .W1BEG1(snk[37]),
-    .W1BEG2(snk[38]),
-    .W1BEG3(snk[39])
+    .N1BEG0(snk[0]),
+    .N1BEG1(snk[1]),
+    .N1BEG2(snk[2]),
+    .N1BEG3(snk[3]),
+    .E1BEG0(snk[4]),
+    .E1BEG1(snk[5]),
+    .E1BEG2(snk[6]),
+    .E1BEG3(snk[7]),
+    .S1BEG0(snk[8]),
+    .S1BEG1(snk[9]),
+    .S1BEG2(snk[10]),
+    .S1BEG3(snk[11]),
+    .W1BEG0(snk[12]),
+    .W1BEG1(snk[13]),
+    .W1BEG2(snk[14]),
+    .W1BEG3(snk[15]),
+    .LA_I0(snk[16]),
+    .LA_I1(snk[17]),
+    .LA_I2(snk[18]),
+    .LA_I3(snk[19]),
+    .LA_SR(snk[20]),
+    .LA_EN(snk[21]),
+    .LB_I0(snk[22]),
+    .LB_I1(snk[23]),
+    .LB_I2(snk[24]),
+    .LB_I3(snk[25]),
+    .LB_SR(snk[26]),
+    .LB_EN(snk[27]),
+    .LC_I0(snk[28]),
+    .LC_I1(snk[29]),
+    .LC_I2(snk[30]),
+    .LC_I3(snk[31]),
+    .LC_SR(snk[32]),
+    .LC_EN(snk[33]),
+    .LD_I0(snk[34]),
+    .LD_I1(snk[35]),
+    .LD_I2(snk[36]),
+    .LD_I3(snk[37]),
+    .LD_SR(snk[38]),
+    .LD_EN(snk[39])
 );
 integer tbl_snk [0:NROW-1]; integer tbl_off [0:NROW-1];
 integer tbl_w [0:NROW-1]; integer tbl_n [0:NROW-1];
 integer tbl_src [0:NROW*MAXFAN-1];
 task load_table; begin
-  tbl_snk[0]=0; tbl_off[0]=0; tbl_w[0]=2; tbl_n[0]=4;
-  tbl_src[0]=0;
-  tbl_src[1]=1;
-  tbl_src[2]=2;
-  tbl_src[3]=3;
-  tbl_snk[1]=1; tbl_off[1]=2; tbl_w[1]=2; tbl_n[1]=4;
-  tbl_src[7]=4;
-  tbl_src[8]=5;
-  tbl_src[9]=6;
-  tbl_src[10]=7;
-  tbl_snk[2]=2; tbl_off[2]=4; tbl_w[2]=2; tbl_n[2]=4;
-  tbl_src[14]=8;
-  tbl_src[15]=9;
-  tbl_src[16]=10;
-  tbl_src[17]=11;
-  tbl_snk[3]=3; tbl_off[3]=6; tbl_w[3]=2; tbl_n[3]=4;
-  tbl_src[21]=12;
-  tbl_src[22]=13;
-  tbl_src[23]=14;
-  tbl_src[24]=15;
-  tbl_snk[4]=4; tbl_off[4]=8; tbl_w[4]=2; tbl_n[4]=4;
+  tbl_snk[0]=0; tbl_off[0]=0; tbl_w[0]=3; tbl_n[0]=7;
+  tbl_src[0]=4;
+  tbl_src[1]=8;
+  tbl_src[2]=12;
+  tbl_src[3]=16;
+  tbl_src[4]=17;
+  tbl_src[5]=18;
+  tbl_src[6]=19;
+  tbl_snk[1]=1; tbl_off[1]=3; tbl_w[1]=3; tbl_n[1]=7;
+  tbl_src[7]=5;
+  tbl_src[8]=9;
+  tbl_src[9]=13;
+  tbl_src[10]=16;
+  tbl_src[11]=17;
+  tbl_src[12]=18;
+  tbl_src[13]=19;
+  tbl_snk[2]=2; tbl_off[2]=6; tbl_w[2]=3; tbl_n[2]=7;
+  tbl_src[14]=6;
+  tbl_src[15]=10;
+  tbl_src[16]=14;
+  tbl_src[17]=16;
+  tbl_src[18]=17;
+  tbl_src[19]=18;
+  tbl_src[20]=19;
+  tbl_snk[3]=3; tbl_off[3]=9; tbl_w[3]=3; tbl_n[3]=7;
+  tbl_src[21]=7;
+  tbl_src[22]=11;
+  tbl_src[23]=15;
+  tbl_src[24]=16;
+  tbl_src[25]=17;
+  tbl_src[26]=18;
+  tbl_src[27]=19;
+  tbl_snk[4]=4; tbl_off[4]=12; tbl_w[4]=3; tbl_n[4]=7;
   tbl_src[28]=0;
-  tbl_src[29]=1;
-  tbl_src[30]=2;
-  tbl_src[31]=3;
-  tbl_snk[5]=5; tbl_off[5]=10; tbl_w[5]=2; tbl_n[5]=4;
-  tbl_src[35]=4;
-  tbl_src[36]=5;
-  tbl_src[37]=6;
-  tbl_src[38]=7;
-  tbl_snk[6]=6; tbl_off[6]=12; tbl_w[6]=2; tbl_n[6]=4;
-  tbl_src[42]=8;
-  tbl_src[43]=9;
-  tbl_src[44]=10;
-  tbl_src[45]=11;
-  tbl_snk[7]=7; tbl_off[7]=14; tbl_w[7]=2; tbl_n[7]=4;
-  tbl_src[49]=12;
-  tbl_src[50]=13;
-  tbl_src[51]=14;
-  tbl_src[52]=15;
-  tbl_snk[8]=8; tbl_off[8]=16; tbl_w[8]=2; tbl_n[8]=4;
+  tbl_src[29]=8;
+  tbl_src[30]=12;
+  tbl_src[31]=16;
+  tbl_src[32]=17;
+  tbl_src[33]=18;
+  tbl_src[34]=19;
+  tbl_snk[5]=5; tbl_off[5]=15; tbl_w[5]=3; tbl_n[5]=7;
+  tbl_src[35]=1;
+  tbl_src[36]=9;
+  tbl_src[37]=13;
+  tbl_src[38]=16;
+  tbl_src[39]=17;
+  tbl_src[40]=18;
+  tbl_src[41]=19;
+  tbl_snk[6]=6; tbl_off[6]=18; tbl_w[6]=3; tbl_n[6]=7;
+  tbl_src[42]=2;
+  tbl_src[43]=10;
+  tbl_src[44]=14;
+  tbl_src[45]=16;
+  tbl_src[46]=17;
+  tbl_src[47]=18;
+  tbl_src[48]=19;
+  tbl_snk[7]=7; tbl_off[7]=21; tbl_w[7]=3; tbl_n[7]=7;
+  tbl_src[49]=3;
+  tbl_src[50]=11;
+  tbl_src[51]=15;
+  tbl_src[52]=16;
+  tbl_src[53]=17;
+  tbl_src[54]=18;
+  tbl_src[55]=19;
+  tbl_snk[8]=8; tbl_off[8]=24; tbl_w[8]=3; tbl_n[8]=7;
   tbl_src[56]=0;
-  tbl_src[57]=1;
-  tbl_src[58]=2;
-  tbl_src[59]=3;
-  tbl_snk[9]=9; tbl_off[9]=18; tbl_w[9]=2; tbl_n[9]=4;
-  tbl_src[63]=4;
+  tbl_src[57]=4;
+  tbl_src[58]=12;
+  tbl_src[59]=16;
+  tbl_src[60]=17;
+  tbl_src[61]=18;
+  tbl_src[62]=19;
+  tbl_snk[9]=9; tbl_off[9]=27; tbl_w[9]=3; tbl_n[9]=7;
+  tbl_src[63]=1;
   tbl_src[64]=5;
-  tbl_src[65]=6;
-  tbl_src[66]=7;
-  tbl_snk[10]=10; tbl_off[10]=20; tbl_w[10]=2; tbl_n[10]=4;
-  tbl_src[70]=8;
-  tbl_src[71]=9;
-  tbl_src[72]=10;
-  tbl_src[73]=11;
-  tbl_snk[11]=11; tbl_off[11]=22; tbl_w[11]=2; tbl_n[11]=4;
-  tbl_src[77]=12;
-  tbl_src[78]=13;
-  tbl_src[79]=14;
-  tbl_src[80]=15;
-  tbl_snk[12]=12; tbl_off[12]=24; tbl_w[12]=2; tbl_n[12]=4;
+  tbl_src[65]=13;
+  tbl_src[66]=16;
+  tbl_src[67]=17;
+  tbl_src[68]=18;
+  tbl_src[69]=19;
+  tbl_snk[10]=10; tbl_off[10]=30; tbl_w[10]=3; tbl_n[10]=7;
+  tbl_src[70]=2;
+  tbl_src[71]=6;
+  tbl_src[72]=14;
+  tbl_src[73]=16;
+  tbl_src[74]=17;
+  tbl_src[75]=18;
+  tbl_src[76]=19;
+  tbl_snk[11]=11; tbl_off[11]=33; tbl_w[11]=3; tbl_n[11]=7;
+  tbl_src[77]=3;
+  tbl_src[78]=7;
+  tbl_src[79]=15;
+  tbl_src[80]=16;
+  tbl_src[81]=17;
+  tbl_src[82]=18;
+  tbl_src[83]=19;
+  tbl_snk[12]=12; tbl_off[12]=36; tbl_w[12]=3; tbl_n[12]=7;
   tbl_src[84]=0;
-  tbl_src[85]=1;
-  tbl_src[86]=2;
-  tbl_src[87]=3;
-  tbl_snk[13]=13; tbl_off[13]=26; tbl_w[13]=2; tbl_n[13]=4;
-  tbl_src[91]=4;
+  tbl_src[85]=4;
+  tbl_src[86]=8;
+  tbl_src[87]=16;
+  tbl_src[88]=17;
+  tbl_src[89]=18;
+  tbl_src[90]=19;
+  tbl_snk[13]=13; tbl_off[13]=39; tbl_w[13]=3; tbl_n[13]=7;
+  tbl_src[91]=1;
   tbl_src[92]=5;
-  tbl_src[93]=6;
-  tbl_src[94]=7;
-  tbl_snk[14]=14; tbl_off[14]=28; tbl_w[14]=2; tbl_n[14]=4;
-  tbl_src[98]=8;
-  tbl_src[99]=9;
+  tbl_src[93]=9;
+  tbl_src[94]=16;
+  tbl_src[95]=17;
+  tbl_src[96]=18;
+  tbl_src[97]=19;
+  tbl_snk[14]=14; tbl_off[14]=42; tbl_w[14]=3; tbl_n[14]=7;
+  tbl_src[98]=2;
+  tbl_src[99]=6;
   tbl_src[100]=10;
-  tbl_src[101]=11;
-  tbl_snk[15]=15; tbl_off[15]=30; tbl_w[15]=2; tbl_n[15]=4;
-  tbl_src[105]=12;
-  tbl_src[106]=13;
-  tbl_src[107]=14;
-  tbl_src[108]=15;
-  tbl_snk[16]=24; tbl_off[16]=32; tbl_w[16]=3; tbl_n[16]=7;
-  tbl_src[112]=16;
-  tbl_src[113]=17;
-  tbl_src[114]=18;
-  tbl_src[115]=19;
-  tbl_src[116]=1;
-  tbl_src[117]=2;
-  tbl_src[118]=3;
-  tbl_snk[17]=25; tbl_off[17]=35; tbl_w[17]=3; tbl_n[17]=7;
-  tbl_src[119]=16;
-  tbl_src[120]=17;
-  tbl_src[121]=18;
-  tbl_src[122]=19;
-  tbl_src[123]=5;
-  tbl_src[124]=6;
-  tbl_src[125]=7;
-  tbl_snk[18]=26; tbl_off[18]=38; tbl_w[18]=3; tbl_n[18]=7;
-  tbl_src[126]=16;
-  tbl_src[127]=17;
-  tbl_src[128]=18;
-  tbl_src[129]=19;
-  tbl_src[130]=9;
-  tbl_src[131]=10;
-  tbl_src[132]=11;
-  tbl_snk[19]=27; tbl_off[19]=41; tbl_w[19]=3; tbl_n[19]=7;
-  tbl_src[133]=16;
-  tbl_src[134]=17;
-  tbl_src[135]=18;
-  tbl_src[136]=19;
-  tbl_src[137]=13;
-  tbl_src[138]=14;
-  tbl_src[139]=15;
-  tbl_snk[20]=28; tbl_off[20]=44; tbl_w[20]=3; tbl_n[20]=7;
-  tbl_src[140]=16;
-  tbl_src[141]=17;
-  tbl_src[142]=18;
-  tbl_src[143]=19;
-  tbl_src[144]=0;
-  tbl_src[145]=2;
-  tbl_src[146]=3;
-  tbl_snk[21]=29; tbl_off[21]=47; tbl_w[21]=3; tbl_n[21]=7;
-  tbl_src[147]=16;
-  tbl_src[148]=17;
-  tbl_src[149]=18;
-  tbl_src[150]=19;
-  tbl_src[151]=4;
-  tbl_src[152]=6;
-  tbl_src[153]=7;
-  tbl_snk[22]=30; tbl_off[22]=50; tbl_w[22]=3; tbl_n[22]=7;
-  tbl_src[154]=16;
-  tbl_src[155]=17;
-  tbl_src[156]=18;
-  tbl_src[157]=19;
-  tbl_src[158]=8;
-  tbl_src[159]=10;
-  tbl_src[160]=11;
-  tbl_snk[23]=31; tbl_off[23]=53; tbl_w[23]=3; tbl_n[23]=7;
-  tbl_src[161]=16;
-  tbl_src[162]=17;
-  tbl_src[163]=18;
-  tbl_src[164]=19;
-  tbl_src[165]=12;
-  tbl_src[166]=14;
-  tbl_src[167]=15;
-  tbl_snk[24]=32; tbl_off[24]=56; tbl_w[24]=3; tbl_n[24]=7;
-  tbl_src[168]=16;
-  tbl_src[169]=17;
-  tbl_src[170]=18;
-  tbl_src[171]=19;
-  tbl_src[172]=0;
-  tbl_src[173]=1;
-  tbl_src[174]=3;
-  tbl_snk[25]=33; tbl_off[25]=59; tbl_w[25]=3; tbl_n[25]=7;
-  tbl_src[175]=16;
-  tbl_src[176]=17;
-  tbl_src[177]=18;
-  tbl_src[178]=19;
-  tbl_src[179]=4;
-  tbl_src[180]=5;
-  tbl_src[181]=7;
-  tbl_snk[26]=34; tbl_off[26]=62; tbl_w[26]=3; tbl_n[26]=7;
-  tbl_src[182]=16;
-  tbl_src[183]=17;
-  tbl_src[184]=18;
-  tbl_src[185]=19;
-  tbl_src[186]=8;
-  tbl_src[187]=9;
-  tbl_src[188]=11;
-  tbl_snk[27]=35; tbl_off[27]=65; tbl_w[27]=3; tbl_n[27]=7;
-  tbl_src[189]=16;
-  tbl_src[190]=17;
-  tbl_src[191]=18;
-  tbl_src[192]=19;
-  tbl_src[193]=12;
-  tbl_src[194]=13;
-  tbl_src[195]=15;
-  tbl_snk[28]=36; tbl_off[28]=68; tbl_w[28]=3; tbl_n[28]=7;
-  tbl_src[196]=16;
-  tbl_src[197]=17;
-  tbl_src[198]=18;
-  tbl_src[199]=19;
-  tbl_src[200]=0;
-  tbl_src[201]=1;
-  tbl_src[202]=2;
-  tbl_snk[29]=37; tbl_off[29]=71; tbl_w[29]=3; tbl_n[29]=7;
-  tbl_src[203]=16;
-  tbl_src[204]=17;
-  tbl_src[205]=18;
-  tbl_src[206]=19;
-  tbl_src[207]=4;
-  tbl_src[208]=5;
-  tbl_src[209]=6;
-  tbl_snk[30]=38; tbl_off[30]=74; tbl_w[30]=3; tbl_n[30]=7;
-  tbl_src[210]=16;
-  tbl_src[211]=17;
-  tbl_src[212]=18;
-  tbl_src[213]=19;
-  tbl_src[214]=8;
-  tbl_src[215]=9;
-  tbl_src[216]=10;
-  tbl_snk[31]=39; tbl_off[31]=77; tbl_w[31]=3; tbl_n[31]=7;
-  tbl_src[217]=16;
-  tbl_src[218]=17;
-  tbl_src[219]=18;
-  tbl_src[220]=19;
-  tbl_src[221]=12;
-  tbl_src[222]=13;
-  tbl_src[223]=14;
+  tbl_src[101]=16;
+  tbl_src[102]=17;
+  tbl_src[103]=18;
+  tbl_src[104]=19;
+  tbl_snk[15]=15; tbl_off[15]=45; tbl_w[15]=3; tbl_n[15]=7;
+  tbl_src[105]=3;
+  tbl_src[106]=7;
+  tbl_src[107]=11;
+  tbl_src[108]=16;
+  tbl_src[109]=17;
+  tbl_src[110]=18;
+  tbl_src[111]=19;
+  tbl_snk[16]=16; tbl_off[16]=48; tbl_w[16]=2; tbl_n[16]=4;
+  tbl_src[112]=0;
+  tbl_src[113]=4;
+  tbl_src[114]=8;
+  tbl_src[115]=12;
+  tbl_snk[17]=17; tbl_off[17]=50; tbl_w[17]=2; tbl_n[17]=4;
+  tbl_src[119]=1;
+  tbl_src[120]=5;
+  tbl_src[121]=9;
+  tbl_src[122]=13;
+  tbl_snk[18]=18; tbl_off[18]=52; tbl_w[18]=2; tbl_n[18]=4;
+  tbl_src[126]=2;
+  tbl_src[127]=6;
+  tbl_src[128]=10;
+  tbl_src[129]=14;
+  tbl_snk[19]=19; tbl_off[19]=54; tbl_w[19]=2; tbl_n[19]=4;
+  tbl_src[133]=3;
+  tbl_src[134]=7;
+  tbl_src[135]=11;
+  tbl_src[136]=15;
+  tbl_snk[20]=22; tbl_off[20]=56; tbl_w[20]=2; tbl_n[20]=4;
+  tbl_src[140]=0;
+  tbl_src[141]=4;
+  tbl_src[142]=8;
+  tbl_src[143]=12;
+  tbl_snk[21]=23; tbl_off[21]=58; tbl_w[21]=2; tbl_n[21]=4;
+  tbl_src[147]=1;
+  tbl_src[148]=5;
+  tbl_src[149]=9;
+  tbl_src[150]=13;
+  tbl_snk[22]=24; tbl_off[22]=60; tbl_w[22]=2; tbl_n[22]=4;
+  tbl_src[154]=2;
+  tbl_src[155]=6;
+  tbl_src[156]=10;
+  tbl_src[157]=14;
+  tbl_snk[23]=25; tbl_off[23]=62; tbl_w[23]=2; tbl_n[23]=4;
+  tbl_src[161]=3;
+  tbl_src[162]=7;
+  tbl_src[163]=11;
+  tbl_src[164]=15;
+  tbl_snk[24]=28; tbl_off[24]=64; tbl_w[24]=2; tbl_n[24]=4;
+  tbl_src[168]=0;
+  tbl_src[169]=4;
+  tbl_src[170]=8;
+  tbl_src[171]=12;
+  tbl_snk[25]=29; tbl_off[25]=66; tbl_w[25]=2; tbl_n[25]=4;
+  tbl_src[175]=1;
+  tbl_src[176]=5;
+  tbl_src[177]=9;
+  tbl_src[178]=13;
+  tbl_snk[26]=30; tbl_off[26]=68; tbl_w[26]=2; tbl_n[26]=4;
+  tbl_src[182]=2;
+  tbl_src[183]=6;
+  tbl_src[184]=10;
+  tbl_src[185]=14;
+  tbl_snk[27]=31; tbl_off[27]=70; tbl_w[27]=2; tbl_n[27]=4;
+  tbl_src[189]=3;
+  tbl_src[190]=7;
+  tbl_src[191]=11;
+  tbl_src[192]=15;
+  tbl_snk[28]=34; tbl_off[28]=72; tbl_w[28]=2; tbl_n[28]=4;
+  tbl_src[196]=0;
+  tbl_src[197]=4;
+  tbl_src[198]=8;
+  tbl_src[199]=12;
+  tbl_snk[29]=35; tbl_off[29]=74; tbl_w[29]=2; tbl_n[29]=4;
+  tbl_src[203]=1;
+  tbl_src[204]=5;
+  tbl_src[205]=9;
+  tbl_src[206]=13;
+  tbl_snk[30]=36; tbl_off[30]=76; tbl_w[30]=2; tbl_n[30]=4;
+  tbl_src[210]=2;
+  tbl_src[211]=6;
+  tbl_src[212]=10;
+  tbl_src[213]=14;
+  tbl_snk[31]=37; tbl_off[31]=78; tbl_w[31]=2; tbl_n[31]=4;
+  tbl_src[217]=3;
+  tbl_src[218]=7;
+  tbl_src[219]=11;
+  tbl_src[220]=15;
 end endtask

@@ -40,9 +40,12 @@ module tb_switch_matrix;
         end
     endtask
 
-    // Source index map (matches generated port order): 0..15 = 4*idx+dir with
-    // dir N,E,S,W; 16..19 = LA_O..LD_O.  Sink map: 0..15 = L{A..D}_I{0..3};
-    // 16+2k = L?_EN, 17+2k = L?_SR; 24..39 = N/E/S/W1BEG0..3.
+    // Source index map (matches generated port order, = FABulous input-port
+    // order): 0..15 = 4*dir+idx with dir N,E,S,W; 16..19 = LA_O..LD_O.
+    // Sink map (= FABulous output-port order): 0..15 = N/E/S/W1BEG0..3
+    // (4*dir+idx); 16+6*bel+{0..3} = L?_I0..3, +4 = L?_SR, +5 = L?_EN.
+    // cfg layout: BEG k at cfg[3k+:3]; L{bel}_I{p} at cfg[48+2*(4*bel+p)+:2];
+    // J_SR_BEG0 at cfg[80+:2]; J_EN_BEGi at cfg[82+2i+:2].
     integer r, s, k, n, bitv, d, i;
     reg [89:0] mask;
 
@@ -73,38 +76,34 @@ module tb_switch_matrix;
         end
 
         // 2. spot checks
-        // LA_I2 (sink 2, cfg[5:4]): N,E,S,W of track 2 -> src 8..11
+        // LA_I2 (sink 18, cfg[53:52]): N,E,S,W of track 2 -> src 4*d+2
+        // LD_I3 (sink 37, cfg[79:78]): N,E,S,W of track 3 -> src 4*d+3
         for (d = 0; d < 4; d = d + 1) begin
-            drive_one(2,  8 + d, 4,  2, d, "LA_I2 track2");
-            drive_one(15, 12 + d, 30, 2, d, "LD_I3 track3");
+            drive_one(18, 4*d + 2, 52, 2, d, "LA_I2 track2");
+            drive_one(37, 4*d + 3, 78, 2, d, "LD_I3 track3");
         end
-        // N1BEG0 (sink 24): sel0..3 = LA_O..LD_O, sel4..6 = E,S,W track0
-        // (offset of the track-driver fields is read from the table row)
-        for (r = 0; r < NROW; r = r + 1)
-            if (tbl_snk[r] == 24) begin
-                for (d = 0; d < 4; d = d + 1)
-                    drive_one(24, 16 + d, tbl_off[r], 3, d, "N1BEG0 BEL out");
-                drive_one(24, 1,  tbl_off[r], 3, 4, "N1BEG0 <- E1END0");
-                drive_one(24, 2,  tbl_off[r], 3, 5, "N1BEG0 <- S1END0");
-                drive_one(24, 3,  tbl_off[r], 3, 6, "N1BEG0 <- W1END0");
-            end
-            else if (tbl_snk[r] == 36) begin   // W1BEG0
-                drive_one(36, 0, tbl_off[r], 3, 4, "W1BEG0 <- N1END0");
-                drive_one(36, 1, tbl_off[r], 3, 5, "W1BEG0 <- E1END0");
-                drive_one(36, 2, tbl_off[r], 3, 6, "W1BEG0 <- S1END0");
-            end
+        // N1BEG0 (sink 0, cfg[2:0]): sel0..2 = E,S,W track0, sel3..6 = LA_O..LD_O
+        for (d = 0; d < 4; d = d + 1)
+            drive_one(0, 16 + d, 0, 3, 3 + d, "N1BEG0 BEL out");
+        drive_one(0, 4,  0, 3, 0, "N1BEG0 <- E1END0");
+        drive_one(0, 8,  0, 3, 1, "N1BEG0 <- S1END0");
+        drive_one(0, 12, 0, 3, 2, "N1BEG0 <- W1END0");
+        // W1BEG0 (sink 12, cfg[38:36]): sel0..2 = N,E,S track0
+        drive_one(12, 0, 36, 3, 0, "W1BEG0 <- N1END0");
+        drive_one(12, 4, 36, 3, 1, "W1BEG0 <- E1END0");
+        drive_one(12, 8, 36, 3, 2, "W1BEG0 <- S1END0");
 
-        // J_EN_BEGi at cfg[80+2i +: 2]; J_SR_BEG0 at cfg[88 +: 2].
+        // J_EN_BEGi at cfg[82+2i +: 2] -> L?_EN (sink 21+6i); J_SR_BEG0 at cfg[80 +: 2].
         for (i = 0; i < 4; i = i + 1)
             for (d = 0; d < 4; d = d + 1) begin
-                drive_one(16 + 2*i, 4*i + d, 80 + 2*i, 2, d, "J_EN -> L?_EN");
+                drive_one(21 + 6*i, 4*d + i, 82 + 2*i, 2, d, "J_EN -> L?_EN");
             end
         for (d = 0; d < 4; d = d + 1) begin
-            cfg = 0; cfg = cfg | (d << 88);
-            srcr = {20{1'b1}}; srcr[d] = 1'b0; #1;
-            for (i = 0; i < 4; i = i + 1) check1(snk[17 + 2*i], 1'b0, "J_SR -> L?_SR (0)");
-            srcr = {20{1'b0}}; srcr[d] = 1'b1; #1;
-            for (i = 0; i < 4; i = i + 1) check1(snk[17 + 2*i], 1'b1, "J_SR -> L?_SR (1)");
+            cfg = 0; cfg = cfg | (d << 80);
+            srcr = {20{1'b1}}; srcr[4*d] = 1'b0; #1;
+            for (i = 0; i < 4; i = i + 1) check1(snk[20 + 6*i], 1'b0, "J_SR -> L?_SR (0)");
+            srcr = {20{1'b0}}; srcr[4*d] = 1'b1; #1;
+            for (i = 0; i < 4; i = i + 1) check1(snk[20 + 6*i], 1'b1, "J_SR -> L?_SR (1)");
         end
 
         // structural count sanity
