@@ -91,7 +91,14 @@ and re-verified → shuttle seat → measured silicon. **Current position:**
 framework evaluated and tile spec ratified; tile RTL is implemented
 (`design/rtl/lut4_slice.v`, `design/rtl/logic_tile.v`) and the tile layout is
 DRC/LVS-clean (`layout/logic_tile.drc.json`: `status: "clean"`;
-`layout/logic_tile.lvs.json`: `status: "match"`). **Timing characterization
+`layout/logic_tile.lvs.json`: `status: "match"`). Separately, **experimental**
+(not ratified, not signoff) observations exist for the composed tile with the
+stand-in same-index matrix: a routed layout in `layout/experimental/`
+(issue #102), DRC `clean` / LVS `match` / ERC `clean_partial` (#108), and an
+18-corner extracted-parasitics STA in
+`measurements/timing-characterization-experimental/` (#113; 17 corners meet the
+20 ns reference, `ss_n40C_1v28` does not, binding path undiagnosed, #117).
+**Timing characterization
 has landed on `main`** — evidence is recorded under
 `measurements/timing-characterization/records/20260909-225431-86f71d2.md` and
 corner-specific STA reports under `measurements/timing-characterization/corners/`.

@@ -65,8 +65,10 @@ committed evidence.
 `lut4_slice`, `logic_tile`, the switch matrix and the composed tile, plus the
 experimental bitstream-driven harness test below. It does not cover the
 ratified fabric or inter-tile verification (G5 stays open) or
-gate-level/SDF-annotated verification (blocked, see below); it makes no
-timing claim.
+SDF-annotated verification (blocked, see below); the zero-delay gate-level
+re-runs are separate, PDK-model-dependent experimental scripts (see "Composed-tile
+gate-level coverage" and "Bitstream-driven gate-level coverage" below). It makes
+no timing claim.
 
 **No PDK is read by this run, and none needs pinning.** `sim/run.sh`
 compiles behavioral RTL only — no `sky130_fd_sc_hd` cell model, no liberty,

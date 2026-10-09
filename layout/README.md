@@ -533,5 +533,8 @@ die 5527.18 um^2, 667 components, 323 nets); reported wirelength 9764 um.
 The minimum signal pitch actually used is therefore the met1 0.34 um track
 grid on this stand-in matrix.
 
-Outstanding: ADR-0004 topology and shared-reset decisions, a pitch decision
-record (G3 item (a)), and extracted timing (G4).
+Extracted timing of this composed tile exists only as an experimental
+observation (issue #113, `measurements/timing-characterization-experimental/`;
+not ratified). Outstanding: ADR-0004 topology and shared-reset decisions, a
+pitch decision record (G3 item (a)), and path-level diagnosis (#117) plus a
+decision record for any composed-tile timing claim (G4).
