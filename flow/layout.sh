@@ -134,6 +134,20 @@ COMMITTED_GDS="$LAYOUT_DIR/${GDS_NAME}"
 COMMITTED_DEF="$LAYOUT_DIR/${DEF_NAME}"
 COMMITTED_REPORT="$LAYOUT_DIR/${REPORT_NAME}"
 
+# klt >= 0.6.0 writes stage artifacts under .klt/<stage>/run-<id>/ instead of
+# flat .klt/<stage>/ (the same fallback flow/sdf-resim.sh carries; needed
+# here since flow/lvs.sh runs under klt 0.7.0, issue #69). Returns the flat
+# (<= 0.5.x) path when present, else the newest run-* copy, else the flat
+# path unchanged so the "did not produce" errors below still fire.
+resolve_klt_artifact() {
+    local flat="$1" dir base newest
+    if [[ -s "$flat" ]]; then echo "$flat"; return 0; fi
+    dir="$(dirname "$flat")"; base="$(basename "$flat")"
+    # shellcheck disable=SC2012
+    newest="$(ls -1dt "$dir"/run-*/"$base" 2>/dev/null | head -1 || true)"
+    echo "${newest:-$flat}"
+}
+
 cat > "$SYNTH_REQUEST" <<EOF
 {
   "schema": "klt.synthesize.request/1",
@@ -155,6 +169,7 @@ if ! python3 -c "import json,sys; sys.exit(0 if json.load(open('$SYNTH_RESPONSE'
     exit 1
 fi
 
+SYNTH_NETLIST="$(resolve_klt_artifact "$SYNTH_NETLIST")"
 if [[ ! -s "$SYNTH_NETLIST" ]]; then
     echo "error: klt synthesize did not produce a netlist at $SYNTH_NETLIST" >&2
     exit 1
@@ -179,6 +194,8 @@ if ! python3 -c "import json,sys; sys.exit(0 if json.load(open('$PAR_RESPONSE'))
     exit 1
 fi
 
+RAW_GDS="$(resolve_klt_artifact "$RAW_GDS")"
+GENERATED_DEF="$(resolve_klt_artifact "$GENERATED_DEF")"
 if [[ ! -s "$RAW_GDS" ]]; then
     echo "error: klt place-and-route did not produce a GDS at $RAW_GDS" >&2
     exit 1

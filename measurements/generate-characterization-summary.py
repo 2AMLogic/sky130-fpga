@@ -15,9 +15,11 @@ Sources aggregated (see each `assert` below for exactly what is
 cross-checked against each one):
 
 - layout/logic_tile.drc.json           (DRC)
-- layout/logic_tile.lvs.json           (LVS -- signal connectivity only)
-- layout/logic_tile.erc.json           (ERC -- supply connectivity + antenna,
-  the power half the LVS compare structurally cannot supply; see issue #41)
+- layout/logic_tile.lvs.json           (LVS -- signal connectivity, plus the
+  layout-side power-pin consistency check re-enabled by issue #69)
+- layout/logic_tile.erc.json           (ERC -- supply connectivity + antenna
+  from the GDS geometry, the supply-island/tie half the LVS compare cannot
+  supply; see issue #41)
 - measurements/timing-characterization/records/20261008-234741-dc615b4.md
   (the current 18-corner STA sweep record, issue #68's timing_status
   re-sweep; successor of 20260921-062500-e8a37ad, itself the post-PDN
@@ -122,9 +124,11 @@ def collect_drc():
 def collect_erc():
     """The power-connectivity + antenna half of the layout claim (issue #41).
 
-    Exists because `collect_lvs` structurally cannot supply it: that compare
-    reads a `gate-level-verilog` reference carrying no supply pins, so it
-    drops the layout's VPWR/VGND/VPB nets rather than checking them. `klt
+    Exists because `collect_lvs` cannot supply it: that compare reads a
+    `gate-level-verilog` reference carrying no supply pins, so its
+    power-connectivity check (issue #69) only asks whether every instance's
+    VPWR/VGND/VPB pin lands on one consistent layout net -- not whether the
+    supply is one island or every well is tapped. `klt
     erc` works from the GDS geometry alone and needs no reference netlist,
     so a supply net that is drawn but not joined shows up as an island and
     an untapped well shows up as `erc.missing_tie`.
@@ -177,6 +181,15 @@ def collect_lvs():
         "LVS mismatches[] carries entries that are neither error- nor warning-severity",
     )
 
+    # Issue #69: flow/lvs.sh no longer disables `klt lvs`'s inline
+    # power-connectivity check (klayout-tools#2121 fixed the abstracted-well
+    # artifact that forced the disable), and T1 item 11 cites this report
+    # for it.
+    power = data.get("power_connectivity") or {}
+    require(power.get("status") == "match", "LVS power_connectivity.status is not 'match'")
+    require(power.get("finding_count") == 0, "LVS power_connectivity.finding_count is not 0")
+    require(power.get("power_pins"), "LVS power_connectivity.power_pins is empty")
+
     return {
         "path": path,
         "status": data["status"],
@@ -187,6 +200,9 @@ def collect_lvs():
         ),
         "layout_gds_sha256": data["layout_gds_sha256"],
         "top": data["top"],
+        "power_status": power["status"],
+        "power_pins": power["power_pins"],
+        "power_instance_count": power["instance_count"],
     }
 
 
@@ -512,10 +528,16 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
             + ", ".join(f"`{c}`" for c in lvs["warning_categories"])
         )
     lines.append(
-        "- **Scope**: signal-connectivity only -- this compare comes from a "
-        "`gate-level-verilog` reference carrying no supply pins, so it says "
-        "nothing about power/ground. The power half of the claim is ERC, "
-        "below. See `layout/README.md`'s \"LVS scope, concretely\"."
+        f"- **Power connectivity**: `{lvs['power_status']}` -- power pins "
+        + ", ".join(f"`{p}`" for p in lvs["power_pins"])
+        + f" consistent across all {lvs['power_instance_count']} instances, 0 findings"
+    )
+    lines.append(
+        "- **Scope**: the netlist compare is signal-connectivity -- it comes "
+        "from a `gate-level-verilog` reference carrying no supply pins. The "
+        "power-connectivity check is layout-side: each standard-cell power "
+        "pin lands on one consistent net. Supply islands and well ties are "
+        "ERC, below. See `layout/README.md`'s \"LVS scope, concretely\"."
     )
     lines.append("")
 
@@ -541,9 +563,10 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"produced by klt `{erc['klt_version']}`)"
     )
     lines.append(
-        "- **Why this is separate from LVS**: the LVS compare above is "
-        "signal-connectivity only and drops the layout's supply nets. This "
-        "is the check that actually binds the power half of the claim -- "
+        "- **Why this is separate from LVS**: the LVS run above checks that "
+        "each cell's power pins land on consistent nets, but not that each "
+        "supply is one island or that every well is tapped. This is the "
+        "check that binds those from the GDS geometry -- "
         "against the pre-PDN layout the same invocation reported 9 findings "
         "(7 `erc.missing_tie`, 2 `erc.unconnected_net`). See "
         "`layout/README.md`'s \"Power delivery network\"."

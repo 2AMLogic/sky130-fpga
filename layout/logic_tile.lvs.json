@@ -8,7 +8,8 @@
     "status": "unchecked"
   },
   "category_counts": {
-    "topology.power_only_pruned": 1
+    "topology.power_only_pruned": 1,
+    "topology.top_level_pins_anchored": 1
   },
   "category_error_counts": {},
   "counts": {
@@ -18,7 +19,7 @@
       "reference": 0
     },
     "nets": {
-      "layout": 146,
+      "layout": 139,
       "matched": 183,
       "reference": 137
     },
@@ -29,17 +30,19 @@
     }
   },
   "device_classes": null,
+  "device_parameter_coverage": [],
   "engine": "klayout",
   "environment": {
     "engine": "klayout",
     "extracted_netlist": null,
-    "layout_sha256": "1eff80b2834a6c1b84375036f41792afdd3020716c0b07fbaf9106f1038c5626",
+    "layout_sha256": "193095a101b08f37927cf1e8cfbaf0b3ef02459eb63047d6512734cb1fa5ef2d",
+    "netgen_binary": null,
     "reference_sha256": "f7fe4339211a9a9a871c96faed3ac7b1b051d98aad28e0fdeec3910ef59dc2e3"
   },
   "error_count": 0,
   "hints_applied": null,
   "layout_gds_sha256": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f",
-  "mismatch_count": 1,
+  "mismatch_count": 2,
   "mismatches": [
     {
       "category": "topology.power_only_pruned",
@@ -52,6 +55,44 @@
       "property": null,
       "severity": "warning",
       "side": "layout",
+      "subcircuit": null
+    },
+    {
+      "category": "topology.top_level_pins_anchored",
+      "circuit": null,
+      "description": "94 top-level pin name(s) declared on both sides were anchored by name before comparing (options.anchor_top_level_pins): each one's layout net is asserted to match the reference net of the same-named pin, which the comparer's own topology-only net pairing does not otherwise require. Without it, two boundary nets with identical topology (e.g. two bits of a black-box macro's bus) are interchangeable and a swap between them compares clean -- see docs/cli/lvs.md, \"Top-level pin anchoring\"",
+      "details": {
+        "pin_count": 94,
+        "pins": [
+          "CE[0]",
+          "CE[1]",
+          "CE[2]",
+          "CE[3]",
+          "CLK",
+          "IN[0]",
+          "IN[10]",
+          "IN[11]",
+          "IN[12]",
+          "IN[13]",
+          "IN[14]",
+          "IN[15]",
+          "IN[1]",
+          "IN[2]",
+          "IN[3]",
+          "IN[4]",
+          "IN[5]",
+          "IN[6]",
+          "IN[7]",
+          "IN[8]"
+        ],
+        "pins_truncated": true
+      },
+      "device": null,
+      "instance": null,
+      "net": null,
+      "property": null,
+      "severity": "warning",
+      "side": "both",
       "subcircuit": null
     }
   ],
@@ -1156,14 +1197,16 @@
     }
   ],
   "options": {
+    "anchor_top_level_pins": null,
     "combine_devices": false,
+    "combine_devices_max_attempts": 5,
     "combine_devices_per_circuit": null,
     "compare_parameters": null,
     "flatten_layout": false,
     "flatten_reference": false,
     "netgen_setup": null,
     "parameter_tolerance": null,
-    "power_connectivity": false,
+    "power_connectivity": null,
     "supply_nets": [
       "GND",
       "VCC",
@@ -1178,28 +1221,53 @@
     "expected_nets": null,
     "finding_count": 0,
     "findings": [],
-    "instance_count": 0,
-    "power_pins": [],
-    "power_pins_derivation": null,
-    "reason": "disabled by options.power_connectivity: false",
-    "status": "unchecked",
+    "instance_count": 63,
+    "power_pins": [
+      "VGND",
+      "VPB",
+      "VPWR"
+    ],
+    "power_pins_derivation": {
+      "corroborated": true,
+      "master_count": 7,
+      "masters": [
+        "SKY130_FD_SC_HD__BUF_4",
+        "SKY130_FD_SC_HD__DFXTP_1",
+        "SKY130_FD_SC_HD__INV_1",
+        "SKY130_FD_SC_HD__MUX2_2",
+        "SKY130_FD_SC_HD__MUX4_2",
+        "SKY130_FD_SC_HD__NOR2_1",
+        "SKY130_FD_SC_HD__O21A_1"
+      ],
+      "reason": null,
+      "rule": "declared-by-every-instantiated-master"
+    },
+    "reason": null,
+    "status": "match",
     "unchecked_expected_pins": []
   },
   "provenance": {
     "deck": null,
     "input": {
-      "content_hash": "sha256:1eff80b2834a6c1b84375036f41792afdd3020716c0b07fbaf9106f1038c5626",
+      "content_hash": "sha256:193095a101b08f37927cf1e8cfbaf0b3ef02459eb63047d6512734cb1fa5ef2d",
       "role": "netlist"
     },
-    "klayout_version_mismatch": true,
+    "klayout_version_mismatch": false,
     "pdk": {
       "name": "sky130A",
       "source": "PDK_ROOT environment variable",
       "version": "open_pdks c6d73a35f524070e85faff4a6a9eef49553ebc2b"
-    }
+    },
+    "pin_order_sources": [
+      {
+        "cells": 437,
+        "library": "sky130_fd_sc_hd",
+        "path": "/home/ubuntu/.volare/sky130A/libs.ref/sky130_fd_sc_hd/spice/sky130_fd_sc_hd.spice"
+      }
+    ]
   },
   "reference_top": "LOGIC_TILE",
-  "rtl_input_sha256": "sha256:b0e47ed307405b0a6ab5e6bac974bf2522a59e56837cccf9a5637bad92f94f75",
+  "rtl_input_sha256": "sha256:6ed88bcf8c0945fe0fdffa60802dbe68531b30454cb3fdf89fc2935ce1607fd8",
   "schema_version": 1,
   "status": "match",
   "top": "LOGIC_TILE"

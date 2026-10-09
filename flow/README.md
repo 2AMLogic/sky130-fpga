@@ -59,6 +59,30 @@ lineage. Measured drift against the 0.5.0 lineage:
 
 `flow/sta-sweep.sh` prints its banner against this pair.
 
+**Recorded LVS toolchain** (issue #69). This produced the committed
+`layout/logic_tile.lvs.json`:
+
+| Tool | Version |
+|------|---------|
+| `klt` (klayout-tools) | `0.7.0+g4cbdfa769875` (`RECORDED_LVS_KLT_VERSION`; PyPI `klayout-tools==0.7.0`) |
+| OpenROAD (reference-netlist regeneration only) | `26Q3-1510-g6cb3f2b704` |
+
+Bump rule, as for the STA pin: a deliberate design-flow upgrade, pinned
+**separately** from `RECORDED_KLT_VERSION`. Re-enabling `klt lvs`'s
+power-connectivity check needs a klt carrying klayout-tools#2121 (merge
+commit `fa034fb670d8`, 2026-09-19). The 0.5.0 layout pin is 30 commits
+behind that merge; `0.7.0+g4cbdfa769875` is 725 commits past it (checked
+with the GitHub compare API). The GDS, DEF and par report were not
+regenerated: `./flow/lvs.sh --update-report` rewrites only the LVS report,
+and `layout/logic_tile.gds` stayed byte-identical. ERC and PAR keep
+their own lineages (`provenance.klt_version` in the ERC report;
+`RECORDED_KLT_VERSION` for PAR). Reproduce in a throwaway env without
+touching the host klt:
+`uvx --from "klayout-tools==0.7.0" klt ...`, or put that klt first on
+`$PATH` and run `./flow/lvs.sh`. `flow/lvs.sh` prints its klt banner
+against this value. The `flow/layout.sh` it calls prints its own banner
+against `RECORDED_KLT_VERSION`, and that one warns.
+
 `flow/layout.sh`, `flow/sta-sweep.sh` and `flow/sdf-resim.sh` all source
 `flow/tool_versions.sh` and print the installed `klt`/OpenROAD versions at
 the top of every run, with a warning if they differ from the table above
@@ -391,7 +415,11 @@ regenerates and commits `layout/logic_tile.gds` and
 circuit. Since the GDS content changes, `layout/logic_tile.drc.json`'s own
 provenance is re-derived (`flow/drc.sh --update`) in the same pass whenever
 this happens, so all four committed layout artifacts stay mutually
-consistent.
+consistent. **Exception (issue #69):** the committed LVS report came from
+`./flow/lvs.sh --update-report`, a cross-run compare of the unchanged GDS
+against a reference regenerated under the LVS klt pin. A restructuring
+between runs would fail it as a topology mismatch, so its `match` stays
+honest. See `layout/README.md`'s "LVS scope, concretely".
 
 Running:
 
@@ -408,7 +436,17 @@ Running:
                           # ./flow/drc.sh --update afterward to keep the
                           # DRC report's provenance in sync with the new
                           # GDS.
+./flow/lvs.sh --update-report
+                          # as check mode, but overwrite only
+                          # layout/logic_tile.lvs.json; GDS/DEF/par report
+                          # untouched. For a klt change to the compare
+                          # itself (issue #69).
 ```
+
+Every mode refuses a report whose `power_connectivity.status` is not
+`"match"` (issue #69). Under klt `>= 0.6.0`, stage artifacts land in
+`.klt/<stage>/run-<id>/`; `flow/lvs.sh` and `flow/layout.sh` fall back to
+the newest `run-*` copy, as `flow/sdf-resim.sh` already did.
 
 Requires everything `flow/layout.sh` requires (`klt`, a native `yosys`
 build, `openroad`, a resolvable sky130A PDK); LVS itself runs fully
@@ -439,9 +477,18 @@ to the persistent, git-tracked GDS and RTL sources — not the ephemeral
 scratch netlists `klt lvs`'s own `environment.*_sha256` hash) so freshness
 is verifiable later without re-running the flow.
 
+**Power connectivity (issue #69).** `klt lvs`'s inline
+power-connectivity check is on, and the committed report says `match`:
+power pins `VGND`/`VPB`/`VPWR`, 63 instances, 0 findings. It was disabled
+by issue #49 because under `--abstract-cells` the pre-#2121 extraction
+split each row's n-well into a row-local `VPB` net. klayout-tools#2082
+showed that was an artifact; #2121 fixed it. This is layout-side pin
+consistency, not a supply-integrity check: it does not count islands or
+check well taps. That remains `flow/erc.sh`'s job.
+
 **Out of scope here**: the `netgen` LVS engine (not exercised — this uses
-`klt lvs`'s default `"klayout"` engine) and a power-connectivity check.
-This compare is **signal-connectivity only**, per `docs/cli/lvs.md`: the
+`klt lvs`'s default `"klayout"` engine). The netlist compare itself is
+**signal-connectivity only**, per `docs/cli/lvs.md`: the
 `gate-level-verilog` reference is written without `-include_pwr_gnd`, so it
 carries no supply pins and the comparer *drops* the layout's `VPWR`/`VGND`/
 `VPB` nets rather than failing on them — 21 of the committed report's
@@ -450,8 +497,8 @@ reason. This README previously called that "not a gap here, since there is
 no power connectivity for this mode to miss", which stopped being true the
 moment a PDN existed and was never a safe thing to assert anyway: a
 signal-only `match` reads identically whether the layout is fully strapped
-or has fifteen mutually isolated rails (issue #41). The power half of the
-claim is `flow/erc.sh`, below.
+or has fifteen mutually isolated rails (issue #41). The supply-island and
+well-tie half of the claim is `flow/erc.sh`, below.
 
 ### `flow/erc.sh` — supply connectivity + antenna (T1 items 11 and the power half of 4)
 
@@ -517,10 +564,10 @@ the same block pins, so it stays checkable independently of that.
 **Out of scope here**: IR drop, electromigration and current density —
 nothing in this repo computes them. `klt erc` answers "is every supply
 shape actually joined, and is every well tapped", a topology question, not
-"is the grid wide enough"; the LVS `power_connectivity` verdict is issue
-#50's (and is blocked by the greybox abstraction rather than the PDN —
-see `flow/lvs.sh`'s request-options comment), and the `klt signoff
---manifest` grading pass is issue #52's.
+"is the grid wide enough"; the LVS `power_connectivity` verdict is
+`flow/lvs.sh`'s (re-enabled by issue #69 once klayout-tools#2121 fixed the
+greybox well artifact), and the `klt signoff --manifest` grading pass is
+issue #52's.
 
 ### `flow/sta-sweep.sh` — multi-corner timing characterization (G4)
 

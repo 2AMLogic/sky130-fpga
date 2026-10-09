@@ -13,7 +13,7 @@ One aggregated, current snapshot of the tile's design-evidence artifacts -- klay
 | Evidence | Status | Source | Derived from |
 | --- | --- | --- | --- |
 | DRC | **clean** (0 violations) | [`layout/logic_tile.drc.json`](layout/logic_tile.drc.json) | content hash `sha256:38498092805e` |
-| LVS | **match** (1 mismatches, engine `klayout`) | [`layout/logic_tile.lvs.json`](layout/logic_tile.lvs.json) | layout GDS hash `sha256:38498092805e` |
+| LVS | **match** (2 mismatches, engine `klayout`) | [`layout/logic_tile.lvs.json`](layout/logic_tile.lvs.json) | layout GDS hash `sha256:38498092805e` |
 | ERC (supply connectivity + antenna) | **0 findings**, 0 antenna `violate` across 232 gates | [`layout/logic_tile.erc.json`](layout/logic_tile.erc.json) | layout GDS hash `sha256:38498092805e` |
 | 18-corner STA sweep | **setup/hold-clean at all 18 corners** (binding setup corner `ss_n40C_1v28`, SPEF WNS 15.2145 ns) | [`measurements/timing-characterization/records/20261008-234741-dc615b4.md`](measurements/timing-characterization/records/20261008-234741-dc615b4.md) | record `20261008-234741-dc615b4`, git revision `dc615b4` |
 | Multi-corner `klt sta` envelope (T1 item 5 citation) | **18 corners, every one `timing_status: constrained`, setup/hold slack >= 0** | [`measurements/timing-characterization/logic_tile.sta.json`](measurements/timing-characterization/logic_tile.sta.json) | analysed-DEF hash `sha256:6e1bb79d924d` |
@@ -27,17 +27,18 @@ One aggregated, current snapshot of the tile's design-evidence artifacts -- klay
 
 ## LVS
 
-- **Status**: `match`, `mismatch_count`: 1, engine: `klayout`, top: `LOGIC_TILE`
+- **Status**: `match`, `mismatch_count`: 2, engine: `klayout`, top: `LOGIC_TILE`
 - **Source**: [`layout/logic_tile.lvs.json`](layout/logic_tile.lvs.json) (layout GDS hash `sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f`)
-- **Warning-severity entries** (0 error-severity): `topology.power_only_pruned`
-- **Scope**: signal-connectivity only -- this compare comes from a `gate-level-verilog` reference carrying no supply pins, so it says nothing about power/ground. The power half of the claim is ERC, below. See `layout/README.md`'s "LVS scope, concretely".
+- **Warning-severity entries** (0 error-severity): `topology.power_only_pruned`, `topology.top_level_pins_anchored`
+- **Power connectivity**: `match` -- power pins `VGND`, `VPB`, `VPWR` consistent across all 63 instances, 0 findings
+- **Scope**: the netlist compare is signal-connectivity -- it comes from a `gate-level-verilog` reference carrying no supply pins. The power-connectivity check is layout-side: each standard-cell power pin lands on one consistent net. Supply islands and well ties are ERC, below. See `layout/README.md`'s "LVS scope, concretely".
 
 ## ERC (supply connectivity + antenna)
 
 - **Findings**: 0 (no floating supply island, no `erc.missing_tie`)
 - **Antenna**: 0 `violate` across 232 gates (232 `pass_partial`, 0 `pass`, 0 `unchecked`). `pass_partial` is the expected sky130 verdict, not a violation: that PDK's antenna-limit table has no met3-met5 entries, so some graded level of every gate is necessarily `unchecked`.
 - **Source**: [`layout/logic_tile.erc.json`](layout/logic_tile.erc.json) (layout GDS hash `sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f`, produced by klt `0.5.0+g2b1e55e51bb8.dirty`)
-- **Why this is separate from LVS**: the LVS compare above is signal-connectivity only and drops the layout's supply nets. This is the check that actually binds the power half of the claim -- against the pre-PDN layout the same invocation reported 9 findings (7 `erc.missing_tie`, 2 `erc.unconnected_net`). See `layout/README.md`'s "Power delivery network".
+- **Why this is separate from LVS**: the LVS run above checks that each cell's power pins land on consistent nets, but not that each supply is one island or that every well is tapped. This is the check that binds those from the GDS geometry -- against the pre-PDN layout the same invocation reported 9 findings (7 `erc.missing_tie`, 2 `erc.unconnected_net`). See `layout/README.md`'s "Power delivery network".
 
 ## 18-corner STA sweep
 

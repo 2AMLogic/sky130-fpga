@@ -64,11 +64,14 @@ regenerate `tier-report.json` last.
 grader **cannot** check — the claim-side disclosures
 `docs/design-evidence-tiers.md` makes this repo's responsibility.
 
-**8 of 11 T1 items are `met`: items 1, 2, 3, 4, 5, 8, 9, 10. Item 11 is `unmet`
-(`lvs_supply_unproven`); items 6 and 7 render `unmet`/`no_evidence` and are
-deliberately uncited.** The grader is pinned at klayout-tools
+**9 of 11 T1 items are `met`: items 1, 2, 3, 4, 5, 8, 9, 10, 11. Items 6
+and 7 render `unmet`/`no_evidence` and are deliberately uncited.** Item 11
+moved from `unmet`/`lvs_supply_unproven` to `met` in issue #69, when the LVS
+report gained `power_connectivity.status: "match"` (see its row below). The
+grader is pinned at klayout-tools
 `3a75c3ae705b7ad3803625255de93bcd982e70c6`. Moving to it changed no row for
-items 3, 4, 8 or 11 (item 11 keeps reason `lvs_supply_unproven`); the only
+items 3, 4, 8 or 11 (item 11 kept reason `lvs_supply_unproven` until
+issue #69); the only
 other differences in `tier-report.json` are the grader's own metadata
 (a `build` block, `build_t1_item_count`, and the checklist document hash).
 Item 5's citation (issue #68) did not need a grader bump. The pinned
@@ -94,17 +97,26 @@ byte-identical signoff code.
   is separate follow-on work (see `layout/README.md`, "DRC scope,
   concretely").
 - **Item 4 (LVS) — met.** `layout/logic_tile.lvs.json`, `status: match`,
-  pinned to the as-built gate-level reference netlist the compare ran
-  against (regenerated + hashed by `flow/lvs.sh` every run;
-  `layout_gds_sha256` ties the same report to the committed GDS, and
-  `verify-pins.sh` re-checks that tie). Scope disclosure: the compare is
-  **signal-connectivity only** — its one warning-severity entry
-  (`topology.power_only_pruned`) records the tapcells being pruned, and
-  `power_connectivity.status` is `"unchecked"` because the as-built
-  reference netlist carries no supply pins (see `layout/README.md`, "LVS
-  scope, concretely"). The grader accepts `"unchecked"` here (it is not
-  `"mismatch"`); the power half of the item-4 claim is carried by item 11's
-  ERC geometry evidence, not by this compare.
+  0 errors. The manifest pins the report's `provenance.input.content_hash`
+  (`sha256:193095a1…`), which hashes the layout-side SPICE netlist
+  `klt extract` produced from the committed GDS. `layout_gds_sha256` ties
+  the same report to the committed GDS, and `verify-pins.sh` re-checks that
+  tie. Since issue #69, `power_connectivity.status` is `"match"` (power
+  pins `VGND`/`VPB`/`VPWR`, 63 instances, 0 findings), produced by klt
+  `0.7.0+g4cbdfa769875`, which carries klayout-tools#2121
+  (`RECORDED_LVS_KLT_VERSION`). Before that it was `"unchecked"`, because
+  `flow/lvs.sh` disabled the check. Scope disclosure:
+  - The netlist compare is **signal-connectivity only**: the as-built
+    reference carries no supply pins.
+  - Its two warning-severity entries are `topology.power_only_pruned` (the
+    16 tapcells pruned) and `topology.top_level_pins_anchored` (94
+    top-level pins anchored by name).
+  - The power check is layout-side pin consistency, not island count or
+    well taps. Those stay with item 11's ERC evidence.
+  - The reference netlist came from a different run than the GDS, under the
+    newer klt (`flow/lvs.sh --update-report`). The GDS is unchanged.
+
+  See `layout/README.md`, "LVS scope, concretely".
 - **Item 8 (characterization) — met.** The generic envelope wraps
   `measurements/characterization-summary.md` — the single generated
   aggregate of DRC, LVS, ERC, the 18-corner SPEF-annotated STA sweep, the
@@ -116,20 +128,37 @@ byte-identical signoff code.
   the manifest pin, and `tier-report.json`) is the expected cadence whenever
   an evidence source changes — same regen cadence PRs #55/#58/#59 already
   follow.
-- **Item 11 (power delivery, structural) — `unmet`, reason
-  `lvs_supply_unproven`.** The compound citation is complete and each part
-  passes its own gates: the `klt erc` supply run is clean (0 findings:
-  every declared supply one island, 0 `missing_tie`, spec stackup covering
-  the PDN's met1/met4/met5 straps, live spec hash re-verified), the LVS
-  report is the item-4 one, and the `klt place-and-route` response reports
-  `power.pdn: true` with `tapcell_master` named. The one missing condition
-  is the one the reason names: LVS `power_connectivity.status: "match"`
-  against a reference that carries the supplies — impossible today because
-  `klt place-and-route`'s as-built netlist is written without power pins
-  (upstream klayout-tools#2121 is the tracked fix; `flow/lvs.sh` carries the
-  dated re-enable trigger). This row exists (per the issue's acceptance
-  criterion) so the fleet roll-up reports the *real* remaining blocker, not
-  a hand-wave.
+- **Item 11 (power delivery, structural) — met** (issue #69). The
+  compound citation has three parts, each passing its own gates:
+  - The `klt erc` supply run is clean: 0 findings, every declared supply
+    one island, 0 `missing_tie`, a spec stackup covering the PDN's
+    met1/met4/met5 straps, and the live spec hash re-verified.
+  - The LVS report is the item-4 one, now with
+    `power_connectivity.status: "match"`.
+  - The `klt place-and-route` response reports `power.pdn: true` with
+    `tapcell_master` named.
+
+  The grader's `power_delivery` block in `tier-report.json` echoes this:
+  supply nets `VPWR`/`VGND`, `pdn: true`, strap layers met1/met4/met5,
+  tapcell `sky130_fd_sc_hd__tapvpwrvgnd_1`, `power_connectivity_status:
+  "match"`. Until issue #69 the row was `unmet`/`lvs_supply_unproven`.
+  `flow/lvs.sh` disabled the LVS power check because the pre-#2121
+  `--abstract-cells` extraction split each row's n-well into a row-local
+  `VPB` net. klayout-tools#2082 showed that was an artifact, #2121 fixed it,
+  and klt `0.7.0+g4cbdfa769875` carries the fix. Disclosures the grader
+  cannot make:
+  - The ERC part grades `check_status: "clean_partial"` with
+    `coverage_qualification.reason: "partial_coverage"`. The skipped
+    entries are antenna levels with `missing_antenna_limit` (sky130's
+    antenna table has no met3–met5 limits, klayout-tools#1997). That was
+    already true of the report; the `met` row now surfaces it in
+    `tier-report.json`.
+  - `supply_unlabelled_islands` is `{}`: the supply spec declares no
+    `nets[].roles`, so the severed-unlabelled-rail question was not asked.
+    That means "not measured", not zero.
+  - `VNB` is not among the LVS power pins; the abstracted cells expose no
+    `VNB` pin.
+  - Structural only: no IR drop, EM or current-density analysis.
 - **Items 1, 2, 9, 10 — met, by artifact-bound generic envelopes**
   (klayout-tools#2718). These items have no `klt` verb behind them. Each is
   cited through a `"kind": "generic"` envelope that declares its `t1_item`,
