@@ -44,6 +44,8 @@ on:
       - 'sim/tb_logic_tile*.v'
       - 'sim/bitstream/**'
       - 'flow/gate-sim-bitstream.sh'
+      - 'flow/gate_sim_verdict.sh'
+      - 'flow/test_gate_sim_verdict.sh'
       - 'flow/gate-sim-routed.sh'
       - '.github/workflows/gate-sim.yml'
 
@@ -109,6 +111,9 @@ jobs:
           echo "${MODELS_SHA256}  $d/sky130_fd_sc_hd.v" | sha256sum -c -
           echo "${PRIMITIVES_SHA256}  $d/primitives.v" | sha256sum -c -
           echo "PDK_ROOT=$PDK_ROOT" >> "$GITHUB_ENV"
+
+      - name: Verdict classifier regression (no simulator needed)
+        run: ./flow/test_gate_sim_verdict.sh
 
       - name: Gate-level bitstream re-sim (with negative checks)
         run: ./flow/gate-sim-bitstream.sh --negative
