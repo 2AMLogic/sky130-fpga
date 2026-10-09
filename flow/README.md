@@ -986,3 +986,23 @@ python3 flow/test_check_status_claims.py     # unit tests, incl. deliberately wr
 When evidence changes (e.g. an ADR is ratified), update the marker value and
 its surrounding prose together; the check fails until you do. Needs no
 toolchain; run in CI by `.github/workflows/flow-evidence.yml`.
+
+### `flow/gen_bitstream_format.py` — as-built bitstream-format table + drift check (issue #131)
+
+Renders `design/bitstream-format.md` (per-bit table: frame, frame bit,
+position, owner BEL or switch-matrix mux, meaning; per-mux select encodings;
+decoded `top_io.cfg` / `top_reg.cfg` fixtures) from
+`sim/bitstream/logic4_configmem.map` plus the frozen `tile_specs` in
+`sim/bitstream/fabric_spec.json` (the map alone only carries cfg-bit ->
+position; field names come from the spec). Generation fails if any of the 158
+bits has zero or two owners, if the split is not 68 BEL + 90 matrix, or if a
+fixture does not decode through the tables. The document is an **experimental
+as-built harness format**, not the ratified-fabric format; G6 stays OPEN.
+
+```
+python3 flow/gen_bitstream_format.py           # rewrite the document
+python3 flow/gen_bitstream_format.py --check   # exit 1 (with a diff) if stale
+python3 flow/test_gen_bitstream_format.py      # incl. changed-map-entry failure
+```
+
+Needs no toolchain; `--check` runs in `.github/workflows/flow-evidence.yml`.
