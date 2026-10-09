@@ -894,11 +894,16 @@ tree:
 2. every `content_hash` a record pins still describes the committed file
    (a mismatch fails unless it is an explicit, commit-cited entry in
    `flow/audit_evidence.py`'s `ALLOWED_INPUT_DRIFT`);
-3. every committed report JSON under `layout/`/`measurements/` pins that
+3. every committed report JSON under `layout/` (recursively, so the
+   experimental composed tile's `layout/experimental/*.json` reports are
+   covered, issue #149) and `measurements/` pins that
    same PDK revision — or is listed explicitly in
    `flow/audit_evidence.py`'s `PDK_NULL_UPSTREAM_GAP`. Only
    `layout/logic_tile.erc.json` is a live null gap there (`klt erc` writes
-   no provenance block and reads no PDK install, klayout-tools#2036); the
+   no provenance block and reads no PDK install, klayout-tools#2036) plus
+   the single scoped `layout/experimental/logic_tile_routed.erc.json`
+   (same `klt erc` producer, spec and trimmer; it content-hash-pins its
+   GDS; no other experimental report is exempt); the
    `klt drc`/`klt lvs` entries are retained as regression guards — those
    two reports have pinned the PDK in-artifact since the 2026-09-21
    re-stamp (klayout-tools#1901 was fixed upstream before klt 0.5.0) —
