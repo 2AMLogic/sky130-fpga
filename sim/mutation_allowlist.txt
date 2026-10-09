@@ -1,0 +1,2 @@
+# mutant-id | one-line justification (mutants with no observable effect)
+RT_SR_SLICE_ROTATE | the generated matrix drives all four BEL SR pins from the single shared net J_SR_END0, so bel_sr[i] are identical and rotating the index is unobservable

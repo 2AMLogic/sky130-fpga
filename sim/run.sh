@@ -10,6 +10,11 @@
 #
 # Usage:
 #   ./sim/run.sh            # build + run all testbenches, report pass/fail
+#   ./sim/run.sh --mutation [--record]
+#                           # RTL mutation check (issue #124): mutate a copy of
+#                           # design/rtl/ in sim/build/, require every
+#                           # non-allowlisted mutant to FAIL some testbench.
+#                           # Not part of the default path; see sim/README.md.
 #
 # Requires Icarus Verilog (iverilog/vvp) and python3 on PATH (no mapping tool:
 # the bitstream fixtures under sim/bitstream/ are committed; flow/bitstream.sh
@@ -26,6 +31,15 @@ RTL_DIR="$REPO_ROOT/design/rtl"
 BUILD_DIR="$SCRIPT_DIR/build"
 
 mkdir -p "$BUILD_DIR"
+
+if [[ "${1:-}" == "--mutation" ]]; then
+    shift
+    for tool in iverilog vvp python3; do
+        command -v "$tool" >/dev/null 2>&1 || { echo "error: $tool not found on PATH" >&2; exit 1; }
+    done
+    # Mutants run strictly serially inside mutation.py (shared-host rule).
+    exec python3 -I "$SCRIPT_DIR/mutation.py" "$@"
+fi
 
 if ! command -v iverilog >/dev/null 2>&1 || ! command -v vvp >/dev/null 2>&1; then
     echo "error: Icarus Verilog (iverilog/vvp) not found on PATH" >&2
@@ -66,6 +80,7 @@ TESTBENCHES=(
     "tb_logic_tile:${RTL_DIR}/lut4_slice.v ${RTL_DIR}/logic_tile.v"
     "tb_switch_matrix:${RTL_DIR}/logic_tile_switch_matrix.v"
     "tb_logic_tile_routed:${RTL_DIR}/lut4_slice.v ${RTL_DIR}/logic_tile_switch_matrix.v ${RTL_DIR}/logic_tile_routed.v"
+    "tb_logic_tile_gapfill:${RTL_DIR}/lut4_slice.v ${RTL_DIR}/logic_tile.v ${RTL_DIR}/logic_tile_switch_matrix.v ${RTL_DIR}/logic_tile_routed.v"
 )
 
 overall_status=0

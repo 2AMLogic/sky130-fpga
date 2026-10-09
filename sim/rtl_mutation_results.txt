@@ -1,0 +1,67 @@
+# Append-only evidence record (issue #124). Add new dated entries below; do not edit old ones.
+# Scope: RTL mutation check of the single LOGIC4 tile RTL (design/rtl/{lut4_slice,logic_tile,
+#   logic_tile_routed,logic_tile_switch_matrix}.v) against the iverilog testbenches under sim/.
+#   Each mutant is a single-point edit of a COPY in sim/build/mutation/; the committed RTL is untouched.
+# Meaning: KILLED = at least one testbench reported non-PASS. ALLOWLISTED = survives and is justified
+#   as equivalent in sim/mutation_allowlist.txt. Non-claims: a curated list, not exhaustive mutation
+#   coverage; says nothing about timing, layout or the ratified (Wilton-class) fabric.
+# Reproduce: ./sim/run.sh --mutation [--record]   (iverilog + python3; serial)
+# Findings (first run, before sim/tb_logic_tile_gapfill.v existed): 4 mutants SURVIVED --
+#   TILE_IN_SLICE_ROTATE, TILE_REGSEL_SLICE_SWAP (tb_logic_tile fed identical input nibbles to all
+#   slices and used only reg_sel 0000/1111) and RT_SM_CFG_BIT157_TIED0 (no composed-tile bench routed
+#   BEL3's EN from the S/W edges). Coverage holes closed by the new tb_logic_tile_gapfill.v.
+#   RT_SR_SLICE_ROTATE is equivalent (shared SR net) and is allowlisted.
+
+2026-10-09  RTL mutation check (./sim/run.sh --mutation)
+  mutants: total=49 killed=48 allowlisted=1 surviving=0
+  KILLED       LUT_ADDR_SWAP_01             lut4_slice.v                     tb_lut4_slice
+  KILLED       LUT_ADDR_SWAP_23             lut4_slice.v                     tb_logic_tile_routed
+  KILLED       LUT_ADDR_SWAP_03             lut4_slice.v                     tb_lut4_slice
+  KILLED       LUT_ADDR_REVERSE             lut4_slice.v                     tb_lut4_slice
+  KILLED       LUT_INIT_INV_BIT0            lut4_slice.v                     tb_lut4_slice
+  KILLED       LUT_INIT_INV_BIT6            lut4_slice.v                     tb_lut4_slice
+  KILLED       LUT_INIT_INV_BIT15           lut4_slice.v                     tb_lut4_slice
+  KILLED       LUT_INIT_STUCK0_BIT9         lut4_slice.v                     tb_lut4_slice
+  KILLED       FF_RST_POLARITY              lut4_slice.v                     tb_lut4_slice
+  KILLED       FF_RST_VALUE_1               lut4_slice.v                     tb_lut4_slice
+  KILLED       FF_RST_IGNORED               lut4_slice.v                     tb_lut4_slice
+  KILLED       FF_RST_ASYNC                 lut4_slice.v                     tb_logic_tile_bitstream[reg]
+  KILLED       FF_RST_GATED_BY_CE           lut4_slice.v                     tb_logic_tile
+  KILLED       FF_CE_POLARITY               lut4_slice.v                     tb_lut4_slice
+  KILLED       FF_CE_IGNORED                lut4_slice.v                     tb_lut4_slice
+  KILLED       FF_CLK_NEGEDGE               lut4_slice.v                     tb_lut4_slice
+  KILLED       FF_D_INVERTED                lut4_slice.v                     tb_lut4_slice
+  KILLED       REGSEL_FORCE_COMB            lut4_slice.v                     tb_lut4_slice
+  KILLED       REGSEL_FORCE_REG             lut4_slice.v                     tb_lut4_slice
+  KILLED       REGSEL_INVERTED              lut4_slice.v                     tb_lut4_slice
+  KILLED       TILE_CE_SLICE_SWAP           logic_tile.v                     tb_logic_tile
+  KILLED       TILE_IN_SLICE_ROTATE         logic_tile.v                     tb_logic_tile_gapfill
+  KILLED       TILE_INIT_SLICE_ROTATE       logic_tile.v                     tb_logic_tile
+  KILLED       TILE_REGSEL_SLICE_SWAP       logic_tile.v                     tb_logic_tile_gapfill
+  KILLED       TILE_RST_TIED0               logic_tile.v                     tb_logic_tile
+  KILLED       TILE_OUT_SLICE_SWAP          logic_tile.v                     tb_logic_tile
+  KILLED       RT_LUTINIT_CFG_SHIFT         logic_tile_routed.v              tb_logic_tile_routed
+  KILLED       RT_REGSEL_CFG_IDX_SWAP       logic_tile_routed.v              tb_logic_tile_routed
+  KILLED       RT_REGSEL_CFG_TIED0          logic_tile_routed.v              tb_logic_tile_routed
+  KILLED       RT_LUTINIT_BIT3_TIED0        logic_tile_routed.v              tb_logic_tile_gapfill
+  KILLED       RT_SM_CFG_OFFSET             logic_tile_routed.v              tb_logic_tile_routed
+  KILLED       RT_SM_CFG_BIT68_TIED0        logic_tile_routed.v              tb_logic_tile_routed
+  KILLED       RT_SM_CFG_BIT157_TIED0       logic_tile_routed.v              tb_logic_tile_gapfill
+  KILLED       RT_SM_CFG_BITS69_70_SWAP     logic_tile_routed.v              tb_logic_tile_routed
+  ALLOWLISTED  RT_SR_SLICE_ROTATE           logic_tile_routed.v              -
+  KILLED       RT_EN_SLICE_ROTATE           logic_tile_routed.v              tb_logic_tile_routed
+  KILLED       RT_LUTIN_SLICE_ROTATE        logic_tile_routed.v              tb_logic_tile_routed
+  KILLED       RT_BELO_FEEDBACK_SWAP        logic_tile_routed.v              tb_logic_tile_routed
+  KILLED       RT_EDGE_N_E_SWAP             logic_tile_routed.v              tb_logic_tile_routed
+  KILLED       RT_OUT_W0_FROM_N0            logic_tile_routed.v              tb_logic_tile_routed
+  KILLED       SM_SELECT_FIELD_SHIFT        logic_tile_switch_matrix.v       tb_switch_matrix
+  KILLED       SM_SELECT_BITS_SWAP          logic_tile_switch_matrix.v       tb_switch_matrix
+  KILLED       SM_SELECT_BIT_TIED0          logic_tile_switch_matrix.v       tb_switch_matrix
+  KILLED       SM_SELECT_TOPBIT89_TIED0     logic_tile_switch_matrix.v       tb_switch_matrix
+  KILLED       SM_SOURCE_SWAP_E_S           logic_tile_switch_matrix.v       tb_switch_matrix
+  KILLED       SM_SOURCE_LD_AS_LC           logic_tile_switch_matrix.v       tb_switch_matrix
+  KILLED       SM_DEFAULT_DRIVES_1          logic_tile_switch_matrix.v       tb_switch_matrix
+  KILLED       SM_ENABLE_SRC_W_AS_N         logic_tile_switch_matrix.v       tb_switch_matrix
+  KILLED       SM_LAST_SOURCE_DROPPED       logic_tile_switch_matrix.v       tb_switch_matrix
+  allowlist: RT_SR_SLICE_ROTATE: the generated matrix drives all four BEL SR pins from the single shared net J_SR_END0, so bel_sr[i] are identical and rotating the index is unobservable
+  result: PASS
