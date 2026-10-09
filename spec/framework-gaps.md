@@ -47,11 +47,14 @@ install; pins in `flow/tool_versions.sh`) on the generated model; nextpnr
 loads it, places and routes a 4-input-function BEL plus one routed net, and
 emits FASM (`design/fabulous/nextpnr.log`). Scope is "the model is accepted
 and a trivial design places/routes", not bitstream correctness (G5) or
-timing. Findings from the same run: the generated fabric has no IO BEL
+timing. Findings from the same run (resolution: ADR-0005, issue #92 --
+harness-only pad model + constants folded into LUT truth tables, demonstrated
+with `design/fabulous/nextpnr/top_io.v`; Proposed, pending ratification): the generated fabric has no IO BEL
 (top-level ports cannot be packed: "must be PAD") and no constant driver
 (tied-off pins make `$PACKER_GND` unroutable), each recorded as an
 expected-FAIL probe in the same log, so the accepted design is
-structural with no ports - recorded in `design/README.md` for the G5 owner;
+structural with no ports in the first design, recorded in `design/README.md`
+for the G5 owner;
 (2) the generator needs non-logic boundary terminator tiles and the
 switch matrix is a simplified stand-in - both written up under "Discrepancies
 and deferrals" in `design/README.md` for a decision record. Spec text not
@@ -172,6 +175,12 @@ later the demonstration fabric) — a simulated fabric model driven by a real
 generated bitstream, exercising representative mapped designs (at minimum:
 combinational LUT function coverage, FF register behavior, inter-tile
 routing across the 2×2–4×4 demo grid).
+
+**Status note (issue #92)**: how a mapped design gets ports and constant
+inputs through nextpnr is decided in
+[ADR-0005](decisions/0005-nextpnr-io-and-constant-handling.md) (Proposed):
+harness-only pad model plus constants folded into LUT truth tables. The
+FASM-to-bitstream step and `EN`/`SR` for registered BELs remain open here.
 
 **Verification**: this item *is* verification infrastructure — its own
 acceptance bar is "tests exist under `sim/` and pass," with results recorded

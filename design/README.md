@@ -93,10 +93,17 @@ Two findings from that run, both properties of the G1 harness fabric: it has
 PAD", probe recorded in `nextpnr.log`) and **no constant driver** (a
 tied-off LUT input makes `$PACKER_GND` unroutable: "Failed to find a route
 ... `$PACKER_GND`", probe `nextpnr/top_const.v` recorded in `nextpnr.log`),
-so the accepted design
-is structural, port-less and leaves unused inputs floating. Resolving that
-(IO/tie cells) is a fabric/tile-type change and is left to G5 and a decision
-record. **Not verified:** nextpnr's FASM was not turned into a bitstream or
+so the original
+accepted design (`nextpnr/top.v`) is structural, port-less and leaves unused
+inputs floating. [ADR-0005](../spec/decisions/0005-nextpnr-io-and-constant-handling.md)
+(Proposed, issue #92) chooses the handling: constants fold into the LUT truth
+table (replicated INIT, unused pins and SR/EN left unconnected; no
+`$PACKER_GND/VCC` sink, checked by `flow/nextpnr.sh`) and IO is a
+harness-only pad model (`flow/nextpnr_io_overlay.py`, a scratch copy of the
+nextpnr model; no tile type, BEL or config bit added). `nextpnr/top_io.v`
+(six ports, a 4-input parity LUT and a constant-folded AND3) packs, places and
+routes under that scheme (`nextpnr.log`). FASM pad pips have no config bits;
+FASM-to-bitstream is not built (#74/G5). **Not verified:** nextpnr's FASM was not turned into a bitstream or
 simulated.
 No bitstream was
 assembled or simulated (G5), and no timing claim is made: the
