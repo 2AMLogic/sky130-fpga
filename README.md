@@ -93,12 +93,15 @@ DRC/LVS-clean (`layout/logic_tile.drc.json`: `status: "clean"`;
 has landed on `main`** — evidence is recorded under
 `measurements/timing-characterization/records/20260909-225431-86f71d2.md` and
 corner-specific STA reports under `measurements/timing-characterization/corners/`.
-The **bitstream-level-tests rung has not been started**: it is gated on
-`spec/framework-gaps.md` items
 [G1](spec/framework-gaps.md#g1--pin-down-the-exact-fabulous-tilefabric-description-schema)
-(bitstream/tile-description schema, unconfirmed) and
+(FABulous tile/fabric description schema) is largely closed: FABulous 2.2.0 is
+pinned and a tile description is committed under `design/fabulous/` (the
+generator accepts it; `nextpnr` itself has not been run). The
+**bitstream-level-tests rung has not been started**: it is gated on
 [G5](spec/framework-gaps.md#g5--bitstream-level-functional-verification-rtltile-description-correctness)
-(bitstream-level functional verification), neither of which is closed yet.
+(bitstream-level functional verification) and
+[G6](spec/framework-gaps.md#g6--bitstream-format-documentation)
+(bitstream format documentation), neither of which is closed yet.
 
 ## Repo layout
 
