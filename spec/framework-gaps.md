@@ -40,9 +40,18 @@ generator accepts it and `gen_model_npnr` succeeds
 schema findings - CSV column layout, `sink,source` pair lists, BEL attributes
 - are in `design/README.md`). Config-bit layout: 158 bits, of which the 68
 BEL bits match `logic_tile.v`'s `lut_init[63:0]`/`reg_sel[3:0]`. Caveats:
-(1) `nextpnr` itself was not run (not installed on the dispatch host), so the
-nextpnr half of the acceptance bar is met only up to the generated model
-files; (2) the generator needs non-logic boundary terminator tiles and the
+(1) *closed 2026-10-09 (issue #87)*: `flow/nextpnr.sh` runs pinned yosys
+0.69+260 + `nextpnr-generic --uarch fabulous` (nextpnr-0.11.1-54-g861c57be,
+YosysHQ OSS CAD Suite 2026-10-08 unpacked under `flow/build/`, no host-wide
+install; pins in `flow/tool_versions.sh`) on the generated model; nextpnr
+loads it, places and routes a 4-input-function BEL plus one routed net, and
+emits FASM (`design/fabulous/nextpnr.log`). Scope is "the model is accepted
+and a trivial design places/routes", not bitstream correctness (G5) or
+timing. Findings from the same run: the generated fabric has no IO BEL
+(top-level ports cannot be packed: "must be PAD") and no constant driver
+(tied-off pins make `$PACKER_GND` unroutable), so the accepted design is
+structural with no ports - recorded in `design/README.md` for the G5 owner;
+(2) the generator needs non-logic boundary terminator tiles and the
 switch matrix is a simplified stand-in - both written up under "Discrepancies
 and deferrals" in `design/README.md` for a decision record. Spec text not
 modified.

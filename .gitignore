@@ -10,6 +10,7 @@ __pycache__/
 !sim/*/corners/**/*.log
 # FABulous generator log (G1 evidence, reproduced by flow/fabulous.sh)
 !design/fabulous/generator.log
+!design/fabulous/nextpnr.log
 sim/build/
 # synthesis / P&R scratch
 flow/build/

@@ -1,0 +1,76 @@
+# flow/nextpnr.sh: yosys 0.69+260 / nextpnr-0.11.1-54-g861c57be
+# model: flow/fabulous.sh output (.FABulous/{bel.v3,pips}.txt of the LOGIC4 fabric)
+$ yosys -p 'synth_fabulous -top top -noiopad -extra-plib prims.v -json top.json' top.v
+Warning: Feature 'write_xaiger2' is experimental.
+$ FAB_ROOT=<fabulous-run> nextpnr-generic --uarch fabulous --json top.json -o fasm=top.fasm
+Info: Reading BELs file: /.FABulous/bel.v3.txt
+Info: Reading PIPs file: /.FABulous/pips.txt
+
+Info: No PCF file specified, skipping constraints application.
+
+Info: Device utilisation:
+Info: 	        Global_Clock:       0/      1     0%
+Info: 	         lut4_ff_bel:       2/      4    50%
+
+Info: Placed 0 cells based on constraints.
+Info: Creating initial analytic placement for 2 cells, random placement wirelen = 0.
+Info:     at initial placer iter 0, wirelen = 0
+Info:     at initial placer iter 1, wirelen = 0
+Info:     at initial placer iter 2, wirelen = 0
+Info:     at initial placer iter 3, wirelen = 0
+Info: Running main analytical placer, max placement attempts per cell = 10000.
+Info:   of which solving equations: 0.00s
+Info:   of which spreading cells: 0.00s
+Info:   of which strict legalisation: 0.00s
+
+Info: Running simulated annealing placer for refinement.
+
+Info: No Fmax available; no interior timing paths found in design.
+
+Info: Routing..
+Info: Setting up routing queue.
+Info: Routing 1 arcs.
+Info:    IterCnt |  w/ripup   wo/ripup |  w/r  wo/r |      arcs| batch(sec) total(sec)|
+Info:          1 |        0          1 |    0     1 |         0|       0.00       0.00|
+Info: Routing complete.
+
+Info: No Fmax available; no interior timing paths found in design.
+
+Info: Program finished normally.
+# --- top.fasm ---
+# routing for net '$PACKER_GND'
+
+
+# routing for net '$PACKER_VCC'
+
+
+# routing for net 'n2'
+
+
+# routing for net 'n1'
+
+X1Y1.LB_O.E1BEG3
+X1Y1.W1END0.LA_I0
+X1Y1.E1BEG3.E1END3
+X2Y1.E1END3.W1BEG0
+X2Y1.W1BEG0.W1END0
+
+# config for cell '$PACKER_GND_DRV'
+
+
+# config for cell '$PACKER_VCC_DRV'
+
+
+# config for cell 'u1'
+
+X1Y1.A.INIT[15:0] = 'b0110100110010110
+
+# config for cell 'u0'
+
+X1Y1.B.INIT[15:0] = 'b0110100110010110
+
+# --- probe (expected FAIL): top_ports.v, 4-input function on top-level ports ---
+Warning: Feature 'write_xaiger2' is experimental.
+ERROR: Top-level port 'y' connected to illegal port $auto$abc_ops_reintegrate.cc:696:reintegrate$241._lut.O (must be PAD)
+ERROR: Packing design failed.
+0 warnings, 2 errors
