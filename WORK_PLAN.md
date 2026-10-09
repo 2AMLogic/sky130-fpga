@@ -25,13 +25,13 @@ _None._
 
 Issues currently being built (`loom:building`).
 
-- **#137**: Routability: isolate LUT pin-index assignment in the single-tile fanout failure
+- **#140**: G5: replay committed streams through the integrated FABulous-generated tile
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#142**: Routability: opt-in LUT pin-index experiment for fan4 (#137)
+_None._
 
 ## Approved (Awaiting Merge)
 
@@ -47,8 +47,7 @@ _None._
 
 ## Proposed (Architect / Hermit)
 
-- **#140**: G5: replay committed streams through the integrated FABulous-generated tile *(architect)*
-- **#141**: Verification: require completed functional rejection in gate bitstream negative controls *(architect)*
+_None._
 
 ## Epics
 
@@ -62,9 +61,9 @@ _None._
 | Operator priority | 0 |
 | Ready (`loom:issue`) | 0 |
 | In Progress (`loom:building`) | 1 |
-| PRs awaiting review | 1 |
+| PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 0 |
-| Architect / Hermit proposals | 2 |
+| Architect / Hermit proposals | 0 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
