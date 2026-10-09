@@ -1,0 +1,137 @@
+{
+  "artifacts_sha256": {
+    "logic_tile_routed.def": "9747b1b37b7375435d4fe3ed19b8633d5033da8ccf4a7d1c9a5be7064518a8cd",
+    "logic_tile_routed.gds": "58613737e379e7a4e93d25fa0bed41f74febfbce76abe6f9cc26eef82fed7e60",
+    "logic_tile_routed.par.json": "88c7006ebd2be75d323337f23610939341475e3ffcf91bfd6e58ecdc181a4e7d",
+    "logic_tile_routed.synth.v": "0e7d4c702b06c7f4a3272cc60a95f4e1ec96c2fec7d74da66727738534a99f22",
+    "logic_tile_routed.v": "2568a2e841c20b65ee441e3a2a60882eaf04af549d62248bf2b55ee03ab66e51"
+  },
+  "clock_period_ns_placeholder": 20,
+  "issue": 102,
+  "place_and_route": {
+    "antenna_violation_count": 2,
+    "core_area_um2": 4754.56,
+    "die_area_um2": 5527.18,
+    "hold_violation_count": 0,
+    "route_drc_violation_count": 0,
+    "seed": 1,
+    "setup_violation_count": 0,
+    "stage_reached": "route",
+    "status": "ok",
+    "timing_status": "constrained",
+    "utilization_pct": 43.6579,
+    "wirelength_um": 9764
+  },
+  "place_and_route_slack_estimates_ns": {
+    "worst_hold_slack_ns": 0.35583,
+    "worst_setup_slack_ns": 15.2043,
+    "worst_slack_ns": 19.348
+  },
+  "schema": "sky130-fpga.layout-routed-run-record/1",
+  "slack_estimates_caveat": "OpenROAD estimates against a placeholder clock with no I/O delay constraints (port-to-register and port-to-port paths are not characterized) -- not a timing claim. cyclic_scc_count==0 because matrix LUT-input muxes select only from the 16 track inputs and BEL outputs only reach track outputs: loops exist only across tile abutment, which a single-tile run cannot see.",
+  "sources_sha256": {
+    "design/rtl/logic_tile_routed.v": "6f5c0fee5e882ecff60851c8d9daf6a86486abab6eb0da3e82b45ff143670fd0",
+    "design/rtl/logic_tile_switch_matrix.v": "34f38f5837b7384e919dc4e21081124786600638aba41159379d95262636eb65",
+    "design/rtl/lut4_slice.v": "670559dfb7e57cb8b9b636a211187406e9c9f6e09a9b5ff2c044024030a7a4aa"
+  },
+  "status_note": "EXPERIMENTAL: place-and-route canary of the same-index stand-in matrix (spec/decisions/0004 Proposed). Not signoff; no timing claim.",
+  "structure": {
+    "combinational_cycle_analysis": {
+      "cells_in_cycles": 0,
+      "cyclic_scc_count": 0,
+      "cyclic_scc_sizes": [],
+      "method": "cell-level SCC over every non-output pin of every combinational cell (all mux data+select inputs), flops cut; structural over ALL configurations"
+    },
+    "hierarchy_prefix_instance_counts": {
+      "g_slice[0].u_slice": 11,
+      "g_slice[1].u_slice": 11,
+      "g_slice[2].u_slice": 11,
+      "g_slice[3].u_slice": 11,
+      "u_sm": 101
+    },
+    "instance_counts_by_cell": {
+      "sky130_fd_sc_hd__buf_4": 3,
+      "sky130_fd_sc_hd__dfxtp_1": 4,
+      "sky130_fd_sc_hd__diode_2": 2,
+      "sky130_fd_sc_hd__inv_1": 4,
+      "sky130_fd_sc_hd__mux2_2": 4,
+      "sky130_fd_sc_hd__mux2i_1": 16,
+      "sky130_fd_sc_hd__mux4_2": 57,
+      "sky130_fd_sc_hd__nand2_1": 16,
+      "sky130_fd_sc_hd__nor2_1": 8,
+      "sky130_fd_sc_hd__o21a_1": 20,
+      "sky130_fd_sc_hd__o221ai_1": 16
+    },
+    "top_ports": {
+      "cfg": {
+        "dir": "input",
+        "width": 158
+      },
+      "clk": {
+        "dir": "input",
+        "width": 1
+      },
+      "e_in": {
+        "dir": "input",
+        "width": 4
+      },
+      "e_out": {
+        "dir": "output",
+        "width": 4
+      },
+      "n_in": {
+        "dir": "input",
+        "width": 4
+      },
+      "n_out": {
+        "dir": "output",
+        "width": 4
+      },
+      "s_in": {
+        "dir": "input",
+        "width": 4
+      },
+      "s_out": {
+        "dir": "output",
+        "width": 4
+      },
+      "w_in": {
+        "dir": "input",
+        "width": 4
+      },
+      "w_out": {
+        "dir": "output",
+        "width": 4
+      }
+    }
+  },
+  "synthesis": {
+    "area_um2": 1979.3984,
+    "instance_count": 149,
+    "instance_counts_by_type": {
+      "sky130_fd_sc_hd__clkbuf_1": 4,
+      "sky130_fd_sc_hd__dfxtp_1": 4,
+      "sky130_fd_sc_hd__inv_1": 4,
+      "sky130_fd_sc_hd__mux2_2": 4,
+      "sky130_fd_sc_hd__mux2i_1": 16,
+      "sky130_fd_sc_hd__mux4_2": 57,
+      "sky130_fd_sc_hd__nand2_1": 16,
+      "sky130_fd_sc_hd__nor2_1": 8,
+      "sky130_fd_sc_hd__o21a_1": 20,
+      "sky130_fd_sc_hd__o221ai_1": 16
+    },
+    "sequential_area_um2": 80.0768,
+    "status": "ok"
+  },
+  "tools": {
+    "klt": "klt 0.7.0+g4cbdfa769875",
+    "openroad": "26Q3-1510-g6cb3f2b704 ",
+    "pdk": {
+      "name": "sky130A",
+      "version": "open_pdks c6d73a35f524070e85faff4a6a9eef49553ebc2b"
+    },
+    "yosys": "Yosys 0.67+post (git sha1 b8e7da6f40ae8f552c116bf6c359b07c6533e159, Release, GNU /usr/bin/c++ 13.3.0)"
+  },
+  "top": "logic_tile_routed",
+  "utc": "2026-10-09T10:13:40Z"
+}

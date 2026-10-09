@@ -72,6 +72,13 @@ and friends per `CLAUDE.md`).
 now exists, but the committed layout is still BEL-only. Still open: `klt par`
 of the composed tile, then DRC/LVS (follow-on issue to be filed).
 
+*Status note (#102):* an **experimental** `klt synthesize` + `klt
+place-and-route` run of the composed tile now exists under
+`layout/experimental/` (`flow/layout_routed.sh`): routing reached, 0 route
+DRC violations. It measures the same-index stand-in matrix (ADR-0004
+Proposed) and makes no DRC/LVS/ERC, timing or reset-compliance claim; those
+and the topology decision remain open under G2/G3/G4.
+
 **Work item**: standard-cell (or custom) implementation of the tile,
 placed and routed on sky130 using klayout-tools. Given `CLAUDE.md`'s framing
 ("a dense, regular logic tile is exactly the kind of workout `klt par`
