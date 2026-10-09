@@ -291,6 +291,25 @@ Regenerating the gate-level netlist and SDF also requires `klt`, `openroad`,
 `yosys` and a resolvable sky130A PDK (same requirements as
 `flow/layout.sh`).
 
+## Composed-tile gate-level coverage (issue #112, EXPERIMENTAL)
+
+**Label: composed tile, stand-in matrix (ADR-0004 Proposed), zero-delay,
+functional-only; no timing claim.** `./flow/gate-sim-routed.sh` re-runs
+`sim/tb_logic_tile_routed.v` **unmodified** against the committed synthesized
+netlist `layout/experimental/logic_tile_routed.synth.v` (the netlist that was
+placed and routed in #102/#108) plus the `sky130_fd_sc_hd` cell models. This
+closes the gap that LVS only compares layout to its own as-built netlist: it
+shows the synthesized netlist still passes the same 1046 checks as the RTL.
+The testbench uses only top-level ports, so flattening/hierarchy names need no
+handling. Result: `PASS: tb_logic_tile_routed (1046 checks, 0 failures)`,
+recorded append-only in `sim/logic_tile_routed_gate_results.txt`.
+
+Non-claims: no timing/SDF/parasitics; not formal equivalence; no statement
+about the ratified Wilton-class fabric (ADR-0004/0005 Proposed); not G5/G6
+completion. Needs only Icarus Verilog and the sky130A cell models (no `klt`),
+but the PDK models are not available in `rtl-sim.yml`, so it is deliberately
+**not** wired into CI and not part of `./sim/run.sh`.
+
 ## Out of scope here
 
 Bitstream-level verification of the *ratified* fabric (the Wilton-class

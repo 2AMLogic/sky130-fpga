@@ -1,0 +1,22 @@
+# Append-only evidence record (issue #112). Add new dated entries below; do not edit old ones.
+# LABEL: composed tile, stand-in matrix (ADR-0004 Proposed), zero-delay, functional-only; no timing claim.
+# Scope: the experimental composed tile (layout/experimental/, #102/#108) synthesized netlist,
+#   simulated with the sky130_fd_sc_hd behavioral models and the UNMODIFIED sim/tb_logic_tile_routed.v.
+# Non-claims: not conformance to the ratified Wilton-class population (ADR-0004/0005 Proposed); no
+#   timing, SDF, parasitic or power content; not a proof of equivalence (simulation of the testbench's
+#   1046 checks only, no formal LEC); says nothing about the placed/routed DEF/GDS beyond that the
+#   netlist fed to place-and-route is functionally consistent with the tested RTL on these vectors;
+#   not G5/G6 completion; no inter-tile routing; no spec or signoff artifact changed.
+# Reproduce: ./flow/gate-sim-routed.sh   (iverilog 13 + sky130A cell models; no klt/openroad needed)
+
+2026-10-09  sim/tb_logic_tile_routed.v  (gate-level, zero delay)
+  Netlist : layout/experimental/logic_tile_routed.synth.v  sha256 0e7d4c702b06c7f4a3272cc60a95f4e1ec96c2fec7d74da66727738534a99f22
+  TB      : sim/tb_logic_tile_routed.v (unmodified)         sha256 cad2f85b85ebc037e87efdf39ed5ef1002cfa65a66b565b1cf731b74e3c4f30f
+  Models  : sky130_fd_sc_hd primitives.v + sky130_fd_sc_hd.v (zero-delay run; no -gspecify, no SDF)
+  Tool    : Icarus Verilog 13.0 (stable)
+  Result  : PASS: tb_logic_tile_routed (1046 checks, 0 failures)  -- same check count as the RTL run
+  Hierarchy: the testbench references only top-level ports of the DUT, so no flattening/instance-name
+            issue arises (the netlist keeps logic_tile_routed / logic_tile_switch_matrix / lut4_slice
+            as separate modules; escaped \g_slice[N].u_slice instance names are never referenced).
+  Sensitivity control (not committed): replacing one nand2_1 with nor2_1 in a scratch copy of the
+            netlist makes the same testbench report 2 failures, so the run does exercise the netlist.
