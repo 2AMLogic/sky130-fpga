@@ -35,6 +35,7 @@ fi
 TESTBENCHES=(
     "tb_lut4_slice:${RTL_DIR}/lut4_slice.v"
     "tb_logic_tile:${RTL_DIR}/lut4_slice.v ${RTL_DIR}/logic_tile.v"
+    "tb_switch_matrix:${RTL_DIR}/logic_tile_switch_matrix.v"
 )
 
 overall_status=0
@@ -48,7 +49,7 @@ for entry in "${TESTBENCHES[@]}"; do
 
     echo "=== building ${name} ==="
     # shellcheck disable=SC2086 # intentional word-splitting of rtl_sources
-    if ! iverilog -g2012 -Wall -o "$out_bin" $rtl_sources "$tb_source" 2>&1 | tee "${log_file}.compile"; then
+    if ! iverilog -g2012 -Wall -I "$SCRIPT_DIR" -o "$out_bin" $rtl_sources "$tb_source" 2>&1 | tee "${log_file}.compile"; then
         echo "error: compile failed for ${name}" >&2
         overall_status=1
         continue
