@@ -38,6 +38,24 @@ Build outputs land in `sim/build/` (gitignored).
 
 Exit status is `0` iff every testbench reports `PASS` with zero failures.
 
+### CI
+
+`.github/workflows/rtl-sim.yml` (workflow `rtl-sim`) runs `./sim/run.sh` on
+every pull request and on pushes to `main`, on `ubuntu-24.04` with the
+packaged `iverilog` (the version is printed in the job log), read-only
+permissions and a 15-minute timeout. It is a separate workflow from
+`signoff.yml`, whose bytes are evidence-bound. The testbench list is not
+duplicated in YAML, so testbenches added to `sim/run.sh` are picked up
+automatically (provided their tool needs are met by the runner). Compile and
+simulation logs (`sim/build/*.log*`) are uploaded as the `rtl-sim-logs`
+artifact even on failure; they are build artifacts and do not replace any
+committed evidence.
+
+**Coverage is RTL-only.** This check is the behavioral regression of
+`lut4_slice` and `logic_tile`. It does not cover bitstream-level fabric
+verification (pending, G5) or gate-level/SDF-annotated verification
+(blocked, see below); it makes no timing claim.
+
 **No PDK is read by this run, and none needs pinning.** `sim/run.sh`
 compiles behavioral RTL only — no `sky130_fd_sc_hd` cell model, no liberty,
 no LEF/GDS — so no PDK revision can change its result. That is why the

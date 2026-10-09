@@ -1,0 +1,45 @@
+# RTL regression: runs the existing Icarus testbench harness (sim/run.sh).
+#
+# Deliberately a separate workflow from signoff.yml: that file's bytes are
+# bound by the item-10 evidence envelope, so it must not be edited for
+# unrelated checks. This job needs no PDK and no klayout-tools.
+#
+# The testbench list lives only in sim/run.sh; do not duplicate it here.
+name: rtl-sim
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  rtl-sim:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Icarus Verilog
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends iverilog
+
+      - name: Print simulator version
+        run: |
+          iverilog -V | head -n 1
+          vvp -V | head -n 1
+
+      - name: Run RTL testbench suite
+        run: ./sim/run.sh
+
+      - name: Upload compile and simulation logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rtl-sim-logs
+          path: sim/build/*.log*
+          if-no-files-found: warn
+          retention-days: 14
