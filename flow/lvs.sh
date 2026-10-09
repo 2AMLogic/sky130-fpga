@@ -75,6 +75,25 @@
 #                              logic_tile.par.json (via `flow/layout.sh
 #                              --update`), and logic_tile.lvs.json. Refuses
 #                              to write a non-"match" LVS report.
+#   ./flow/lvs.sh --update-report
+#                            # regenerate the reference netlist exactly as
+#                              check mode does (layout/logic_tile.gds,
+#                              .def and .par.json are NOT touched), run LVS
+#                              against the committed GDS, and write only
+#                              layout/logic_tile.lvs.json. For a klt-only
+#                              change to the LVS compare itself (issue #69:
+#                              re-enabling power connectivity under a klt
+#                              carrying klayout-tools#2121) where the
+#                              committed layout must stay byte-identical.
+#                              Same refusal rules as --update. The reference
+#                              then comes from a different run than the GDS,
+#                              so a "match" here is a cross-run topological
+#                              match -- see layout/README.md's "LVS scope,
+#                              concretely" for why that is still honest.
+#
+# Every mode also refuses (exit non-zero) unless the report's
+# power_connectivity.status is "match": T1 item 11 cites this report for
+# the structural power-delivery claim (issue #69).
 #
 # Requires everything flow/layout.sh requires (klt, a native yosys build,
 # openroad, a resolvable sky130A PDK), plus nothing else -- LVS itself runs
@@ -108,11 +127,14 @@ case "${1:-}" in
     --update)
         MODE="update"
         ;;
+    --update-report)
+        MODE="update-report"
+        ;;
     "")
         MODE="check"
         ;;
     *)
-        echo "usage: $0 [--update]" >&2
+        echo "usage: $0 [--update | --update-report]" >&2
         exit 1
         ;;
 esac
@@ -143,11 +165,14 @@ require_pdk_resolvable "$PDK_VARIANT"
 # (issue #41, PR #55); on older builds `klt lvs` wrote
 # `provenance.pdk: null`, and even there this banner remained where a PDK
 # swap became visible. See flow/tool_versions.sh (issue #34, T1 checklist
-# item 9). Only the PDK half of the banner is printed here; the
-# klt/OpenROAD half comes from the flow/layout.sh invocation below, which
-# prints the full banner.
+# item 9). The klt half is checked against RECORDED_LVS_KLT_VERSION -- the
+# klt that produced the committed LVS report, a lineage separate from the
+# layout's RECORDED_KLT_VERSION (issue #69). The flow/layout.sh invocation
+# below prints its own full banner against the layout lineage, and that
+# one is expected to warn under the LVS klt.
 # shellcheck source=./tool_versions.sh
 source "$SCRIPT_DIR/tool_versions.sh"
+print_klt_version_banner "$RECORDED_LVS_KLT_VERSION" "LVS report (layout/${REPORT_NAME})"
 print_pdk_version_banner "$PDK_VARIANT"
 
 mkdir -p "$LVS_BUILD_DIR"
@@ -176,6 +201,15 @@ fi
 
 SYNTH_RESPONSE="$BUILD_DIR/synth_response.json"
 AS_BUILT_NETLIST="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.v"
+
+# klt >= 0.6.0 writes stage artifacts under .klt/<stage>/run-<id>/ (same
+# fallback as flow/layout.sh / flow/sdf-resim.sh): flat path if present,
+# else the newest run-* copy -- the one flow/layout.sh just wrote above.
+if [[ ! -s "$AS_BUILT_NETLIST" ]]; then
+    # shellcheck disable=SC2012
+    newest_netlist="$(ls -1dt "$(dirname "$AS_BUILT_NETLIST")"/run-*/"$(basename "$AS_BUILT_NETLIST")" 2>/dev/null | head -1 || true)"
+    AS_BUILT_NETLIST="${newest_netlist:-$AS_BUILT_NETLIST}"
+fi
 
 if [[ ! -s "$AS_BUILT_NETLIST" ]]; then
     echo "error: no as-built netlist at $AS_BUILT_NETLIST -- flow/layout.sh did not reach place-and-route (see $LAYOUT_LOG)" >&2
@@ -240,33 +274,14 @@ LVS_REQUEST="$LVS_BUILD_DIR/lvs_request.json"
 LVS_RESPONSE="$LVS_BUILD_DIR/lvs_response.json"
 GENERATED_REPORT="$LVS_BUILD_DIR/${REPORT_NAME}"
 
-# options.power_connectivity is deliberately false. This compare is the
-# *signal-connectivity* half of T1 item 4 (see layout/README.md's "LVS
-# scope, concretely"): the gate-level-verilog reference carries no supply
-# pins at all, so the power half is verified by flow/erc.sh against the GDS
-# geometry (issue #41). klt >= 16ca3d40 additionally runs an inline
-# power-connectivity check over the layout-side netlist, and under this
-# flow's --abstract-cells greyboxing that check cannot be answered here:
-# the blackboxed cells hide the in-cell well geometry, so each standard
-# cell's VPB pin extracts onto its row-pair-local well net (VPB, VPB$1,
-# ... VPB$6 on this layout) and the checker reports
-# power.inconsistent_pin_net even though every one of those well regions
-# contains a tap contact reaching the single-island VPWR node -- exactly
-# what klt erc's nwell_tap tie rule verifies (0 missing_tie, see
-# flow/erc.sh). A klt that predates the feature ignores the key entirely
-# (unknown request options are dropped, not rejected), so this stays
-# portable across the toolchain versions flow/tool_versions.sh warns about.
-#
-# Re-enable trigger (dated, issue #49): the mismatch this disable guards
-# against was verified upstream to be an abstracted-cell extraction
-# artifact, not a real PDN gap -- klayout-tools#2082's flat-extract
-# control measured 407/407 pfet bulks on the power net and 407/407 nfet
-# bulks on ground across the 814-device layout, and klt#2121 fixed it by
-# preserving abstracted well continuity. The recorded toolchain
-# (0.5.0+g2b7caa9939af, pinned in flow/tool_versions.sh) is the build
-# klt#2082 was filed against and predates that fix, so the disable stays
-# structurally necessary on it: a future klt bump past klt#2121 may re-
-# enable this option and expect power_connectivity.status: "match".
+# Power connectivity (issue #69): the request leaves `options` unset, so
+# `klt lvs` runs its inline power-connectivity check over the layout-side
+# netlist (default on). It was disabled (issue #49) while abstracted-cell
+# extraction split each row's well into row-local VPB nets -- the
+# extraction artifact klayout-tools#2082 confirmed and klayout-tools#2121
+# fixed by preserving abstracted well continuity. Under
+# RECORDED_LVS_KLT_VERSION (which contains #2121) the check reports
+# "match"; the gate after `klt lvs` below refuses any other status.
 cat > "$LVS_REQUEST" <<EOF
 {
   "schema": "klt.lvs.request/1",
@@ -277,8 +292,7 @@ cat > "$LVS_REQUEST" <<EOF
     "top": "${TOP_MODULE}",
     "form": "gate-level-verilog",
     "library": "${STD_CELL_LIBRARY}"
-  },
-  "options": { "power_connectivity": false }
+  }
 }
 EOF
 
@@ -289,9 +303,16 @@ if ! klt lvs "$LVS_REQUEST" --format json | tee "$LVS_RESPONSE"; then
 fi
 if ! python3 -c "import json,sys; sys.exit(0 if json.load(open('$LVS_RESPONSE')).get('status') == 'match' else 1)"; then
     echo "error: klt lvs did not report status 'match' (see $LVS_RESPONSE) -- refusing to commit a non-clean LVS report" >&2
-    if [[ "$MODE" != "update" ]]; then
+    if [[ "$MODE" == "check" ]]; then
         echo "       if this is due to the non-reproducibility note above, run './flow/lvs.sh --update' instead" >&2
     fi
+    exit 1
+fi
+PC_STATUS="$(python3 -c "import json,sys; print((json.load(open(sys.argv[1])).get('power_connectivity') or {}).get('status'))" "$LVS_RESPONSE")"
+if [[ "$PC_STATUS" != "match" ]]; then
+    echo "error: klt lvs power_connectivity.status is '${PC_STATUS}', not 'match' (see $LVS_RESPONSE) -- T1 item 11 cites" >&2
+    echo "       this report for structural power delivery; refusing a report that does not verify it." >&2
+    echo "       A klt older than RECORDED_LVS_KLT_VERSION (${RECORDED_LVS_KLT_VERSION}) predates klayout-tools#2121." >&2
     exit 1
 fi
 
@@ -302,9 +323,9 @@ RTL_INPUT_SHA256="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1
 
 python3 "$SCRIPT_DIR/lvs_report_trim.py" "$LVS_RESPONSE" "$LAYOUT_GDS_SHA256" "$RTL_INPUT_SHA256" "$GENERATED_REPORT"
 
-if [[ "$MODE" == "update" ]]; then
+if [[ "$MODE" == "update" || "$MODE" == "update-report" ]]; then
     cp "$GENERATED_REPORT" "$COMMITTED_REPORT"
-    echo "=== LVS report written to ${COMMITTED_REPORT} (status: match) ==="
+    echo "=== LVS report written to ${COMMITTED_REPORT} (status: match, power_connectivity: match) ==="
     exit 0
 fi
 
@@ -324,4 +345,4 @@ if [[ "$status" -ne 0 ]]; then
     exit 1
 fi
 
-echo "=== committed LVS report matches regenerated output (reproducible, status: match) ==="
+echo "=== committed LVS report matches regenerated output (reproducible, status: match, power_connectivity: match) ==="

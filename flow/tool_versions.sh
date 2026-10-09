@@ -89,6 +89,24 @@ RECORDED_OPENROAD_VERSION="26Q3-1278-g4421880472"
 RECORDED_STA_KLT_VERSION="0.7.0+g6fd0278268cc"
 RECORDED_STA_OPENROAD_VERSION="26Q3-1510-g6cb3f2b704"
 
+# The klt that produced the LVS report CURRENTLY committed as
+# layout/logic_tile.lvs.json (issue #69). The first klt build carrying
+# klayout-tools#2121 ("preserve abstracted well continuity", merge commit
+# fa034fb670d8, 2026-09-19) is what lets flow/lvs.sh re-enable `klt lvs`'s
+# power-connectivity check and get power_connectivity.status "match" under
+# --abstract-cells; 0.5.0+g2b7caa9939af is 30 commits behind that merge.
+# This is the PyPI `klayout-tools==0.7.0` release (725 commits past the
+# merge), reproducible in a throwaway env with
+# `uvx --from "klayout-tools==0.7.0" klt ...`. Split from
+# RECORDED_KLT_VERSION for the same reason the STA pin is: the GDS, DEF
+# and par report were NOT regenerated (flow/lvs.sh --update-report leaves
+# them byte-identical) and do not regenerate byte-identically under 0.7.0,
+# so bumping the shared pin would misstate their lineage. The LVS
+# reference netlist is regenerated every run by flow/layout.sh's check
+# mode; under this klt that ran OpenROAD RECORDED_STA_OPENROAD_VERSION.
+# flow/lvs.sh prints its klt banner against this value.
+RECORDED_LVS_KLT_VERSION="0.7.0+g4cbdfa769875"
+
 # The sky130A PDK revision those same committed artifacts were produced
 # against -- the value `klt pdk find --pdk sky130A --format json` reports
 # as `.version`, and the value both committed provenance blocks above
@@ -141,18 +159,22 @@ print_pdk_version_banner() {
 # cannot have been produced by the pinned klt and this banner is where
 # that says so out loud. Safe to call once `klt` is confirmed on $PATH.
 #
-# Usage: print_klt_version_banner
+# Usage: print_klt_version_banner [expected_klt] [artifact_description]
+# (defaults: RECORDED_KLT_VERSION, "layout artifacts" -- flow/lvs.sh passes
+# RECORDED_LVS_KLT_VERSION instead, issue #69).
 print_klt_version_banner() {
     local installed_klt
+    local expected_klt="${1:-$RECORDED_KLT_VERSION}"
+    local artifact="${2:-layout artifacts}"
     installed_klt="$(klt --version 2>/dev/null | awk '{print $2}')"
 
     echo "=== toolchain: klt ${installed_klt:-unknown} ==="
-    if [[ "$installed_klt" != "$RECORDED_KLT_VERSION" ]]; then
+    if [[ "$installed_klt" != "$expected_klt" ]]; then
         {
             echo "warning: installed klt (${installed_klt:-unknown}) differs from the klt that produced the"
-            echo "         currently committed layout artifacts (${RECORDED_KLT_VERSION}). The report this run"
-            echo "         writes pins its own klt version in provenance.klt_version, so the committed evidence"
-            echo "         records which klt actually produced it -- see flow/README.md's 'Toolchain versions'"
+            echo "         currently committed ${artifact} (${expected_klt}). A report that keeps"
+            echo "         provenance.klt_version (the ERC report does; the trimmed LVS report does not) records"
+            echo "         which klt actually produced it -- see flow/README.md's 'Toolchain versions'"
             echo "         section before treating any diff below as a design regression."
         } >&2
     fi

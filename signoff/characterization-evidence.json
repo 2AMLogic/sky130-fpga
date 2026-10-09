@@ -2,11 +2,11 @@
   "schema_version": 1,
   "kind": "generic",
   "status": "pass",
-  "summary": "T1 item 8 aggregated characterization report, current against its committed sources (generate-characterization-summary.py --check passes): DRC clean (0 violations), LVS signal-match (topology.power_only_pruned warning, signal-connectivity scope), ERC supply connectivity 0 findings and 0 antenna violations across 232 gates, 18-corner SPEF-annotated STA setup/hold-clean and timing_status constrained at every corner (binding corner ss_n40C_1v28, SPEF WNS 15.2145 ns under klt 0.7.0, -0.1 ps vs the 15.2146 ns figure of record; record 20261008-234741-dc615b4, multi-corner envelope logic_tile.sta.json cited for item 5), timing spec row ratified (ADR-0002) with the WNS figure of record re-ratified against the post-PDN geometry (ADR-0003). The SDF-annotated gate-level re-simulation leg is still BLOCKED and is recorded as such in the same report: klayout-tools#1890 is closed, but its fix (klt v0.6.0) is only a fail-loud guard on options.sdf, a raw $sdf_annotate still aborts vvp (re-tried 2026-10-08, record 20261008-233733-23e6b5e), and the remaining gap is tracked as klayout-tools#2897.",
+  "summary": "T1 item 8 aggregated characterization report, current against its committed sources (generate-characterization-summary.py --check passes): DRC clean (0 violations), LVS match (signal-connectivity compare, warnings topology.power_only_pruned and topology.top_level_pins_anchored; power_connectivity match since issue #69), ERC supply connectivity 0 findings and 0 antenna violations across 232 gates, 18-corner SPEF-annotated STA setup/hold-clean and timing_status constrained at every corner (binding corner ss_n40C_1v28, SPEF WNS 15.2145 ns under klt 0.7.0, -0.1 ps vs the 15.2146 ns figure of record; record 20261008-234741-dc615b4, multi-corner envelope logic_tile.sta.json cited for item 5), timing spec row ratified (ADR-0002) with the WNS figure of record re-ratified against the post-PDN geometry (ADR-0003). The SDF-annotated gate-level re-simulation leg is still BLOCKED and is recorded as such in the same report: klayout-tools#1890 is closed, but its fix (klt v0.6.0) is only a fail-loud guard on options.sdf, a raw $sdf_annotate still aborts vvp (re-tried 2026-10-08, record 20261008-233733-23e6b5e), and the remaining gap is tracked as klayout-tools#2897.",
   "source": "measurements/characterization-summary.md",
   "provenance": {
     "input": {
-      "content_hash": "sha256:538b22ab8b17d512ff6cddaad697bf0f3b16bb0f13a3646d729ae7ff0872f0e4",
+      "content_hash": "sha256:9513ada8af48a8ce3924c9ed4523e2c413cfc9e94c12023e30076416a5f8c7d4",
       "role": "characterization-record"
     }
   }
