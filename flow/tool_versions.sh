@@ -54,7 +54,9 @@
 # actual inputs -- remains the stated pin.
 
 # The klt / OpenROAD versions that produced the artifacts CURRENTLY
-# committed under layout/ and measurements/timing-characterization/ (per
+# committed under layout/ (and, until issue #68, also the STA evidence
+# under measurements/timing-characterization/ -- see
+# RECORDED_STA_KLT_VERSION below for that lineage now) (per
 # layout/logic_tile.erc.json's provenance.klt_version pin and the successor
 # records:
 # measurements/timing-characterization/records/20260921-062500-e8a37ad.md
@@ -63,10 +65,29 @@
 # GDS/DEF/SPEF/SDF lineage was produced under 0.5.0+g2b7caa9939af, and
 # check-mode diffs were re-verified 2026-09-21 on this tree under
 # 0.5.0+g2b1e55e51bb8.dirty -- byte-identical GDS/DEF, identical verdict
-# fields in every re-stamped report. See flow/README.md's "Known drift"
-# for the OpenROAD-image annotation regression the SPEF legs hit.
+# fields in every re-stamped report. The committed SDF
+# (measurements/timing-characterization/logic_tile_route.sdf) is still of
+# this lineage too.
 RECORDED_KLT_VERSION="0.5.0+g2b7caa9939af"
 RECORDED_OPENROAD_VERSION="26Q3-1278-g4421880472"
+
+# The klt / OpenROAD that produced the STA evidence CURRENTLY committed by
+# flow/sta-sweep.sh: every corners/*/*.sta.json, the multi-corner item-5
+# envelope logic_tile.sta.json and the sanitized SPEF logic_tile.spef under
+# measurements/timing-characterization/ (issue #68, successor record
+# measurements/timing-characterization/records/20261008-234741-dc615b4.md).
+# A deliberate design-flow upgrade: only a klt that emits `timing_status`
+# (klayout-tools#1865) and accepts `pdk.corners` (klayout-tools#1871)
+# produces an envelope `klt signoff` can grade for T1 item 5. Split from
+# RECORDED_KLT_VERSION rather than replacing it because the layout/
+# artifacts were NOT regenerated (and do not regenerate byte-identically
+# under this newer toolchain -- record 20261008-233733-23e6b5e), so
+# bumping the shared pin would misstate their lineage. Measured drift vs.
+# the 0.5.0 lineage: binding-corner (ss_n40C_1v28) SPEF WNS 15.2146 ->
+# 15.2145 ns (-0.1 ps); see the record for every corner. flow/sta-sweep.sh
+# prints its banner against THESE two values.
+RECORDED_STA_KLT_VERSION="0.7.0+g6fd0278268cc"
+RECORDED_STA_OPENROAD_VERSION="26Q3-1510-g6cb3f2b704"
 
 # The sky130A PDK revision those same committed artifacts were produced
 # against -- the value `klt pdk find --pdk sky130A --format json` reports
@@ -142,17 +163,23 @@ print_klt_version_banner() {
 # RECORDED_PDK_VERSION above, a warning pointing back to this file and
 # flow/README.md. Safe to call once `klt`/`openroad` are already confirmed
 # present on $PATH.
+#
+# Usage: print_tool_version_banner [pdk_variant] [expected_klt] [expected_openroad]
+# (defaults: sky130A, RECORDED_KLT_VERSION, RECORDED_OPENROAD_VERSION --
+# flow/sta-sweep.sh passes the RECORDED_STA_* pair instead, issue #68).
 print_tool_version_banner() {
     local installed_klt installed_openroad
+    local expected_klt="${2:-$RECORDED_KLT_VERSION}"
+    local expected_openroad="${3:-$RECORDED_OPENROAD_VERSION}"
     installed_klt="$(klt --version 2>/dev/null | awk '{print $2}')"
     installed_openroad="$(openroad -version 2>/dev/null | head -1 | awk '{print $1}')"
 
     echo "=== toolchain: klt ${installed_klt:-unknown}, OpenROAD ${installed_openroad:-unknown} ==="
-    if [[ "$installed_klt" != "$RECORDED_KLT_VERSION" || "$installed_openroad" != "$RECORDED_OPENROAD_VERSION" ]]; then
+    if [[ "$installed_klt" != "$expected_klt" || "$installed_openroad" != "$expected_openroad" ]]; then
         {
             echo "warning: installed toolchain (klt ${installed_klt:-unknown} / OpenROAD ${installed_openroad:-unknown}) differs from"
-            echo "         the toolchain that produced the currently committed artifacts (klt ${RECORDED_KLT_VERSION} /"
-            echo "         OpenROAD ${RECORDED_OPENROAD_VERSION}). A check-mode diff below on a byte-reproducibility"
+            echo "         the toolchain that produced the currently committed artifacts (klt ${expected_klt} /"
+            echo "         OpenROAD ${expected_openroad}). A check-mode diff below on a byte-reproducibility"
             echo "         artifact (GDS/DEF/report, or a spef_sha256 provenance field) alongside matching *numeric*"
             echo "         STA/timing/wirelength results may be toolchain drift, not a design regression -- see"
             echo "         flow/README.md's 'Toolchain versions' section before treating it as one (issue #23)."

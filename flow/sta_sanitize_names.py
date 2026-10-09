@@ -63,13 +63,17 @@ script exits non-zero rather than emit a silently-wrong file.
 
 Usage:
     sta_sanitize_names.py def-unescape <in.def> <out.def>
+    sta_sanitize_names.py def-connections <in.def> <out.def>
     sta_sanitize_names.py def-sanitize <in.def> <out.def>
     sta_sanitize_names.py spef-sanitize <in.spef> <out.spef>
 
 `def-unescape` removes the DEF's Verilog backslash escapes but keeps the
 names otherwise intact -- that is the form `klt extract
 --def-net-connections` needs in order to match the extraction's own net
-names (gap 1 above). `def-sanitize` produces the `/`- and `.`-free form
+names (gap 1 above) on klt builds before klayout-tools#2145; since that
+rewrite (klt >= 0.6.0) `flow/sta-sweep.sh` uses `def-connections` instead,
+which additionally spells dotted NETS record names the way the extractor now
+does (klayout-tools#2903, issue #68). `def-sanitize` produces the `/`- and `.`-free form
 `klt sta` needs (gap 2). `spef-sanitize` applies the identical mapping to
 the SPEF emitted from the unescaped DEF.
 """
@@ -132,6 +136,64 @@ def def_unescape(text: str) -> str:
     return _rewrite(text, lambda token: unescape(token))
 
 
+def def_connections(text: str) -> str:
+    """`def-unescape`, plus `.` -> `_` in every `NETS`-section net *record
+    name* (never in an instance name, a pin name, or any other section).
+
+    Why (issue #68): since klayout-tools#2145, `klt extract` renames every
+    extracted net whose name carries `.` to `_` before it writes anything
+    -- the SPICE netlist *and* the SPEF's `*D_NET` names
+    (`g_slice[0].u_slice/_00_` is emitted as `g_slice[0]_u_slice/_00_`).
+    `--def-net-connections` still keys its `(instance, pin)` table by the
+    DEF's own, dotted net names, so the two no longer compare equal for any
+    hierarchical net and the SPEF silently loses every such net's `*CONN`
+    block -- exactly gap 1 above, re-opened from the other side (filed as
+    klayout-tools#2903). OpenSTA
+    then reports `partially_unannotated_driver_count: 40` and
+    `delay_changed: false`, which `flow/sta-sweep.sh`'s annotation guard
+    refuses. Feeding `--def-net-connections` a DEF whose net names are
+    spelled the way the extractor now spells them restores the
+    correlation; instance names are deliberately left dotted, because they
+    are carried into `*I <inst>:<pin>` verbatim and must then sanitize to
+    the same spelling `def-sanitize` gives the DEF OpenSTA reads.
+
+    Name-only, like every other mode here: the NETS section's membership
+    lists, the COMPONENTS section and all routing are untouched, and the
+    rewrite is asserted injective over the net names it touches."""
+    lines = def_unescape(text).split("\n")
+    in_nets = False
+    renamed = {}
+    out = []
+    for line in lines:
+        stripped = line.lstrip()
+        if not in_nets:
+            if stripped.startswith("NETS ") and not stripped.startswith("NETS_"):
+                in_nets = True
+            out.append(line)
+            continue
+        if stripped.startswith("END NETS"):
+            in_nets = False
+            out.append(line)
+            continue
+        if stripped.startswith("- "):
+            parts = line.split(" ")
+            # `- <name> ...`: the name is the first token after the dash.
+            idx = next(i for i, p in enumerate(parts) if p == "-") + 1
+            name = parts[idx]
+            if "." in name:
+                new = name.replace(".", "_")
+                renamed[name] = new
+                parts[idx] = new
+                line = " ".join(parts)
+        out.append(line)
+    if len(set(renamed.values())) != len(renamed):
+        raise ValueError(
+            "net-name rewrite is not injective -- two distinct net names map "
+            "to the same rewritten name, which would merge two nets"
+        )
+    return "\n".join(out)
+
+
 def def_sanitize(text: str) -> str:
     def map_token(token: str):
         plain = unescape(token)
@@ -176,6 +238,7 @@ def spef_sanitize(text: str) -> str:
 
 _MODES = {
     "def-unescape": def_unescape,
+    "def-connections": def_connections,
     "def-sanitize": def_sanitize,
     "spef-sanitize": spef_sanitize,
 }

@@ -18,13 +18,17 @@
       "file": "layout/logic_tile.lvs.json",
       "content_hash": "sha256:1eff80b2834a6c1b84375036f41792afdd3020716c0b07fbaf9106f1038c5626"
     },
+    "5": {
+      "file": "measurements/timing-characterization/logic_tile.sta.json",
+      "content_hash": "sha256:6e1bb79d924d42cd4debc48df534e7dabe20b0c0b46efbc7944c96d5b4f33be5"
+    },
     "8": {
       "file": "signoff/characterization-evidence.json",
-      "content_hash": "sha256:58ba464be9b0cbcb3429a926a49be95cac30be8700f60c6f5aa12060604cc5ec"
+      "content_hash": "sha256:538b22ab8b17d512ff6cddaad697bf0f3b16bb0f13a3646d729ae7ff0872f0e4"
     },
     "9": {
       "file": "signoff/item-9-testbenches.json",
-      "content_hash": "sha256:1cf49aba580cf3f8b4d05aa39dc55b99cf9219caad350e77df71a9d3f4b5f48d"
+      "content_hash": "sha256:8f157831f02ea6aaf87b0fa86e03c20e5177fbb93110746476e50fdad13e3f29"
     },
     "10": {
       "file": "signoff/item-10-repo-hygiene.json",

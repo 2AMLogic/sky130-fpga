@@ -28,10 +28,43 @@ successor records
 | OpenROAD | `26Q3-1278-g4421880472` |
 | KLayout (via `klt`) | `0.30.12` (last recorded under the 0.3.0 pin; not re-pinnable from the current reports, which do not echo it) |
 
+**Recorded STA toolchain** (issue #68). This produced the timing evidence
+`flow/sta-sweep.sh` currently commits under
+`measurements/timing-characterization/`:
+- the 36 per-corner reports;
+- the multi-corner item-5 envelope `logic_tile.sta.json`;
+- the sanitized SPEF `logic_tile.spef`.
+
+Record:
+`measurements/timing-characterization/records/20261008-234741-dc615b4.md`.
+
+| Tool | Version |
+|------|---------|
+| `klt` (klayout-tools) | `0.7.0+g6fd0278268cc` (`RECORDED_STA_KLT_VERSION`) |
+| OpenROAD | `26Q3-1510-g6cb3f2b704` (`RECORDED_STA_OPENROAD_VERSION`; image pinned by digest in the host wrapper) |
+
+This was a deliberate design-flow upgrade. Only a `klt sta` that emits
+`timing_status` (klayout-tools#1865) and accepts `pdk.corners`
+(klayout-tools#1871) produces an envelope `klt signoff` can grade for T1
+item 5. It is pinned **separately** from `RECORDED_KLT_VERSION` because the
+layout artifacts were not regenerated, and they do not regenerate
+byte-identically under the newer toolchain (record
+`20261008-233733-23e6b5e`). Bumping the shared pin would misstate their
+lineage. Measured drift against the 0.5.0 lineage:
+- every LEF-only WNS is unchanged;
+- SPEF-annotated WNS moves by -0.1 to +0.9 ps;
+- the binding corner `ss_n40C_1v28` moves 15.2146 -> 15.2145 ns, -0.1 ps
+  against ADR-0003's figure of record;
+- every verdict is unchanged.
+
+`flow/sta-sweep.sh` prints its banner against this pair.
+
 `flow/layout.sh`, `flow/sta-sweep.sh` and `flow/sdf-resim.sh` all source
 `flow/tool_versions.sh` and print the installed `klt`/OpenROAD versions at
 the top of every run, with a warning if they differ from the table above
-(`RECORDED_KLT_VERSION` / `RECORDED_OPENROAD_VERSION` in that file). This is
+(`RECORDED_KLT_VERSION` / `RECORDED_OPENROAD_VERSION` in that file;
+`flow/sta-sweep.sh` compares against `RECORDED_STA_KLT_VERSION` /
+`RECORDED_STA_OPENROAD_VERSION` instead). This is
 **informational, not enforced** — this repo has no CI and no pinned
 container image (a possible follow-up, out of scope here), so a mismatch
 does not abort the script.
@@ -108,6 +141,17 @@ correctly refuse to record on such a run; the committed per-corner
 reports and the committed SDF remain the recorded-toolchain evidence,
 and the successor records under
 `measurements/timing-characterization/records/` document that lineage.
+**Correction (issue #68).** The annotation regression on the
+`flow/sta-sweep.sh` legs was misattributed to the OpenROAD image. Under
+OpenROAD `26Q3-1510` it is fully explained by a `klt extract` change:
+since klayout-tools#2145, dotted net names are written as `_` in the SPEF.
+`--def-net-connections` still keys its pin table by the dotted DEF names,
+so the 40 hierarchical nets lost their `*CONN` blocks. Filed as
+klayout-tools#2903, and worked around by
+`flow/sta_sanitize_names.py def-connections`. With the workaround the
+sweep runs annotation-complete at every corner (record
+`20261008-234741-dc615b4`). The `26Q3-2276` image was not re-tested, and
+the `flow/sdf-resim.sh` leg was not re-examined.
 
 ## Current contents
 
@@ -519,17 +563,36 @@ run — no canonicalization needed, since the DEF is already byte-reproducible
 across runs of the identical seeded request (`layout/README.md`'s
 "Reproducibility note").
 
-`flow/sta_report_trim.py` strips local-path and tool-version fields out of
-each `klt sta` response before committing (same rationale as
-`flow/par_report_trim.py`) and injects `layout_def_sha256` / `spef_sha256`,
+`flow/sta_report_trim.py` strips local-path, tool-version and per-run
+`engine_log` fields out of each `klt sta` response before committing (same
+rationale as `flow/par_report_trim.py`). It also injects
+`layout_def_sha256`, `layout_gds_sha256` and `spef_sha256`:
 content-addressed provenance tying every published number back to the
-git-tracked DEF and to the SPEF it was annotated with (mirroring what
-`flow/lvs_report_trim.py` does for LVS).
+git-tracked DEF, the GDS the SPEF was extracted from, and the SPEF it was
+annotated with (mirroring what `flow/lvs_report_trim.py` does for LVS).
+
+**The T1 item-5 envelope (issue #68).** After the per-corner loop the
+sweep makes **one** multi-corner `klt sta` request. It uses `pdk.corners`
+with all 18 corners, the same sanitized DEF and SPEF, and the same 20 ns
+`clk` constraint. The trimmed response is committed as
+`measurements/timing-characterization/logic_tile.sta.json`, the envelope
+`signoff/block-manifest.json` cites for item 5. It is recorded only if
+`flow/sta_envelope_check.py` passes, which requires:
+- exactly the 18 ratified corners, with none missing, duplicated or extra;
+- every corner `timing_status: "constrained"` with non-negative setup and
+  hold slack, zero violations and zero TNS;
+- complete SPEF annotation;
+- `fmax_mhz` consistent with the 20 ns period;
+- field-for-field agreement with that corner's single-corner SPEF report.
+
+The sanitized SPEF is committed beside it (`logic_tile.spef`). Check mode
+diffs both, and `signoff/verify-pins.sh` re-runs the gate and re-derives
+the analysed DEF without klt.
 
 **Friction encountered — escaped identifiers, again.** This design's
 `generate`-block RTL (`design/rtl/logic_tile.v`'s `g_slice[N].u_slice`)
 makes the flattened design carry net/instance names that are Verilog
-*escaped* identifiers containing `[`, `]`, `.` and `/`. Four real
+*escaped* identifiers containing `[`, `]`, `.` and `/`. Five real
 klayout-tools gaps fell out of building this harness, all filed
 generically:
 
@@ -552,6 +615,16 @@ generically:
 - [`klayout-tools#1625`](https://github.com/2AMLogic/klayout-tools/issues/1625)
   — `klt sta` reports `hold_violation_count` but no hold-side WNS/TNS, so
   corners cannot be ranked by hold margin in a characterization sweep.
+- [`klayout-tools#2903`](https://github.com/2AMLogic/klayout-tools/issues/2903)
+  (issue #68): since the dotted-net-name rewrite of
+  [`#2145`](https://github.com/2AMLogic/klayout-tools/issues/2145),
+  `klt extract` writes `a.b/_n_` as `*D_NET a_b/_n_`. `--def-net-connections`
+  still keys its pin table by the DEF's dotted name, so #1623's failure
+  mode came back: the 40 hierarchical nets got no `*CONN` block, and every
+  SPEF run failed the annotation guard (`partially_unannotated_driver_count:
+  40`, `delay_changed: false`). `flow/sta_sanitize_names.py def-connections`
+  hands the extractor a DEF whose NETS record names are spelled the way it
+  now spells them.
 - [`klayout-tools#1627`](https://github.com/2AMLogic/klayout-tools/issues/1627)
   — `klt extract --spef` stamps a wall-clock `*DATE` into the SPEF header,
   so two runs of the identical extraction against the identical GDS produce

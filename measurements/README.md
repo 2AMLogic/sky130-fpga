@@ -58,6 +58,10 @@ timing-characterization/
   records/<YYYYMMDD-HHMMSS>-<7-char sha>.md   append-only characterization records
   corners/<corner>/lef-only.sta.json          per-corner klt sta report, unannotated
   corners/<corner>/spef.sta.json              per-corner klt sta report, SPEF-annotated
+  logic_tile.sta.json                         multi-corner klt sta envelope (pdk.corners,
+                                              all 18 corners, SPEF-annotated) -- the T1
+                                              item-5 citation (issue #68)
+  logic_tile.spef                             the sanitized SPEF every annotated run used
 ```
 
 `records/` is **append-only**: a record is never edited in place. A new
@@ -66,11 +70,17 @@ measurement adds a new record whose `record-meta` header names the record it
 account of what was true then. (Same convention as the sibling digital
 canary `sky130-modexp`'s `verification/records/`.) The per-corner JSON under
 `corners/` is *not* append-only — it always describes the current committed
-layout, and `flow/sta-sweep.sh` diff-checks it on every run.
+layout, and `flow/sta-sweep.sh` diff-checks it on every run. The same holds
+for `logic_tile.sta.json` and `logic_tile.spef`.
 
 The current record is
+[`records/20261008-234741-dc615b4.md`](timing-characterization/records/20261008-234741-dc615b4.md).
+It is the issue #68 re-sweep under a `klt sta` that emits `timing_status`
+(klt 0.7.0). It adds the multi-corner item-5 envelope, and it measures the
+binding-corner SPEF WNS at 15.2145 ns, -0.1 ps from ADR-0003's figure of
+record. It supersedes
 [`records/20260921-062500-e8a37ad.md`](timing-characterization/records/20260921-062500-e8a37ad.md)
-— the post-PDN re-sweep, which supersedes
+— the post-PDN re-sweep, which itself supersedes
 [`records/20260909-225431-86f71d2.md`](timing-characterization/records/20260909-225431-86f71d2.md)
 (that record stays committed as the historical account of the pre-PDN
 sweep). A second record,
@@ -111,8 +121,13 @@ unannotated and the annotated run — plus die/core area from
 `layout/logic_tile.par.json`, so the "Fmax, area and power across the corner
 set" triple sits in one place.
 
-**Headline results** (full table and caveats in the current record,
-[`records/20260921-062500-e8a37ad.md`](timing-characterization/records/20260921-062500-e8a37ad.md)):
+**Headline results** (as published by
+[`records/20260921-062500-e8a37ad.md`](timing-characterization/records/20260921-062500-e8a37ad.md),
+the record ADR-0003 ratified from. The current record
+[`records/20261008-234741-dc615b4.md`](timing-characterization/records/20261008-234741-dc615b4.md)
+re-measures every corner under klt 0.7.0, with SPEF WNS moves of -0.1 to
++0.9 ps and unchanged verdicts. Its per-corner delta table and
+`measurements/characterization-summary.md` carry the current figures):
 
 | | Corner | SPEF-annotated |
 | --- | --- | ---: |
