@@ -354,6 +354,22 @@ Recorded append-only in `sim/logic_tile_bitstream_results.txt`. Same scope
 limits as the #74 harness: as-implemented same-index fabric, pad overlay, no
 inter-tile routing, no timing.
 
+## Pin-experiment fixtures (issue #145, EXPERIMENTAL)
+
+`sim/bitstream/pin_experiment/` holds the three successful distinct-pin `fan4`
+streams of `flow/pin_experiment.py` (opt-in export:
+`flow/pin_experiment.sh --export-fixtures`), kept apart from the baseline
+corpus above. `./sim/run.sh` replays them through `sim/pin_fixture_replay.sh`
+(index/count/sha256/snapshot provenance, assembler reproduction, `fan4` oracle
+with perturbation checks, cfg cross-check) and runs
+`sim/pin_fixture_negative.sh` (missing file, empty index, function-changing LUT
+INIT corruption must fail); `./flow/gate-sim-bitstream.sh` replays the same
+set at zero-delay gate level. No mapper is needed to replay. Covers three seeds
+of one design on the experimental harness only: no ratified-fabric, timing or
+general-routability claim. Details: `design/fabulous/corpus/pin_experiment.md`;
+evidence appended to `sim/logic_tile_bitstream_results.txt` and
+`sim/logic_tile_bitstream_gate_results.txt`.
+
 ## Out of scope here
 
 Bitstream-level verification of the *ratified* fabric (the Wilton-class

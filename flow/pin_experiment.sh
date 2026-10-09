@@ -7,7 +7,7 @@
 # from flow/corpus.sh: it changes no corpus expectation and no committed fixture.
 # See design/fabulous/corpus/pin_experiment.md. Prerequisites as flow/corpus.sh.
 #
-# Usage: flow/pin_experiment.sh [--append-record FILE] [--case fan4]
+# Usage: flow/pin_experiment.sh [--append-record FILE] [--case fan4] [--export-fixtures [DIR]]  (issue #145: opt-in fixture export)
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

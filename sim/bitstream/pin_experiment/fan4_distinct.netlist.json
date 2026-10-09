@@ -1,0 +1,1809 @@
+{
+ "creator": "Yosys 0.69+260 (git sha1 dcd59343b, Release, Clang /usr/bin/clang++ 21.1.8)",
+ "modules": {
+  "$__ABC9_BARRIER": {
+   "attributes": {
+    "abc9_box": "00000000000000000000000000000001",
+    "abc9_box_id": "00000000000000000000000000000011",
+    "blackbox": "00000000000000000000000000000001",
+    "cells_not_processed": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:10.1-14.10"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$208": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       3
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    },
+    "$specify$156": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:12.5-12.18"
+     },
+     "connections": {
+      "DST": [
+       3
+      ],
+      "EN": [
+       "1"
+      ],
+      "SRC": [
+       2
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "DST_WIDTH": "00000000000000000000000000000001",
+      "FULL": "0",
+      "SRC_DST_PEN": "0",
+      "SRC_DST_POL": "0",
+      "SRC_WIDTH": "00000000000000000000000000000001",
+      "T_FALL_MAX": "00000000000000000000000000000000",
+      "T_FALL_MIN": "00000000000000000000000000000000",
+      "T_FALL_TYP": "00000000000000000000000000000000",
+      "T_RISE_MAX": "00000000000000000000000000000000",
+      "T_RISE_MIN": "00000000000000000000000000000000",
+      "T_RISE_TYP": "00000000000000000000000000000000"
+     },
+     "port_directions": {
+      "DST": "input",
+      "EN": "input",
+      "SRC": "input"
+     },
+     "type": "$specify2"
+    }
+   },
+   "netnames": {
+    "I": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:10.31-10.32"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    },
+    "O": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:10.41-10.42"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    }
+   },
+   "ports": {
+    "I": {
+     "bits": [
+      2
+     ],
+     "direction": "input"
+    },
+    "O": {
+     "bits": [
+      3
+     ],
+     "direction": "output"
+    }
+   }
+  },
+  "$__ABC9_DELAY": {
+   "attributes": {
+    "abc9_box": "00000000000000000000000000000001",
+    "abc9_box_id": "00000000000000000000000000000100",
+    "blackbox": "00000000000000000000000000000001",
+    "cells_not_processed": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:2.1-7.10"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$210": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       3
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    },
+    "$specify$155": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:5.5-5.22"
+     },
+     "connections": {
+      "DST": [
+       3
+      ],
+      "EN": [
+       "1"
+      ],
+      "SRC": [
+       2
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "DST_WIDTH": "00000000000000000000000000000001",
+      "FULL": "0",
+      "SRC_DST_PEN": "0",
+      "SRC_DST_POL": "0",
+      "SRC_WIDTH": "00000000000000000000000000000001",
+      "T_FALL_MAX": "00000000000000000000000000000000",
+      "T_FALL_MIN": "00000000000000000000000000000000",
+      "T_FALL_TYP": "00000000000000000000000000000000",
+      "T_RISE_MAX": "00000000000000000000000000000000",
+      "T_RISE_MIN": "00000000000000000000000000000000",
+      "T_RISE_TYP": "00000000000000000000000000000000"
+     },
+     "port_directions": {
+      "DST": "input",
+      "EN": "input",
+      "SRC": "input"
+     },
+     "type": "$specify2"
+    }
+   },
+   "netnames": {
+    "I": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:2.29-2.30"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    },
+    "O": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:2.39-2.40"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    }
+   },
+   "parameter_default_values": {
+    "DELAY": "00000000000000000000000000000000"
+   },
+   "ports": {
+    "I": {
+     "bits": [
+      2
+     ],
+     "direction": "input"
+    },
+    "O": {
+     "bits": [
+      3
+     ],
+     "direction": "output"
+    }
+   }
+  },
+  "$__ABC9_SCC_BREAKER": {
+   "attributes": {
+    "blackbox": "00000000000000000000000000000001",
+    "cells_not_processed": "00000000000000000000000000000001",
+    "dynports": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:16.1-18.10"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$206": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z",
+       "z"
+      ],
+      "Y": [
+       4,
+       5
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000010"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    }
+   },
+   "netnames": {
+    "I": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:16.47-16.48"
+     },
+     "bits": [
+      2,
+      3
+     ],
+     "hide_name": 0,
+     "offset": -1,
+     "upto": 1
+    },
+    "O": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:16.69-16.70"
+     },
+     "bits": [
+      4,
+      5
+     ],
+     "hide_name": 0,
+     "offset": -1,
+     "upto": 1
+    }
+   },
+   "parameter_default_values": {
+    "WIDTH": "00000000000000000000000000000000"
+   },
+   "ports": {
+    "I": {
+     "bits": [
+      2,
+      3
+     ],
+     "direction": "input",
+     "offset": -1,
+     "upto": 1
+    },
+    "O": {
+     "bits": [
+      4,
+      5
+     ],
+     "direction": "output",
+     "offset": -1,
+     "upto": 1
+    }
+   }
+  },
+  "$__DFF_N__$abc9_flop": {
+   "attributes": {
+    "abc9_box": "00000000000000000000000000000001",
+    "abc9_box_id": "00000000000000000000000000000010",
+    "abc9_flop": "00000000000000000000000000000001",
+    "cells_not_processed": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:21.1-27.10",
+    "whitebox": "00000000000000000000000000000001"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$204": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       3
+      ],
+      "Y": [
+       5
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    },
+    "$specify$157": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:24.5-24.29"
+     },
+     "connections": {
+      "DST": [
+       2
+      ],
+      "DST_EN": [
+       "1"
+      ],
+      "SRC": [
+       3
+      ],
+      "SRC_EN": [
+       "1"
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "DST_PEN": "1",
+      "DST_POL": "1",
+      "DST_WIDTH": "00000000000000000000000000000001",
+      "SRC_PEN": "0",
+      "SRC_POL": "0",
+      "SRC_WIDTH": "00000000000000000000000000000001",
+      "TYPE": "$setup",
+      "T_LIMIT2_MAX": "00000000000000000000000000000000",
+      "T_LIMIT2_MIN": "00000000000000000000000000000000",
+      "T_LIMIT2_TYP": "00000000000000000000000000000000",
+      "T_LIMIT_MAX": "00000000000000000000000000000000",
+      "T_LIMIT_MIN": "00000000000000000000000000000000",
+      "T_LIMIT_TYP": "00000000000000000000000000000000"
+     },
+     "port_directions": {
+      "DST": "input",
+      "DST_EN": "input",
+      "SRC": "input",
+      "SRC_EN": "input"
+     },
+     "type": "$specrule"
+    },
+    "$specify$158": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:25.5-25.31"
+     },
+     "connections": {
+      "DAT": [
+       3
+      ],
+      "DST": [
+       5
+      ],
+      "EN": [
+       "1"
+      ],
+      "SRC": [
+       2
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "DAT_DST_PEN": "0",
+      "DAT_DST_POL": "0",
+      "DST_WIDTH": "00000000000000000000000000000001",
+      "EDGE_EN": "1",
+      "EDGE_POL": "1",
+      "FULL": "0",
+      "SRC_DST_PEN": "0",
+      "SRC_DST_POL": "0",
+      "SRC_WIDTH": "00000000000000000000000000000001",
+      "T_FALL_MAX": "00000000000000000000000000000000",
+      "T_FALL_MIN": "00000000000000000000000000000000",
+      "T_FALL_TYP": "00000000000000000000000000000000",
+      "T_RISE_MAX": "00000000000000000000000000000000",
+      "T_RISE_MIN": "00000000000000000000000000000000",
+      "T_RISE_TYP": "00000000000000000000000000000000"
+     },
+     "port_directions": {
+      "DAT": "input",
+      "DST": "input",
+      "EN": "input",
+      "SRC": "input"
+     },
+     "type": "$specify3"
+    }
+   },
+   "netnames": {
+    "C": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:21.36-21.37"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    },
+    "D": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:21.39-21.40"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    },
+    "Q": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:21.42-21.43"
+     },
+     "bits": [
+      4
+     ],
+     "hide_name": 0
+    },
+    "n1": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:21.52-21.54"
+     },
+     "bits": [
+      5
+     ],
+     "hide_name": 0
+    }
+   },
+   "ports": {
+    "C": {
+     "bits": [
+      2
+     ],
+     "direction": "input"
+    },
+    "D": {
+     "bits": [
+      3
+     ],
+     "direction": "input"
+    },
+    "Q": {
+     "bits": [
+      4
+     ],
+     "direction": "input"
+    },
+    "n1": {
+     "bits": [
+      5
+     ],
+     "direction": "output"
+    }
+   }
+  },
+  "$__DFF_P__$abc9_flop": {
+   "attributes": {
+    "abc9_box": "00000000000000000000000000000001",
+    "abc9_box_id": "00000000000000000000000000000001",
+    "abc9_flop": "00000000000000000000000000000001",
+    "cells_not_processed": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:30.1-36.10",
+    "whitebox": "00000000000000000000000000000001"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$200": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       3
+      ],
+      "Y": [
+       5
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    },
+    "$specify$159": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:33.5-33.29"
+     },
+     "connections": {
+      "DST": [
+       2
+      ],
+      "DST_EN": [
+       "1"
+      ],
+      "SRC": [
+       3
+      ],
+      "SRC_EN": [
+       "1"
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "DST_PEN": "1",
+      "DST_POL": "1",
+      "DST_WIDTH": "00000000000000000000000000000001",
+      "SRC_PEN": "0",
+      "SRC_POL": "0",
+      "SRC_WIDTH": "00000000000000000000000000000001",
+      "TYPE": "$setup",
+      "T_LIMIT2_MAX": "00000000000000000000000000000000",
+      "T_LIMIT2_MIN": "00000000000000000000000000000000",
+      "T_LIMIT2_TYP": "00000000000000000000000000000000",
+      "T_LIMIT_MAX": "00000000000000000000000000000000",
+      "T_LIMIT_MIN": "00000000000000000000000000000000",
+      "T_LIMIT_TYP": "00000000000000000000000000000000"
+     },
+     "port_directions": {
+      "DST": "input",
+      "DST_EN": "input",
+      "SRC": "input",
+      "SRC_EN": "input"
+     },
+     "type": "$specrule"
+    },
+    "$specify$160": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:34.5-34.31"
+     },
+     "connections": {
+      "DAT": [
+       3
+      ],
+      "DST": [
+       5
+      ],
+      "EN": [
+       "1"
+      ],
+      "SRC": [
+       2
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "DAT_DST_PEN": "0",
+      "DAT_DST_POL": "0",
+      "DST_WIDTH": "00000000000000000000000000000001",
+      "EDGE_EN": "1",
+      "EDGE_POL": "1",
+      "FULL": "0",
+      "SRC_DST_PEN": "0",
+      "SRC_DST_POL": "0",
+      "SRC_WIDTH": "00000000000000000000000000000001",
+      "T_FALL_MAX": "00000000000000000000000000000000",
+      "T_FALL_MIN": "00000000000000000000000000000000",
+      "T_FALL_TYP": "00000000000000000000000000000000",
+      "T_RISE_MAX": "00000000000000000000000000000000",
+      "T_RISE_MIN": "00000000000000000000000000000000",
+      "T_RISE_TYP": "00000000000000000000000000000000"
+     },
+     "port_directions": {
+      "DAT": "input",
+      "DST": "input",
+      "EN": "input",
+      "SRC": "input"
+     },
+     "type": "$specify3"
+    }
+   },
+   "netnames": {
+    "C": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:30.36-30.37"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    },
+    "D": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:30.39-30.40"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    },
+    "Q": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:30.42-30.43"
+     },
+     "bits": [
+      4
+     ],
+     "hide_name": 0
+    },
+    "n1": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/abc9_model.v:30.52-30.54"
+     },
+     "bits": [
+      5
+     ],
+     "hide_name": 0
+    }
+   },
+   "ports": {
+    "C": {
+     "bits": [
+      2
+     ],
+     "direction": "input"
+    },
+    "D": {
+     "bits": [
+      3
+     ],
+     "direction": "input"
+    },
+    "Q": {
+     "bits": [
+      4
+     ],
+     "direction": "input"
+    },
+    "n1": {
+     "bits": [
+      5
+     ],
+     "direction": "output"
+    }
+   }
+  },
+  "$__FABULOUS_IBUF": {
+   "attributes": {
+    "blackbox": "00000000000000000000000000000001",
+    "cells_not_processed": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:5.1-6.10"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$233": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       3
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    }
+   },
+   "netnames": {
+    "OUT": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:5.45-5.48"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    },
+    "PAD": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:5.33-5.36"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    }
+   },
+   "ports": {
+    "OUT": {
+     "bits": [
+      3
+     ],
+     "direction": "output"
+    },
+    "PAD": {
+     "bits": [
+      2
+     ],
+     "direction": "input"
+    }
+   }
+  },
+  "$__FABULOUS_IOBUF": {
+   "attributes": {
+    "blackbox": "00000000000000000000000000000001",
+    "cells_not_processed": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:17.1-18.10"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$225": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       2
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    },
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$226": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       3
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    }
+   },
+   "netnames": {
+    "EN": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:17.67-17.69"
+     },
+     "bits": [
+      5
+     ],
+     "hide_name": 0
+    },
+    "IN": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:17.57-17.59"
+     },
+     "bits": [
+      4
+     ],
+     "hide_name": 0
+    },
+    "OUT": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:17.46-17.49"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    },
+    "PAD": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:17.34-17.37"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    }
+   },
+   "ports": {
+    "EN": {
+     "bits": [
+      5
+     ],
+     "direction": "input"
+    },
+    "IN": {
+     "bits": [
+      4
+     ],
+     "direction": "input"
+    },
+    "OUT": {
+     "bits": [
+      3
+     ],
+     "direction": "output"
+    },
+    "PAD": {
+     "bits": [
+      2
+     ],
+     "direction": "inout"
+    }
+   }
+  },
+  "$__FABULOUS_OBUF": {
+   "attributes": {
+    "blackbox": "00000000000000000000000000000001",
+    "cells_not_processed": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:9.1-10.10"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$231": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       2
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    }
+   },
+   "netnames": {
+    "IN": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:9.45-9.47"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    },
+    "PAD": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:9.34-9.37"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    }
+   },
+   "ports": {
+    "IN": {
+     "bits": [
+      3
+     ],
+     "direction": "input"
+    },
+    "PAD": {
+     "bits": [
+      2
+     ],
+     "direction": "output"
+    }
+   }
+  },
+  "$__FABULOUS_TBUF": {
+   "attributes": {
+    "blackbox": "00000000000000000000000000000001",
+    "cells_not_processed": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:13.1-14.10"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$229": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       2
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    }
+   },
+   "netnames": {
+    "EN": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:13.55-13.57"
+     },
+     "bits": [
+      4
+     ],
+     "hide_name": 0
+    },
+    "IN": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:13.45-13.47"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    },
+    "PAD": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/flow/build/oss-cad-suite/lib/../share/yosys/fabulous/cells_bb.v:13.34-13.37"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    }
+   },
+   "ports": {
+    "EN": {
+     "bits": [
+      4
+     ],
+     "direction": "input"
+    },
+    "IN": {
+     "bits": [
+      3
+     ],
+     "direction": "input"
+    },
+    "PAD": {
+     "bits": [
+      2
+     ],
+     "direction": "output"
+    }
+   }
+  },
+  "IO_1_bidirectional_frame_config_pass": {
+   "attributes": {
+    "blackbox": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_prims.v:5.1-8.10"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$213": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       4
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    },
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$214": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       5
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    },
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$215": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       6
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    }
+   },
+   "netnames": {
+    "I": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_prims.v:6.11-6.12"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    },
+    "O": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_prims.v:6.30-6.31"
+     },
+     "bits": [
+      4
+     ],
+     "hide_name": 0
+    },
+    "PAD": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_prims.v:6.49-6.52"
+     },
+     "bits": [
+      6
+     ],
+     "hide_name": 0
+    },
+    "Q": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_prims.v:6.40-6.41"
+     },
+     "bits": [
+      5
+     ],
+     "hide_name": 0
+    },
+    "T": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_prims.v:6.20-6.21"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    }
+   },
+   "ports": {
+    "I": {
+     "bits": [
+      2
+     ],
+     "direction": "input"
+    },
+    "O": {
+     "bits": [
+      4
+     ],
+     "direction": "output"
+    },
+    "PAD": {
+     "bits": [
+      6
+     ],
+     "direction": "inout"
+    },
+    "Q": {
+     "bits": [
+      5
+     ],
+     "direction": "output"
+    },
+    "T": {
+     "bits": [
+      3
+     ],
+     "direction": "input"
+    }
+   }
+  },
+  "lut4_ff_bel": {
+   "attributes": {
+    "blackbox": "00000000000000000000000000000001",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/prims.v:4.1-11.10"
+   },
+   "cells": {
+    "$auto$rtlil_bufnorm.cc:460:bufNormalize$222": {
+     "attributes": {},
+     "connections": {
+      "A": [
+       "z"
+      ],
+      "Y": [
+       8
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "WIDTH": "00000000000000000000000000000001"
+     },
+     "port_directions": {
+      "A": "input",
+      "Y": "output"
+     },
+     "type": "$buf"
+    }
+   },
+   "netnames": {
+    "EN": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/prims.v:6.21-6.23"
+     },
+     "bits": [
+      7
+     ],
+     "hide_name": 0
+    },
+    "I0": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/prims.v:5.11-5.13"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    },
+    "I1": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/prims.v:5.21-5.23"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    },
+    "I2": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/prims.v:5.31-5.33"
+     },
+     "bits": [
+      4
+     ],
+     "hide_name": 0
+    },
+    "I3": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/prims.v:5.41-5.43"
+     },
+     "bits": [
+      5
+     ],
+     "hide_name": 0
+    },
+    "O": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/prims.v:7.12-7.13"
+     },
+     "bits": [
+      8
+     ],
+     "hide_name": 0
+    },
+    "SR": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/prims.v:6.11-6.13"
+     },
+     "bits": [
+      6
+     ],
+     "hide_name": 0
+    }
+   },
+   "parameter_default_values": {
+    "FF": "0",
+    "INIT": "0000000000000000"
+   },
+   "ports": {
+    "EN": {
+     "bits": [
+      7
+     ],
+     "direction": "input"
+    },
+    "I0": {
+     "bits": [
+      2
+     ],
+     "direction": "input"
+    },
+    "I1": {
+     "bits": [
+      3
+     ],
+     "direction": "input"
+    },
+    "I2": {
+     "bits": [
+      4
+     ],
+     "direction": "input"
+    },
+    "I3": {
+     "bits": [
+      5
+     ],
+     "direction": "input"
+    },
+    "O": {
+     "bits": [
+      8
+     ],
+     "direction": "output"
+    },
+    "SR": {
+     "bits": [
+      6
+     ],
+     "direction": "input"
+    }
+   }
+  },
+  "top": {
+   "attributes": {
+    "hdlname": "top",
+    "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/corpus/fan4.v:5.1-11.10",
+    "top": "00000000000000000000000000000001"
+   },
+   "cells": {
+    "$abc$251$lut$aiger$o0._lut": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/cells_map.v:20.47-21.59"
+     },
+     "connections": {
+      "I0": [
+       10
+      ],
+      "I1": [
+       11
+      ],
+      "I2": [
+       12
+      ],
+      "I3": [
+       13
+      ],
+      "O": [
+       14
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "FF": "0",
+      "INIT": "0110101001101010"
+     },
+     "port_directions": {
+      "I0": "input",
+      "I1": "input",
+      "I2": "input",
+      "I3": "input",
+      "O": "output"
+     },
+     "type": "lut4_ff_bel"
+    },
+    "$abc$251$lut$aiger$o2._lut": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/cells_map.v:20.47-21.59"
+     },
+     "connections": {
+      "I0": [
+       10
+      ],
+      "I1": [
+       11
+      ],
+      "I2": [
+       15
+      ],
+      "I3": [
+       16
+      ],
+      "O": [
+       17
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "FF": "0",
+      "INIT": "1000100010001000"
+     },
+     "port_directions": {
+      "I0": "input",
+      "I1": "input",
+      "I2": "input",
+      "I3": "input",
+      "O": "output"
+     },
+     "type": "lut4_ff_bel"
+    },
+    "$abc$251$lut$aiger$o3._lut": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/cells_map.v:20.47-21.59"
+     },
+     "connections": {
+      "I0": [
+       10
+      ],
+      "I1": [
+       19
+      ],
+      "I2": [
+       20
+      ],
+      "I3": [
+       18
+      ],
+      "O": [
+       21
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "FF": "0",
+      "INIT": "0101010110101010"
+     },
+     "port_directions": {
+      "I0": "input",
+      "I1": "input",
+      "I2": "input",
+      "I3": "input",
+      "O": "output"
+     },
+     "type": "lut4_ff_bel"
+    },
+    "$auto$abc_ops_reintegrate.cc:696:reintegrate$252._lut": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/cells_map.v:20.47-21.59"
+     },
+     "connections": {
+      "I0": [
+       10
+      ],
+      "I1": [
+       22
+      ],
+      "I2": [
+       12
+      ],
+      "I3": [
+       23
+      ],
+      "O": [
+       24
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {
+      "FF": "0",
+      "INIT": "1111101011111010"
+     },
+     "port_directions": {
+      "I0": "input",
+      "I1": "input",
+      "I2": "input",
+      "I3": "input",
+      "O": "output"
+     },
+     "type": "lut4_ff_bel"
+    },
+    "$iopadmap$top.a._io": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_map.v:5.42-5.66"
+     },
+     "connections": {
+      "O": [
+       10
+      ],
+      "PAD": [
+       2
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "O": "output",
+      "PAD": "inout"
+     },
+     "type": "IO_1_bidirectional_frame_config_pass"
+    },
+    "$iopadmap$top.b._io": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_map.v:5.42-5.66"
+     },
+     "connections": {
+      "O": [
+       18
+      ],
+      "PAD": [
+       3
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "O": "output",
+      "PAD": "inout"
+     },
+     "type": "IO_1_bidirectional_frame_config_pass"
+    },
+    "$iopadmap$top.c._io": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_map.v:5.42-5.66"
+     },
+     "connections": {
+      "O": [
+       11
+      ],
+      "PAD": [
+       4
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "O": "output",
+      "PAD": "inout"
+     },
+     "type": "IO_1_bidirectional_frame_config_pass"
+    },
+    "$iopadmap$top.d._io": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_map.v:5.42-5.66"
+     },
+     "connections": {
+      "O": [
+       12
+      ],
+      "PAD": [
+       5
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "O": "output",
+      "PAD": "inout"
+     },
+     "type": "IO_1_bidirectional_frame_config_pass"
+    },
+    "$iopadmap$top.v._io": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_map.v:8.42-8.65"
+     },
+     "connections": {
+      "I": [
+       14
+      ],
+      "PAD": [
+       9
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "I": "input",
+      "PAD": "inout"
+     },
+     "type": "IO_1_bidirectional_frame_config_pass"
+    },
+    "$iopadmap$top.w._io": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_map.v:8.42-8.65"
+     },
+     "connections": {
+      "I": [
+       17
+      ],
+      "PAD": [
+       7
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "I": "input",
+      "PAD": "inout"
+     },
+     "type": "IO_1_bidirectional_frame_config_pass"
+    },
+    "$iopadmap$top.y._io": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_map.v:8.42-8.65"
+     },
+     "connections": {
+      "I": [
+       21
+      ],
+      "PAD": [
+       6
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "I": "input",
+      "PAD": "inout"
+     },
+     "type": "IO_1_bidirectional_frame_config_pass"
+    },
+    "$iopadmap$top.z._io": {
+     "attributes": {
+      "module_not_derived": "00000000000000000000000000000001",
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/io_map.v:8.42-8.65"
+     },
+     "connections": {
+      "I": [
+       24
+      ],
+      "PAD": [
+       8
+      ]
+     },
+     "hide_name": 1,
+     "parameters": {},
+     "port_directions": {
+      "I": "input",
+      "PAD": "inout"
+     },
+     "type": "IO_1_bidirectional_frame_config_pass"
+    }
+   },
+   "netnames": {
+    "$abc$251$aiger$o0": {
+     "attributes": {},
+     "bits": [
+      14
+     ],
+     "hide_name": 1
+    },
+    "$abc$251$aiger$o1": {
+     "attributes": {},
+     "bits": [
+      24
+     ],
+     "hide_name": 1
+    },
+    "$abc$251$aiger$o2": {
+     "attributes": {},
+     "bits": [
+      17
+     ],
+     "hide_name": 1
+    },
+    "$abc$251$aiger$o3": {
+     "attributes": {},
+     "bits": [
+      21
+     ],
+     "hide_name": 1
+    },
+    "$abc$251$iopadmap$a": {
+     "attributes": {},
+     "bits": [
+      10
+     ],
+     "hide_name": 1
+    },
+    "$abc$251$iopadmap$b": {
+     "attributes": {},
+     "bits": [
+      18
+     ],
+     "hide_name": 1
+    },
+    "$abc$251$iopadmap$c": {
+     "attributes": {},
+     "bits": [
+      11
+     ],
+     "hide_name": 1
+    },
+    "$abc$251$iopadmap$d": {
+     "attributes": {},
+     "bits": [
+      12
+     ],
+     "hide_name": 1
+    },
+    "$abc$251$lut$aiger$o0.I": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/cells_map.v:18.16-18.17"
+     },
+     "bits": [
+      10,
+      11,
+      12,
+      13
+     ],
+     "hide_name": 1
+    },
+    "$abc$251$lut$aiger$o2.I": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/cells_map.v:18.16-18.17"
+     },
+     "bits": [
+      10,
+      11,
+      15,
+      16
+     ],
+     "hide_name": 1
+    },
+    "$abc$251$lut$aiger$o3.I": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/cells_map.v:18.16-18.17"
+     },
+     "bits": [
+      10,
+      18,
+      19,
+      20
+     ],
+     "hide_name": 1
+    },
+    "$auto$abc_ops_reintegrate.cc:696:reintegrate$252.I": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/nextpnr/cells_map.v:18.16-18.17"
+     },
+     "bits": [
+      10,
+      12,
+      22,
+      23
+     ],
+     "hide_name": 1
+    },
+    "a": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/corpus/fan4.v:5.19-5.20"
+     },
+     "bits": [
+      2
+     ],
+     "hide_name": 0
+    },
+    "b": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/corpus/fan4.v:5.28-5.29"
+     },
+     "bits": [
+      3
+     ],
+     "hide_name": 0
+    },
+    "c": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/corpus/fan4.v:5.37-5.38"
+     },
+     "bits": [
+      4
+     ],
+     "hide_name": 0
+    },
+    "d": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/corpus/fan4.v:5.46-5.47"
+     },
+     "bits": [
+      5
+     ],
+     "hide_name": 0
+    },
+    "v": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/corpus/fan4.v:6.50-6.51"
+     },
+     "bits": [
+      9
+     ],
+     "hide_name": 0
+    },
+    "w": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/corpus/fan4.v:6.30-6.31"
+     },
+     "bits": [
+      7
+     ],
+     "hide_name": 0
+    },
+    "y": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/corpus/fan4.v:6.20-6.21"
+     },
+     "bits": [
+      6
+     ],
+     "hide_name": 0
+    },
+    "z": {
+     "attributes": {
+      "src": "/home/ubuntu/GitHub/sky130-fpga/.loom/worktrees/issue-145/design/fabulous/corpus/fan4.v:6.40-6.41"
+     },
+     "bits": [
+      8
+     ],
+     "hide_name": 0
+    }
+   },
+   "ports": {
+    "a": {
+     "bits": [
+      2
+     ],
+     "direction": "input"
+    },
+    "b": {
+     "bits": [
+      3
+     ],
+     "direction": "input"
+    },
+    "c": {
+     "bits": [
+      4
+     ],
+     "direction": "input"
+    },
+    "d": {
+     "bits": [
+      5
+     ],
+     "direction": "input"
+    },
+    "v": {
+     "bits": [
+      9
+     ],
+     "direction": "output"
+    },
+    "w": {
+     "bits": [
+      7
+     ],
+     "direction": "output"
+    },
+    "y": {
+     "bits": [
+      6
+     ],
+     "direction": "output"
+    },
+    "z": {
+     "bits": [
+      8
+     ],
+     "direction": "output"
+    }
+   }
+  }
+ }
+}

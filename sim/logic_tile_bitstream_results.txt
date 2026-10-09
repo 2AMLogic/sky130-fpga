@@ -56,3 +56,23 @@
     (rst,en,e,d,c,b,a) vectors + 300 random cycles), each repeated under 4 fixed + random patterns
     on the input tracks nothing is routed to.
   Not covered: ratified fabric, inter-tile routing, timing, tile types other than LOGIC4.
+
+2026-10-09  ./sim/run.sh @ a8096ac + issue #145 (EXPERIMENTAL pin-experiment fixtures; separate from the corpus)
+  Fixtures: sim/bitstream/pin_experiment/ = the three successful variant-distinct fan4 trials of
+    flow/pin_experiment.py, exported with `flow/pin_experiment.sh --export-fixtures` (pinned yosys/nextpnr,
+    FABulous bit_gen byte identity and the oracle gated the export). Baseline corpus fixtures and
+    expectations are untouched; fan4 baseline remains an expected route_nonconvergent corpus case.
+  Replay (sim/pin_fixture_replay.sh, called from ./sim/run.sh): index/case-count/sha256/snapshot-provenance
+    gate (flow/pin_fixtures.py verify), assembler reproduction from FASM, loader + fan4 oracle with
+    perturbation checks, three-way cfg cross-check:
+      fan4_distinct_s1..s3  PASS (61697 checks, 0 failures; 38/38 perturbations detected)
+      pin-experiment fixtures replayed [rtl]: 3/3 PASS ; ./sim/run.sh: all testbenches PASS
+  Unit tests: flow/test_pin_experiment.py 11 tests OK; flow/test_pin_fixtures.py 14 tests OK
+    (export guard refusals; missing/empty/malformed index, wrong count, missing file, sha drift, stray file, wrong policy,
+    snapshot provenance drift, mapped-vs-transformed INIT relation, corruption helper).
+  Negatives (sim/pin_fixture_negative.sh, scratch copies, all rejected): missing fixture file; empty
+    index; LUT INIT of BEL A inverted in all three streams -- rejected by assembler reproduction, and with
+    that check skipped the simulation oracle itself rejects 3/3 corrupted streams.
+  Covered population: three seeds of one design (fan4, one pad assignment, distinct-pin policy) on the
+    experimental same-index single-LOGIC4 harness. Not covered: general routability, ratified Wilton-class
+    fabric (ADR-0004/0005 remain Proposed), inter-tile routing, timing.

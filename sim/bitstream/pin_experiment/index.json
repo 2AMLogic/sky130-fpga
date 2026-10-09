@@ -1,0 +1,64 @@
+{
+ "cases": [
+  {
+   "case": "fan4",
+   "files": {
+    ".bin": "00ed50f11c6f554f4e19a7c4098bc8d27d8e2a49b002799b96716d81a3efd1f2",
+    ".cfg": "2ab2e78d2a57b4c6faaa314c82e732c0eaf465d51974edc57ac9a19e1e1415f7",
+    ".fasm": "5d114f1814676994cb8bd254401410818a45bfa802520750c66e6d77d4c41ff0",
+    ".mapped.json": "cb5b833a4f66198fe96fce616309cf76d9df82be97be2b793a53828da601c01e",
+    ".wiring": "f6c808e4e5424bc969d2a290e822360ffefcbc90c9a75fe08e2432edbc17f8df"
+   },
+   "oracle": "fan4",
+   "policy": "distinct",
+   "seed": 1,
+   "stem": "fan4_distinct_s1"
+  },
+  {
+   "case": "fan4",
+   "files": {
+    ".bin": "48d11061eed54110dbb983466db5fb1ba361bc15b05378b8a70c7f6f4ff05101",
+    ".cfg": "0a838b93c9c3d7532c0b10e76bea3e45380983c692c63d120b1ffe4f65242895",
+    ".fasm": "bbcbeb6dd6be81855df53730331c4981e7fc641a9c1b6fa4c6940bae8b096cdf",
+    ".mapped.json": "7ce9a9603b51555f281e4f5740c3741a56096fd36e114303a8e6a5dd1778f7e6",
+    ".wiring": "60004a2b91ffef650ac55312b0f54d716e4f613350542846847305c2752f34e2"
+   },
+   "oracle": "fan4",
+   "policy": "distinct",
+   "seed": 2,
+   "stem": "fan4_distinct_s2"
+  },
+  {
+   "case": "fan4",
+   "files": {
+    ".bin": "45b5cd4c8274b324be21bdca89b6be7dc99f54fef90feed7e1176c426728fdb7",
+    ".cfg": "b2bcff9332a37523e4d165a4e6a4635bd57a3f43bdf204d05d20c08eb47455b7",
+    ".fasm": "e6719fcdd1e395f7ecf4e4300aa02e69021bf487e26c8370dbbac627efef0491",
+    ".mapped.json": "8e7c7c5d5893932d66b5b8e3915a72b28f464df60fc559c8462f5beeb0334014",
+    ".wiring": "5c1cde9ab8467f673ad87c2c11588a5ffa3229c04fc0ada0d6ea225f6f5bb8df"
+   },
+   "oracle": "fan4",
+   "policy": "distinct",
+   "seed": 3,
+   "stem": "fan4_distinct_s3"
+  }
+ ],
+ "label": "EXPERIMENTAL pin-aligned fan4 fixtures (issue #145); not baseline corpus; no timing or ratified-fabric claim",
+ "provenance": {
+  "snapshot": {
+   "fabric_spec.json": "79435de8fa42239623823ba64ec4206dfbf414a0e24e582c2cec9096960d7fa3",
+   "logic4_configmem.map": "ea7fbba65ec017841c89fc4c13944717c257d288257dc6718f144ccb70af7abd"
+  },
+  "synthesized_baseline_json_sha256": "7c1322b9a82dd609b914100e0f423f946cc3703b0e4113353e80e26d18beb5a8",
+  "tools": {
+   "nextpnr": "nextpnr-0.11.1-54-g861c57be",
+   "yosys": "Yosys 0.69+260"
+  },
+  "transformed_netlist": {
+   "file": "fan4_distinct.netlist.json",
+   "sha256": "9287fe78fe8a660a625a37d94a5c47e0221fe77d1765bcd239c5a1bad581ad26"
+  },
+  "variant_json_sha256": "3ec8b64718bb1566f27fcb5fd4a344dd68886bac691732426200441a5bf8fa6b"
+ },
+ "schema": 1
+}

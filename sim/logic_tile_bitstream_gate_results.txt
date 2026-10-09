@@ -79,3 +79,14 @@
     oracle, missing fixture file each exit 1.
   Not covered: fan4 (expected routing failure, no bitstream), ratified fabric, inter-tile routing,
     timing, the real frame-loader/pad hardware.
+
+2026-10-09  ./flow/gate-sim-bitstream.sh --negative @ a8096ac + issue #145 (EXPERIMENTAL, zero delay)
+  Same synthesized netlist and sky130_fd_sc_hd behavioral models as above. Added: the three
+    pin-experiment fixtures of sim/bitstream/pin_experiment/ (distinct-pin fan4), replayed with the fan4
+    oracle and +mutate by sim/pin_fixture_replay.sh:
+      fan4_distinct_s1..s3  PASS (61697 checks, 0 failures; 38/38 perturbations detected)
+      pin-experiment fixtures replayed [gate]: 3/3 PASS ; corpus fixtures replayed at gate level: 11/11 PASS
+  Negatives (sim/pin_fixture_negative.sh via --negative): missing fixture file, empty index, and
+    function-changing LUT INIT corruption (rejected by assembler reproduction; with that skipped, the
+    gate-level oracle rejects 3/3 streams) all FAIL; existing N1/N2/N3 unchanged and FAIL as before.
+  Not covered: timing/SDF, ratified fabric, inter-tile routing, the real frame loader/pad hardware.
