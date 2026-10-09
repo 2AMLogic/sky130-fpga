@@ -198,6 +198,17 @@ the FABulous output. Evidence: `design/fabulous/tb_switch_matrix_equiv.v`,
 run by `flow/fabulous.sh` (FABulous side generated into gitignored
 `flow/build/`), record in `sim/switch_matrix_fabulous_equiv.txt`.
 
+Configuration storage (issue #136): `design/fabulous/tb_configmem_equiv.v` drives
+the generated `LOGIC4_ConfigMem.v` (latches, scratch only) through its real
+`FrameData`/`FrameStrobe` interface and compares all 158 `ConfigBits` with
+`sim/bitstream/logic4_configmem.map` (walking one/zero, overwrite, retention,
+unused positions), then replays the frame payloads of every committed baseline
+stream (unpacked by the simulation-only `flow/configmem_frames.py`) against the
+recorded `.cfg` vectors. `flow/fabulous.sh` also mutates a scratch copy (frame
+select, output mapping) and requires the bench to fail. This verifies frame
+storage only, not a hardware serial receiver. Record:
+`sim/configmem_fabulous_equiv.txt`.
+
 Mux fan-in (45 sinks, 90 config bits): 8 sinks fan-in 1 (BEL EN/SR, no config),
 21 sinks fan-in 4 (16 LUT inputs, 4 `J_EN_BEG`, `J_SR_BEG0`; 2 bits each),
 16 sinks fan-in 7 (the N/E/S/W track drivers; 3 bits each, codes 7 unused).

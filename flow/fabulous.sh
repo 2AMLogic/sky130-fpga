@@ -81,6 +81,44 @@ iverilog -g2005 -o "$BUILD/sm_tb" \
 vvp "$BUILD/sm_tb" | tee "$BUILD/sm_tb.out"
 grep -q '^PASS: switch_matrix_fabulous_equiv' "$BUILD/sm_tb.out"
 
+# ConfigMem storage differential check (issue #136): the FABulous-generated
+# LOGIC4_ConfigMem.v (+ its config_latch model) is driven through its real
+# FrameData/FrameStrobe interface and compared with the recorded map
+# sim/bitstream/logic4_configmem.map, then the committed baseline streams'
+# frame payloads are replayed and compared with their recorded .cfg vectors.
+# FRAME STORAGE ONLY -- not a hardware serial receiver. Fails on compile error
+# or missing PASS; two scratch mutations (frame select, output mapping) must FAIL.
+echo "=== ConfigMem storage equivalence (iverilog) ==="
+CM_V="$RUN/Tile/LOGIC4/LOGIC4_ConfigMem.v"
+CM_VEC="$BUILD/configmem_vectors.txt"
+python3 "$REPO/flow/configmem_frames.py" "$REPO/sim/bitstream" > "$CM_VEC"
+cm_run() {  # $1 = ConfigMem file, $2 = output prefix
+    iverilog -g2005 -o "$2_tb" "$REPO/design/fabulous/tb_configmem_equiv.v" "$1" \
+        "$RUN/Fabric/models_pack.v"
+    vvp "$2_tb" +map="$REPO/sim/bitstream/logic4_configmem.map" +vec="$CM_VEC" | tee "$2.out"
+}
+cm_run "$CM_V" "$BUILD/cm"
+grep -q '^PASS: configmem_fabulous_equiv' "$BUILD/cm.out"
+echo "--- scratch mutations of the generated ConfigMem (each must be caught) ---"
+# (1) frame select: bit of frame 2 latched by frame 3's strobe
+python3 - "$CM_V" "$BUILD/cm_mut_select.v" "$BUILD/cm_mut_map.v" <<'PYEOF'
+import re, sys
+src = open(sys.argv[1]).read()
+a = re.sub(r"(Inst_frame2_bit5 \(\s*\.D\(FrameData\[5\]\),\s*\.E\()FrameStrobe\[2\]", r"\1FrameStrobe[3]", src, count=1)
+b = src
+for x, y in (("ConfigBits[100]", "ConfigBits[@@]"), ("ConfigBits[101]", "ConfigBits[100]"), ("ConfigBits[@@]", "ConfigBits[101]")):
+    b = b.replace(x, y)
+b = b.replace("ConfigBits_N[100]", "ConfigBits_N[@@]").replace("ConfigBits_N[101]", "ConfigBits_N[100]").replace("ConfigBits_N[@@]", "ConfigBits_N[101]")
+assert a != src and b != src
+open(sys.argv[2], "w").write(a); open(sys.argv[3], "w").write(b)
+PYEOF
+for m in select map; do
+    if cm_run "$BUILD/cm_mut_$m.v" "$BUILD/cm_mut_$m" >/dev/null 2>&1 && grep -q '^PASS' "$BUILD/cm_mut_$m.out"; then
+        echo "ConfigMem mutation '$m' was NOT caught" >&2; exit 1; fi
+    grep -q '^FAIL' "$BUILD/cm_mut_$m.out" || { echo "mutation '$m' did not produce a bench FAIL" >&2; exit 1; }
+    echo "mutation '$m' caught: $(grep '^FAIL: configmem' "$BUILD/cm_mut_$m.out")"
+done
+
 if [[ "${1:-}" == "--update-log" ]]; then
     cp "$NORM" "$REPO/design/fabulous/generator.log"
     echo "updated design/fabulous/generator.log"
