@@ -123,8 +123,8 @@ Decision record: [ADR-0004](../spec/decisions/0004-g1-tile-description-discrepan
    independent of `EN`).
 5. **`MultiplexerStyle,generic`** is used so the description needs no custom
    (sky130-cell) mux models; mapping to sky130 cells is G2 work.
-6. `rtl/logic_tile.v` / `rtl/lut4_slice.v` header comments still say the
-   schema is "unconfirmed pending G1"; left untouched here (out of scope).
+6. `rtl/logic_tile.v` / `rtl/lut4_slice.v` header comments formerly said the
+   schema was "unconfirmed pending G1"; updated in #79 to point here.
 
 ## Out of scope here
 

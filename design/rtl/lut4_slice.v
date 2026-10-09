@@ -17,9 +17,9 @@
 //
 // Scope note: this is BEL-level RTL only. It does not implement the
 // tile's switch matrix / routing or the FABulous-style tile/fabric
-// description format -- that is tracked separately as
-// spec/framework-gaps.md item G1 and is out of scope for this file (see
-// design/README.md).
+// description -- that lives separately under design/fabulous/ (see
+// design/fabulous/fabric.csv and design/README.md; spec/framework-gaps.md
+// item G1) and is out of scope for this file.
 
 `default_nettype none
 `timescale 1ns/1ps

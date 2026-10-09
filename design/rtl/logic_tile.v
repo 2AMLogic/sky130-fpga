@@ -19,9 +19,9 @@
 // Scope note: this is BEL-level RTL only -- 4x LUT4 + 4x output FF, per
 // spec/tile-spec.md's "LUT count per tile" and "FF arrangement" sections.
 // It does NOT implement the tile's switch matrix / inter-tile routing or
-// the FABulous-style tile/fabric description format (that schema is
-// unconfirmed pending spec/framework-gaps.md item G1, and is a separate,
-// larger follow-on). See design/README.md.
+// the FABulous-style tile/fabric description, which lives separately under
+// design/fabulous/ (see design/fabulous/fabric.csv and design/README.md;
+// spec/framework-gaps.md item G1).
 
 `default_nettype none
 `timescale 1ns/1ps
