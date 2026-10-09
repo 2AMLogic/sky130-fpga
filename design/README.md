@@ -116,7 +116,9 @@ Decision record: [ADR-0004](../spec/decisions/0004-g1-tile-description-discrepan
    simple same-index), BEL-output to BEL-input local feedback without leaving
    through a track, and any multi-hop / longer wires (none, deliberately: the
    spec asks for 4 tracks per edge only). Mux fan-in/area has not been
-   evaluated against the spec's routability intent.
+   evaluated against the spec's routability intent. (Fan-in and generic-cell
+   area are now reported in "Switch-matrix RTL (#78)" below; routability
+   against the spec's intent is still a judgement left to the reader.)
 4. **BEL behaviour vs stock FABulous.** The stock `LUT4c_frame_config_dffesr`
    has a carry chain, configurable reset value, and applies reset only when
    `EN`; `lut4_ff_bel` follows the ratified RTL (no carry, reset 0, reset
@@ -126,13 +128,43 @@ Decision record: [ADR-0004](../spec/decisions/0004-g1-tile-description-discrepan
 6. `rtl/logic_tile.v` / `rtl/lut4_slice.v` header comments formerly said the
    schema was "unconfirmed pending G1"; updated in #79 to point here.
 
+## Switch-matrix RTL (#78)
+
+`rtl/logic_tile_switch_matrix.v` is **generated** (not hand-written) from
+`fabulous/Tile/LOGIC4/LOGIC4_switch_matrix.list` by `gen/gen_switch_matrix.py`.
+Regenerate from the repo root (also rewrites the testbench include):
+
+    python3 design/gen/gen_switch_matrix.py \
+        design/fabulous/Tile/LOGIC4/LOGIC4_switch_matrix.list \
+        design/rtl/logic_tile_switch_matrix.v \
+        sim/switch_matrix_tb_gen.vh
+
+It is a purely combinational module with a flat 90-bit `cfg` (per-sink select
+fields, layout documented in the generated comments; a select value >= fan-in
+drives 0). Jump wires `J_EN_BEGn`/`J_SR_BEG0` loop to their `_END` inside the
+module. It is verified by `sim/tb_switch_matrix.v` (469 checks). It is not yet
+instantiated by `logic_tile.v`; the BEL-level tile and the matrix are separate
+modules, and composing them is part of later assembly work.
+
+Mux fan-in (45 sinks, 90 config bits): 8 sinks fan-in 1 (BEL EN/SR, no config),
+21 sinks fan-in 4 (16 LUT inputs, 4 `J_EN_BEG`, `J_SR_BEG0`; 2 bits each),
+16 sinks fan-in 7 (the N/E/S/W track drivers; 3 bits each, codes 7 unused).
+
+Generic-cell area (method: yosys 0.67, `synth -flatten` then
+`abc -g AND,NAND,OR,NOR,XOR,XNOR,MUX`, `stat` cell count; technology
+independent, not sky130 cells and not um^2): 223 cells = 143 `$_MUX_`,
+48 `$_NAND_`, 16 `$_NOT_`, 16 `$_OR_`. For reference a naive N:1 mux tree needs
+N-1 2:1 muxes (21*3 + 16*6 = 159); yosys/abc folds the decode logic and shares
+some of it. No timing is claimed or implied by these numbers.
+
 ## Out of scope here
 
 This is BEL-level RTL plus a generic-cell derived netlist. It does **not**
 implement:
 
-- The tile's switch matrix / inter-tile routing (`spec/tile-spec.md`'s "4
-  general-purpose routing tracks per tile edge" target).
+- Physical layout, routing pitch, and inter-tile / demo-fabric assembly of
+  the switch matrix (`spec/tile-spec.md`'s "4 general-purpose routing tracks
+  per tile edge" target). Switch-matrix *RTL* now exists -- see below.
 - sky130 standard-cell mapping (liberty-mapped netlist) —
   `design/netlist/logic_tile_netlist.v` here is a generic-cell netlist only.
   A liberty-mapped netlist is now produced (as scratch, not committed under

@@ -18,10 +18,14 @@
 //
 // Scope note: this is BEL-level RTL only -- 4x LUT4 + 4x output FF, per
 // spec/tile-spec.md's "LUT count per tile" and "FF arrangement" sections.
-// It does NOT implement the tile's switch matrix / inter-tile routing or
-// the FABulous-style tile/fabric description, which lives separately under
-// design/fabulous/ (see design/fabulous/fabric.csv and design/README.md;
-// spec/framework-gaps.md item G1).
+// It does NOT instantiate the tile's switch matrix. The switch matrix exists
+// as separate, generated RTL (design/rtl/logic_tile_switch_matrix.v, from
+// design/fabulous/Tile/LOGIC4/LOGIC4_switch_matrix.list via
+// design/gen/gen_switch_matrix.py; verified by sim/tb_switch_matrix.v) but is
+// not yet composed with this module, and has no layout or timing. The
+// FABulous-style tile/fabric description lives under design/fabulous/ (see
+// design/fabulous/fabric.csv and design/README.md; spec/framework-gaps.md
+// item G1).
 
 `default_nettype none
 `timescale 1ns/1ps
