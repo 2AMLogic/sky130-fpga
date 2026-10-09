@@ -89,6 +89,15 @@ sweep). A second record,
 separate SDF-generation + gate-level-resimulation experiment
 below — it does not supersede this one.
 
+### `timing-characterization-experimental/` — composed-tile STA observation (issue #113)
+
+Stand-in matrix, ADR-0004 Proposed -- observation, not spec. The same 18-corner
+extracted-parasitics STA, run on the experimental composed tile
+`layout/experimental/logic_tile_routed` (`./flow/sta-sweep.sh --routed`).
+Separate from, and never cited in place of, the ratified BEL-only row above;
+`spec/tile-spec.md` is unchanged. See its `README.md` for exactly what is and
+is not claimed.
+
 ### `timing-characterization/logic_tile_route.sdf` — SDF-annotated gate-level re-simulation (T1 item 7, issue #29)
 
 A real post-route SDF (`klt place-and-route --post_route_sdf`), regenerated

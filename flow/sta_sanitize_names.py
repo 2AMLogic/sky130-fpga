@@ -65,6 +65,7 @@ Usage:
     sta_sanitize_names.py def-unescape <in.def> <out.def>
     sta_sanitize_names.py def-connections <in.def> <out.def>
     sta_sanitize_names.py def-sanitize <in.def> <out.def>
+    sta_sanitize_names.py def-sanitize-hier <in.def> <out.def>   (issue #113)
     sta_sanitize_names.py spef-sanitize <in.spef> <out.spef>
 
 `def-unescape` removes the DEF's Verilog backslash escapes but keeps the
@@ -202,6 +203,57 @@ def def_sanitize(text: str) -> str:
     return _rewrite(text, map_token)
 
 
+def def_sanitize_hier(text: str) -> str:
+    """`def-sanitize`, plus the same `/`/`.` rewrite for *unescaped*
+    hierarchical names (issue #113).
+
+    The BEL-only DEF only ever carries such names as backslash-escaped
+    identifiers (generate-block `[N].`), which `def_sanitize` handles. The
+    composed tile also has plain submodule hierarchy (`u_sm/_001_`): a DEF
+    writes that unescaped, but `klt extract --spef` emits it SPEF-escaped,
+    so `spef-sanitize` rewrites it to `u_sm___001_` while `def-sanitize`
+    leaves the DEF's spelling alone -- and OpenSTA then discards every such
+    SPEF record. This mode rewrites the instance names (COMPONENTS records,
+    NETS connection lists) and NETS record names that contain `/` or `.`,
+    with the identical mapping, and nothing else (geometry, section
+    headers such as DIVIDERCHAR, masters and layer names are untouched).
+    Name-only and asserted injective, like every other mode;
+    `flow/sta-sweep.sh` still proves timing-neutrality per corner against
+    the unannotated committed DEF."""
+    renamed = {}
+
+    def fix(name: str) -> str:
+        if needs_rewrite(name) and "\\" not in name:
+            new = sanitize(name)
+            renamed[name] = new
+            return new
+        return name
+
+    section = None
+    out = []
+    for line in def_sanitize(text).split("\n"):
+        stripped = line.strip()
+        head = stripped.split(" ", 1)[0]
+        if section is None:
+            if head in ("COMPONENTS", "NETS") and stripped.endswith(";"):
+                section = head
+            out.append(line)
+            continue
+        if stripped.startswith("END "):
+            section = None
+            out.append(line)
+            continue
+        toks = line.split(" ")
+        for i, tok in enumerate(toks):
+            prev = toks[i - 1] if i else ""
+            if prev == "-" or (prev == "(" and tok != "PIN" and section == "NETS"):
+                toks[i] = fix(tok)
+        out.append(" ".join(toks))
+    if len(set(renamed.values())) != len(renamed):
+        raise ValueError("hierarchical name rewrite is not injective")
+    return "\n".join(out)
+
+
 _CANONICAL_SPEF_DATE = '*DATE "canonicalized (see flow/sta_sanitize_names.py)"'
 
 
@@ -240,6 +292,7 @@ _MODES = {
     "def-unescape": def_unescape,
     "def-connections": def_connections,
     "def-sanitize": def_sanitize,
+    "def-sanitize-hier": def_sanitize_hier,
     "spef-sanitize": spef_sanitize,
 }
 

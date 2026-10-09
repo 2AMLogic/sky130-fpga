@@ -88,6 +88,17 @@ utilization are recorded in `layout/README.md` as a G3 item (a) *input*; the
 physical pitch remains undecided pending a decision record, and
 `spec/tile-spec.md` is unchanged. Timing (G4) remains open.
 
+*Status note (#113):* an **experimental** 18-corner extracted-parasitics STA of
+the composed tile now exists under
+`measurements/timing-characterization-experimental/` (`flow/sta-sweep.sh
+--routed`): stand-in matrix, ADR-0004 Proposed, observation not spec. All 18
+corners `timing_status: constrained`, SPEF fully annotated; 17 meet the 20 ns
+reference and `ss_n40C_1v28` does not (WNS -4.6838 ns), recorded as found,
+with boundary I/O delays of 0. The worst path's identity (datapath vs.
+quasi-static `cfg` input) is not yet known, so no BEL-pin-to-output matrix
+delay is claimed; `spec/tile-spec.md` timing rows are unchanged and G4 for the
+composed tile stays open pending a decision record.
+
 **Work item**: standard-cell (or custom) implementation of the tile,
 placed and routed on sky130 using klayout-tools. Given `CLAUDE.md`'s framing
 ("a dense, regular logic tile is exactly the kind of workout `klt par`

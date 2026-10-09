@@ -58,6 +58,15 @@
 # bisected fmax_mhz, and first-order lumped-RC parasitics -- not a
 # distributed RC ladder and not a field solve.
 #
+# Issue #113: `--routed` re-targets the whole sweep at the EXPERIMENTAL
+# composed tile (layout/experimental/logic_tile_routed.{def,gds}), writing
+# to measurements/timing-characterization-experimental/ and adding
+# input/output-delay 0 constraints so port-to-port paths are timed. Its
+# envelope gate (sta_envelope_check.py --observation) checks structure only
+# -- exact 18 corners, decks, complete SPEF annotation, cross-check -- and
+# records the verdict as found. See that directory's README.md. Combine with
+# `--update` in either order.
+#
 # Usage:
 #   ./flow/sta-sweep.sh            # extract parasitics, sweep every corner,
 #                                   # and diff the trimmed per-corner reports,
@@ -107,16 +116,53 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-LAYOUT_DIR="$REPO_ROOT/layout"
-BUILD_DIR="$SCRIPT_DIR/build"
-STA_BUILD_DIR="$BUILD_DIR/sta"
-TIMING_DIR="$REPO_ROOT/measurements/timing-characterization"
+# Target selection (issue #113). Default: the ratified BEL-only `logic_tile`.
+# `--routed`: the EXPERIMENTAL composed tile `logic_tile_routed` (stand-in
+# matrix, ADR-0004 Proposed) -- an additive, separate namespace; see the
+# header of this file and measurements/timing-characterization-experimental/
+# README.md. The default target's paths, requests and gates are unchanged.
+TARGET="bel"
+MODE="check"
+for arg in "$@"; do
+    case "$arg" in
+        --update) MODE="update" ;;
+        --routed) TARGET="routed" ;;
+        *)
+            echo "usage: $0 [--routed] [--update]" >&2
+            exit 1
+            ;;
+    esac
+done
+
+if [[ "$TARGET" == "routed" ]]; then
+    LAYOUT_DIR="$REPO_ROOT/layout/experimental"
+    TOP_MODULE="logic_tile_routed"
+    TIMING_DIR="$REPO_ROOT/measurements/timing-characterization-experimental"
+    STA_BUILD_DIR="$SCRIPT_DIR/build/sta_routed"
+    # Boundary constraints: with a clock-only SDC every port-to-port path is
+    # unconstrained and `timing_status` would be "unconstrained". Zero
+    # input/output delay times in->reg, reg->out and in->out paths against
+    # the 20 ns reference period; WNS then reads as 20 ns minus the longest
+    # such path. These are reference conventions, not an interface spec.
+    IO_CONSTRAINTS=', "input_delay_ns": 0, "output_delay_ns": 0'
+    ENVELOPE_GATE_FLAGS="--observation"
+    # Plain (unescaped) submodule hierarchy also needs the rewrite -- see
+    # sta_sanitize_names.py def_sanitize_hier. BEL-only keeps def-sanitize.
+    DEF_SANITIZE_MODE="def-sanitize-hier"
+else
+    LAYOUT_DIR="$REPO_ROOT/layout"
+    TOP_MODULE="logic_tile"
+    TIMING_DIR="$REPO_ROOT/measurements/timing-characterization"
+    STA_BUILD_DIR="$SCRIPT_DIR/build/sta"
+    IO_CONSTRAINTS=""
+    ENVELOPE_GATE_FLAGS=""
+    DEF_SANITIZE_MODE="def-sanitize"
+fi
 CORNERS_DIR="$TIMING_DIR/corners"
 # The multi-corner envelope cited for T1 item 5 and the sanitized SPEF it
 # (and every per-corner SPEF run) annotates -- issue #68.
-COMMITTED_ENVELOPE="$TIMING_DIR/logic_tile.sta.json"
-COMMITTED_SPEF="$TIMING_DIR/logic_tile.spef"
-TOP_MODULE="logic_tile"
+COMMITTED_ENVELOPE="$TIMING_DIR/${TOP_MODULE}.sta.json"
+COMMITTED_SPEF="$TIMING_DIR/${TOP_MODULE}.spef"
 STD_CELL_LIBRARY="sky130_fd_sc_hd"
 PDK_VARIANT="sky130A"
 
@@ -145,20 +191,6 @@ ALL_CORNERS=(
     ss_100C_1v40 ss_100C_1v60 ss_n40C_1v28 ss_n40C_1v35 ss_n40C_1v40
     ss_n40C_1v44 ss_n40C_1v60 ss_n40C_1v60_ccsnoise ss_n40C_1v76
 )
-
-MODE="check"
-case "${1:-}" in
-    --update)
-        MODE="update"
-        ;;
-    "")
-        MODE="check"
-        ;;
-    *)
-        echo "usage: $0 [--update]" >&2
-        exit 1
-        ;;
-esac
 
 for tool in klt openroad; do
     if ! command -v "$tool" >/dev/null 2>&1; then
@@ -223,7 +255,7 @@ CONNECTIONS_DEF="$STA_BUILD_DIR/${TOP_MODULE}.connections.def"
 SANITIZED_DEF="$STA_BUILD_DIR/${TOP_MODULE}.sanitized.def"
 echo "=== rewriting escaped identifiers (see flow/sta_sanitize_names.py) ==="
 python3 "$SCRIPT_DIR/sta_sanitize_names.py" def-connections "$COMMITTED_DEF" "$CONNECTIONS_DEF"
-python3 "$SCRIPT_DIR/sta_sanitize_names.py" def-sanitize "$COMMITTED_DEF" "$SANITIZED_DEF"
+python3 "$SCRIPT_DIR/sta_sanitize_names.py" "$DEF_SANITIZE_MODE" "$COMMITTED_DEF" "$SANITIZED_DEF"
 
 # --- 2. Extract parasitics once from the committed GDS ---
 #
@@ -285,7 +317,7 @@ run_sta() {
   "hdl_toplevel": "${TOP_MODULE}",
   "pdk": { "cell_library": "${STD_CELL_LIBRARY}", "corner": "${corner}" },
 ${spef_field}
-  "constraints": { "clock_port": "${CLOCK_PORT}", "clock_period_ns": ${CLOCK_PERIOD_NS} }
+  "constraints": { "clock_port": "${CLOCK_PORT}", "clock_period_ns": ${CLOCK_PERIOD_NS}${IO_CONSTRAINTS} }
 }
 EOF
     if ! klt sta "$run_dir/request.json" --pdk "$PDK_VARIANT" --format json > "$response" 2>"$run_dir/stderr.log"; then
@@ -414,7 +446,7 @@ cat > "$multi_build/request.json" <<EOF
   "hdl_toplevel": "${TOP_MODULE}",
   "pdk": { "cell_library": "${STD_CELL_LIBRARY}", "corners": ${corners_json} },
   "spef": "${SPEF}",
-  "constraints": { "clock_port": "${CLOCK_PORT}", "clock_period_ns": ${CLOCK_PERIOD_NS} }
+  "constraints": { "clock_port": "${CLOCK_PORT}", "clock_period_ns": ${CLOCK_PERIOD_NS}${IO_CONSTRAINTS} }
 }
 EOF
 multi_response="$multi_build/response.json"
@@ -426,7 +458,7 @@ fi
 generated_envelope="$multi_build/${TOP_MODULE}.sta.json"
 python3 "$SCRIPT_DIR/sta_report_trim.py" "$multi_response" "$DEF_SHA256" "$GDS_SHA256" "$SPEF_SHA256" "$generated_envelope"
 expect_corners="$(IFS=,; echo "${ALL_CORNERS[*]}")"
-if ! python3 "$SCRIPT_DIR/sta_envelope_check.py" "$generated_envelope" \
+if ! python3 "$SCRIPT_DIR/sta_envelope_check.py" "$generated_envelope" $ENVELOPE_GATE_FLAGS \
         --cross-check "$STA_BUILD_DIR/corners-trimmed" --expect-corners "$expect_corners"; then
     echo "error: the multi-corner envelope fails the item-5 gate -- refusing to record it" >&2
     exit 1

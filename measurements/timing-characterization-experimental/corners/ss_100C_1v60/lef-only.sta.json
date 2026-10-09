@@ -1,0 +1,39 @@
+{
+  "clock_skew_ns": 0,
+  "engine": "openroad",
+  "estimated_power_mw": 0.0579,
+  "fmax_mhz": 185.615,
+  "geometry_source": "routed",
+  "hdl_toplevel": "logic_tile_routed",
+  "hold_violation_count": 0,
+  "layout_def_sha256": "sha256:9747b1b37b7375435d4fe3ed19b8633d5033da8ccf4a7d1c9a5be7064518a8cd",
+  "layout_gds_sha256": null,
+  "provenance": {
+    "deck": {
+      "content_hash": "sha256:9b24f0db3967ac67b4cae1f74bb480fd47922d18d0ed577e3c121739b412c361",
+      "name": "sky130_fd_sc_hd__ss_100C_1v60",
+      "released": false
+    },
+    "input": {
+      "content_hash": "sha256:9747b1b37b7375435d4fe3ed19b8633d5033da8ccf4a7d1c9a5be7064518a8cd",
+      "role": "layout"
+    },
+    "pdk": {
+      "name": "sky130A",
+      "version": "open_pdks c6d73a35f524070e85faff4a6a9eef49553ebc2b"
+    }
+  },
+  "schema_version": 1,
+  "setup_violation_count": 0,
+  "spef_annotation": null,
+  "spef_sha256": null,
+  "status": "ok",
+  "timing_status": "constrained",
+  "total_negative_hold_slack_ns": 0,
+  "total_negative_slack_ns": 0,
+  "verilog_path": null,
+  "wire_load_mode": null,
+  "wire_load_model": null,
+  "worst_hold_slack_ns": 0.16181,
+  "worst_slack_ns": 14.6125
+}
