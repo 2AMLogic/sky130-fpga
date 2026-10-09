@@ -1,0 +1,10 @@
+# Harness pin-to-pad constraints for regcasc.v (issue #115 corpus; pads from flow/nextpnr_io_overlay.py).
+# clk has no pad: it is the BEL's implicit UserCLK, a runtime harness input.
+set_io a X1Y0/A
+set_io b X1Y0/B
+set_io c X1Y0/C
+set_io d X1Y0/D
+set_io e X1Y2/A
+set_io en X1Y2/B
+set_io rst X1Y2/C
+set_io q X1Y2/D

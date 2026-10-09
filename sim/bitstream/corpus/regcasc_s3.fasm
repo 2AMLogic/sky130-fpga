@@ -1,0 +1,151 @@
+# routing for net '$PACKER_GND'
+
+
+# routing for net '$PACKER_VCC'
+
+
+# routing for net 'rst'
+
+
+# routing for net 'q'
+
+
+# routing for net 'en'
+
+
+# routing for net 'e'
+
+
+# routing for net 'd'
+
+
+# routing for net 'c'
+
+
+# routing for net 'b'
+
+
+# routing for net 'a'
+
+
+# routing for net '$abc$282$aiger$o1'
+
+X1Y1.J_SR_END0.LB_SR
+X1Y1.N1END0.J_SR_BEG0
+X1Y1.J_SR_BEG0.J_SR_END0
+X1Y2.IOC_O.N1BEG0
+X1Y2.N1BEG0.N1END0
+
+# routing for net 'r'
+
+X1Y1.LB_O.S1BEG1
+X1Y1.S1BEG1.S1END1
+X1Y2.S1END1.IOD_I
+
+# routing for net '$abc$282$aiger$o0'
+
+X1Y1.J_EN_END1.LB_EN
+X1Y1.N1END1.J_EN_BEG1
+X1Y1.J_EN_BEG1.J_EN_END1
+X1Y2.IOB_O.N1BEG1
+X1Y2.N1BEG1.N1END1
+
+# routing for net '$abc$282$iopadmap$d'
+
+X1Y0.IOD_O.S1BEG3
+X1Y0.S1BEG3.S1END3
+X1Y1.S1END3.LC_I3
+
+# routing for net '$abc$282$iopadmap$c'
+
+X1Y0.IOC_O.S1BEG2
+X1Y0.S1BEG2.S1END2
+X1Y1.S1END2.LC_I2
+
+# routing for net '$abc$282$iopadmap$b'
+
+X1Y0.IOB_O.S1BEG1
+X1Y0.S1BEG1.S1END1
+X1Y1.S1END1.LC_I1
+
+# routing for net '$abc$282$iopadmap$a'
+
+X1Y0.IOA_O.S1BEG0
+X1Y0.S1BEG0.S1END0
+X1Y1.S1END0.LC_I0
+
+# routing for net '$abc$282$aiger$o2'
+
+X1Y1.LD_O.E1BEG3
+X1Y1.W1END0.LB_I0
+X1Y1.E1BEG3.E1END3
+X2Y1.E1END3.W1BEG0
+X2Y1.W1BEG0.W1END0
+
+# routing for net '$abc$282$lut$aiger$o2.I[3]'
+
+
+# routing for net '$abc$282$lut$aiger$o2.I[2]'
+
+
+# routing for net '$abc$282$aiger281$33'
+
+X1Y1.LC_O.E1BEG2
+X1Y1.W1END1.LD_I1
+X1Y1.E1BEG2.E1END2
+X2Y1.E1END2.W1BEG1
+X2Y1.W1BEG1.W1END1
+
+# routing for net '$abc$282$iopadmap$e'
+
+X0Y1.W1END3.E1BEG0
+X0Y1.E1BEG0.E1END0
+X1Y1.N1END3.W1BEG3
+X1Y1.E1END0.LD_I0
+X1Y1.W1BEG3.W1END3
+X1Y2.IOA_O.N1BEG3
+X1Y2.N1BEG3.N1END3
+
+# config for cell '$PACKER_GND_DRV'
+
+
+# config for cell '$PACKER_VCC_DRV'
+
+
+# config for cell '$iopadmap$top.rst._io'
+
+
+# config for cell '$iopadmap$top.q._io'
+
+
+# config for cell '$iopadmap$top.en._io'
+
+
+# config for cell '$iopadmap$top.e._io'
+
+
+# config for cell '$iopadmap$top.d._io'
+
+
+# config for cell '$iopadmap$top.c._io'
+
+
+# config for cell '$iopadmap$top.b._io'
+
+
+# config for cell '$iopadmap$top.a._io'
+
+
+# config for cell '$auto$ff.cc:337:slice$87._ff'
+
+X1Y1.B.INIT[15:0] = 'b1010101010101010
+X1Y1.B.FF
+
+# config for cell '$abc$282$lut$aiger281$33._lut'
+
+X1Y1.C.INIT[15:0] = 'b1001011001101001
+
+# config for cell '$abc$282$lut$aiger$o2._lut'
+
+X1Y1.D.INIT[15:0] = 'b0010001000100010
+

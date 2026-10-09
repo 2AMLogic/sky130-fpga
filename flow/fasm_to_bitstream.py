@@ -571,9 +571,10 @@ def cmd_decode(a):
 
 def cmd_check(a):
     base = Path(a.dir)
-    snap = load_snapshot(base / "fabric_spec.json")
+    sbase = Path(a.snapshot_dir) if a.snapshot_dir else base
+    snap = load_snapshot(sbase / "fabric_spec.json")
     ok = True
-    if (base / "logic4_configmem.map").read_text() != map_text(snap):
+    if (sbase / "logic4_configmem.map").read_text() != map_text(snap):
         print("DRIFT logic4_configmem.map"); ok = False
     for fasm in sorted(base.glob("*.fasm")):
         stem = fasm.with_suffix("")
@@ -618,6 +619,8 @@ def main(argv=None):
     p.set_defaults(fn=cmd_decode)
     p = sp.add_parser("check")
     p.add_argument("dir", help="fixture directory (sim/bitstream)")
+    p.add_argument("--snapshot-dir", help="directory holding fabric_spec.json / logic4_configmem.map "
+                   "(default: the fixture directory; issue #115 corpus fixtures share sim/bitstream's)")
     p.set_defaults(fn=cmd_check)
     p = sp.add_parser("snapshot")
     p.add_argument("--spec", required=True); p.add_argument("--configmem", required=True)

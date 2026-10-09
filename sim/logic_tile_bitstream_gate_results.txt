@@ -38,3 +38,21 @@
        (comb: 182 failures, reg: 6404 failures)
   Not covered: ratified fabric, inter-tile routing, timing, tile types other than LOGIC4, the real
     frame-loader/pad hardware.
+
+2026-10-09  sim/tb_logic_tile_bitstream.v  (gate-level, zero delay, +mutate; re-run for the #115 testbench revision)
+  Why     : the testbench was revised for issue #115 (loopback transport delay, loopback flush,
+            corpus oracles); the entry above ran the previous revision. This re-run confirms the
+            #74 fixtures still pass against the synthesized netlist with the new revision.
+  Netlist : layout/experimental/logic_tile_routed.synth.v  sha256 0e7d4c702b06c7f4a3272cc60a95f4e1ec96c2fec7d74da66727738534a99f22
+  TB      : sim/tb_logic_tile_bitstream.v (unmodified by the runner) sha256 7ba602d25d9d55d9a8e2c92a72db5f13b8f8d8d720cea337ce0e01a264e94b7b
+  Runner  : flow/gate-sim-bitstream.sh                     sha256 da81c240a552e908e7ab74ef941978d7d4c8078c837f5b3ea60aedea13034c79
+  Fixtures: unchanged (sim/bitstream/top_io.bin, top_reg.bin as in the entry above)
+  Tool    : Icarus Verilog 13.0 (stable); sky130A cell models as in the entry above
+  Command : ./flow/gate-sim-bitstream.sh --negative   (exit 0)
+  Results :
+    PASS: tb_logic_tile_bitstream[comb] (5409 checks, 0 failures; 26/26 perturbations detected)
+    PASS: tb_logic_tile_bitstream[reg] (139651 checks, 0 failures; 27/27 perturbations detected)
+    Counts identical to the RTL run. Negative checks both reported FAIL as required
+    N1 top_io.bin judged against the reg oracle/wiring -> FAIL (139651 checks, 4474 failures)
+    N2 nand2_1 -> nor2_1 netlist copy -> FAIL for both fixtures (comb: 182 failures, reg: 6404 failures)
+  Not covered: corpus fixtures (RTL-level only), ratified fabric, inter-tile routing, timing.

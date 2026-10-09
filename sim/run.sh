@@ -193,6 +193,58 @@ else
     done
 fi
 
+# ---------------------------------------------------------------------------
+# Routability-corpus fixtures (issue #115 -- EXPERIMENTAL decision evidence for
+# ADR-0004 item 3, see design/fabulous/corpus/README.md). Every (case, seed)
+# of design/fabulous/corpus/corpus.json that mapped successfully has its
+# assembled stream committed under sim/bitstream/corpus/ (index.txt lists
+# "<stem> <oracle>"); each is re-assembled from its FASM, loaded through the
+# same loader and checked against its independent oracle. Non-routable
+# probes have no fixture and no PASS by construction. Regenerating against the
+# pinned mapper (and the recorded expected failures) is flow/corpus.sh.
+CORPUS_DIR="$BS_DIR/corpus"
+echo "=== corpus outcome-classification unit tests (flow/test_corpus_run.py) ==="
+if python3 "$REPO_ROOT/flow/test_corpus_run.py" >"$BUILD_DIR/test_corpus_run.log" 2>&1 \
+   && grep -q '^OK' "$BUILD_DIR/test_corpus_run.log"; then
+    echo "PASS: test_corpus_run ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_corpus_run.log"), 0 failures)"
+else
+    cat "$BUILD_DIR/test_corpus_run.log" >&2
+    echo "error: corpus classification unit tests failed" >&2
+    overall_status=1
+fi
+echo "=== corpus fixtures reproduce from committed FASM (flow/fasm_to_bitstream.py check) ==="
+if ! python3 "$BS_TOOL" check "$CORPUS_DIR" --snapshot-dir "$BS_DIR"; then
+    echo "error: committed sim/bitstream/corpus fixtures drifted from the assembler output" >&2
+    overall_status=1
+fi
+if [[ -f "$out_bin" ]]; then
+    n_corpus=0
+    while read -r stem oracle; do
+        [[ -z "$stem" ]] && continue
+        n_corpus=$((n_corpus + 1))
+        log_file="$BUILD_DIR/${name}_${stem}.log"
+        echo "=== running ${name} [${oracle}] corpus fixture ${stem} (with perturbation checks) ==="
+        if ! vvp "$out_bin" +bin="$CORPUS_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
+                +wiring="$CORPUS_DIR/$stem.wiring" +design="$oracle" +mutate | tee "$log_file"; then
+            echo "error: simulation run failed for ${stem}" >&2
+            overall_status=1
+            continue
+        fi
+        if ! grep -q "^PASS: ${name}\[${oracle}\]" "$log_file"; then
+            echo "error: ${name} [${oracle}] ${stem} did not report PASS (see $log_file)" >&2
+            overall_status=1
+        fi
+        sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$log_file" | cut -d= -f2)"
+        py_cfg="$(python3 "$BS_TOOL" decode "$CORPUS_DIR/$stem.bin" --snapshot "$BS_DIR/fabric_spec.json")"
+        rec_cfg="$(tr -d '\n' < "$CORPUS_DIR/$stem.cfg")"
+        if [[ -z "$sim_cfg" || "$sim_cfg" != "$py_cfg" || "$sim_cfg" != "$rec_cfg" ]]; then
+            echo "error: [${stem}] loaded cfg mismatch: sim=$sim_cfg python=$py_cfg recorded=$rec_cfg" >&2
+            overall_status=1
+        fi
+    done < "$CORPUS_DIR/index.txt"
+    echo "corpus fixtures simulated: ${n_corpus}"
+fi
+
 if [[ "$overall_status" -eq 0 ]]; then
     echo "=== all testbenches PASS ==="
 else

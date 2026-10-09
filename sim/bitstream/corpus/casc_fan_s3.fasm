@@ -1,0 +1,154 @@
+# routing for net '$PACKER_GND'
+
+
+# routing for net '$PACKER_VCC'
+
+
+# routing for net 'z'
+
+
+# routing for net 'y'
+
+
+# routing for net 'w'
+
+
+# routing for net 'e'
+
+
+# routing for net 'd'
+
+
+# routing for net 'c'
+
+
+# routing for net 'b'
+
+
+# routing for net 'a'
+
+
+# routing for net '$abc$286$aiger$o1'
+
+X1Y1.LC_O.S1BEG3
+X1Y1.S1BEG3.S1END3
+X1Y2.S1END3.IOC_I
+
+# routing for net '$abc$286$lut$aiger285$21.I[3]'
+
+
+# routing for net '$abc$286$lut$aiger285$21.I[2]'
+
+
+# routing for net '$abc$286$iopadmap$d'
+
+X1Y0.IOD_O.S1BEG1
+X1Y0.S1BEG1.S1END1
+X1Y1.S1END1.LA_I1
+
+# routing for net '$abc$286$iopadmap$c'
+
+X1Y0.IOC_O.S1BEG0
+X1Y0.S1BEG0.S1END0
+X1Y1.S1END0.LA_I0
+
+# routing for net '$abc$286$aiger$o2'
+
+X1Y1.LD_O.S1BEG2
+X1Y1.S1BEG2.S1END2
+X1Y2.S1END2.IOB_I
+
+# routing for net '$abc$286$aiger$o0'
+
+X1Y1.LB_O.S1BEG1
+X1Y1.S1BEG1.S1END1
+X1Y2.S1END1.IOD_I
+
+# routing for net '$abc$286$aiger285$21'
+
+X1Y1.LA_O.S1BEG0
+X1Y1.N1END3.LB_I3
+X1Y1.N1END3.LC_I3
+X1Y1.N1END3.LD_I3
+X1Y1.S1BEG0.S1END0
+X1Y2.S1END0.N1BEG3
+X1Y2.N1BEG3.N1END3
+
+# routing for net '$abc$286$iopadmap$e'
+
+X1Y1.N1END2.LB_I2
+X1Y1.N1END2.LC_I2
+X1Y1.N1END2.LD_I2
+X1Y2.IOA_O.N1BEG2
+X1Y2.N1BEG2.N1END2
+
+# routing for net '$abc$286$iopadmap$b'
+
+X1Y0.IOB_O.S1BEG2
+X1Y0.S1BEG2.S1END2
+X0Y1.W1END2.E1BEG1
+X0Y1.E1BEG1.E1END1
+X1Y1.S1END2.W1BEG2
+X1Y1.E1END1.LB_I1
+X1Y1.E1END1.LC_I1
+X1Y1.E1END1.LD_I1
+X1Y1.W1BEG2.W1END2
+
+# routing for net '$abc$286$iopadmap$a'
+
+X1Y0.IOA_O.S1BEG3
+X1Y0.S1BEG3.S1END3
+X0Y1.W1END3.E1BEG0
+X0Y1.E1BEG0.E1END0
+X1Y1.S1END3.W1BEG3
+X1Y1.E1END0.LB_I0
+X1Y1.E1END0.LC_I0
+X1Y1.E1END0.LD_I0
+X1Y1.W1BEG3.W1END3
+
+# config for cell '$PACKER_GND_DRV'
+
+
+# config for cell '$PACKER_VCC_DRV'
+
+
+# config for cell '$iopadmap$top.z._io'
+
+
+# config for cell '$iopadmap$top.y._io'
+
+
+# config for cell '$iopadmap$top.w._io'
+
+
+# config for cell '$iopadmap$top.e._io'
+
+
+# config for cell '$iopadmap$top.d._io'
+
+
+# config for cell '$iopadmap$top.c._io'
+
+
+# config for cell '$iopadmap$top.b._io'
+
+
+# config for cell '$iopadmap$top.a._io'
+
+
+# config for cell '$auto$abc_ops_reintegrate.cc:696:reintegrate$287._lut'
+
+X1Y1.C.INIT[15:0] = 'b1111011011111001
+
+# config for cell '$abc$286$lut$aiger285$21._lut'
+
+X1Y1.A.INIT[15:0] = 'b1001100110011001
+
+# config for cell '$abc$286$lut$aiger$o2._lut'
+
+X1Y1.D.INIT[15:0] = 'b0110000010010000
+
+# config for cell '$abc$286$lut$aiger$o0._lut'
+
+X1Y1.B.INIT[15:0] = 'b1001011001101001
+
