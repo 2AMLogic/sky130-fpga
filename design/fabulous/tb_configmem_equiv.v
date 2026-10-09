@@ -1,0 +1,149 @@
+// Differential check (issue #136): FABulous-generated LOGIC4_ConfigMem.v
+// (frame-storage latches, scratch only) vs the recorded configuration map
+// sim/bitstream/logic4_configmem.map ("<ConfigBits index> <frame*32+bit>").
+//
+// SCOPE: frame STORAGE only -- FrameData/FrameStrobe -> ConfigBits.  This does
+// not verify any hardware serial receiver / stream controller (none exists).
+// The generated config_latch (Fabric/models_pack.v) is the unmodified model.
+//
+// Plusargs: +map=<file> +vec=<baseline vector file from flow/configmem_frames.py>
+`timescale 1ns/1ps
+module tb;
+    localparam NB = 158, NF = 20, FB = 32;
+    reg  [FB-1:0] FrameData;
+    reg  [NF-1:0] FrameStrobe;
+    wire [NB-1:0] CB, CBN;
+    LOGIC4_ConfigMem dut (.FrameData(FrameData), .FrameStrobe(FrameStrobe),
+                          .ConfigBits(CB), .ConfigBits_N(CBN));
+
+    integer pos2cb [0:NF*FB-1];
+    reg [NB-1:0] exp;
+    integer checks = 0, fails = 0;
+    integer fh, r, a, b, i, f, k, n;
+    reg [1023:0] mapf, vecf;
+    reg [FB-1:0] d, dv;
+    reg [159:0] want;   // 40 hex digits
+    reg [8*40-1:0] name;
+    reg [7:0] tag;
+
+    task check(input [127:0] what);
+        begin
+            checks = checks + 1;
+            if (CB !== exp || CBN !== ~exp) begin
+                fails = fails + 1;
+                if (fails < 10)
+                    $display("FAIL %0s: ConfigBits %h expected %h (N ok=%b)", what, CB, exp, (CBN === ~exp));
+            end
+        end
+    endtask
+
+    // Legal frame write: data on FrameData, one-hot strobe, release strobe,
+    // then scramble FrameData (storage must hold) before the caller checks.
+    task write(input integer fr, input [FB-1:0] data);
+        integer q;
+        begin
+            FrameData = data; #1;
+            FrameStrobe = {NF{1'b0}}; FrameStrobe[fr] = 1'b1; #1;
+            FrameStrobe = {NF{1'b0}}; #1;
+            for (q = 0; q < FB; q = q + 1)
+                if (pos2cb[fr*FB+q] >= 0) exp[pos2cb[fr*FB+q]] = data[q];
+            FrameData = ~data ^ 32'h5a5a_a5a5; #1;
+        end
+    endtask
+
+    // Compare final ConfigBits against the recorded baseline vector.
+    task check_final;
+        begin
+            checks = checks + 1;
+            if (CB !== want[NB-1:0]) begin
+                fails = fails + 1;
+                $display("FAIL baseline %0s: ConfigBits %h recorded %h", name, CB, want[NB-1:0]);
+            end
+        end
+    endtask
+
+    initial begin
+        if (!$value$plusargs("map=%s", mapf) || !$value$plusargs("vec=%s", vecf)) begin
+            $display("FAIL: need +map= and +vec="); $finish;
+        end
+        for (i = 0; i < NF*FB; i = i + 1) pos2cb[i] = -1;
+        fh = $fopen(mapf, "r");
+        n = 0;
+        while ($fscanf(fh, "%d %d\n", a, b) == 2) begin
+            if (a < 0 || a >= NB || b < 0 || b >= NF*FB || pos2cb[b] >= 0) begin
+                $display("FAIL: bad map entry %0d %0d", a, b); $finish; end
+            pos2cb[b] = a; n = n + 1;
+        end
+        $fclose(fh);
+        if (n != NB) begin $display("FAIL: map has %0d entries", n); $finish; end
+
+        FrameData = 0; FrameStrobe = 0; exp = {NB{1'b0}};
+        // Initial fill: zero every frame so all storage is defined.
+        for (f = 0; f < NF; f = f + 1) write(f, 32'h0);
+        check("init");
+
+        // Walking one on every frame bit (mapped and unmapped), each preceded by
+        // an all-ones write so a stale bit would show; other frames retained.
+        for (f = 0; f < NF; f = f + 1)
+            for (k = 0; k < FB; k = k + 1) begin
+                write(f, 32'hffff_ffff); check("ones");
+                write(f, 32'h1 << k);    check("walk1");
+            end
+        // Walking zero.
+        for (f = 0; f < NF; f = f + 1)
+            for (k = 0; k < FB; k = k + 1) begin
+                write(f, 32'hffff_ffff); write(f, ~(32'h1 << k)); check("walk0");
+            end
+        // Alternating patterns with retention across frames: load all frames with
+        // pattern P, then rewrite single frames with ~P and require the rest hold.
+        for (k = 0; k < 4; k = k + 1) begin
+            d = (k == 0) ? 32'haaaa_aaaa : (k == 1) ? 32'h5555_5555 :
+                (k == 2) ? 32'hf0f0_f0f0 : 32'h0ff0_0ff0;
+            for (f = 0; f < NF; f = f + 1) write(f, d);
+            check("pattern-all");
+            for (f = 0; f < NF; f = f + 1) begin
+                write(f, ~d); check("pattern-inv"); write(f, d); check("pattern-restore");
+            end
+        end
+        // Repeated writes clearing previously set bits.
+        for (f = 0; f < NF; f = f + 1) begin
+            write(f, 32'hffff_ffff); check("set");
+            write(f, 32'h0000_0000); check("clear");
+            write(f, 32'h8000_0001); write(f, 32'h0000_0001); check("clear-msb");
+            write(f, 32'h0000_0000); check("clear2");
+        end
+        // Unused frame positions (frames 5..19, frame4 bits 30-31): ones written
+        // there must not disturb mapped state.
+        write(0, 32'hffff_ffff); write(1, 32'h1234_5678); write(4, 32'h3fff_ffff);
+        check("unused-setup");
+        for (f = 5; f < NF; f = f + 1) begin write(f, 32'hffff_ffff); check("unused-ones"); end
+        write(4, 32'hffff_ffff); check("unused-frame4-hi");
+        for (f = 5; f < NF; f = f + 1) begin write(f, 32'h0); check("unused-zero"); end
+        // Data changes with no strobe leave storage alone.
+        for (i = 0; i < 64; i = i + 1) begin FrameData = $random; #1; check("nostrobe"); end
+        // Randomized frame-write sequences against the map model.
+        for (i = 0; i < 5000; i = i + 1) begin write($unsigned($random) % NF, $random); check("random"); end
+
+        // Baseline streams: replay frame payloads in stream order; final ConfigBits
+        // must equal the recorded .cfg vector.
+        fh = $fopen(vecf, "r");
+        n = 0;
+        while (!$feof(fh)) begin
+            r = $fscanf(fh, " %c", tag);
+            if (r == 1 && tag == "S") begin
+                if (n > 0) check_final;
+                r = $fscanf(fh, " %h %s\n", want, name);
+                n = n + 1;
+            end else if (r == 1 && tag == "F") begin
+                r = $fscanf(fh, " %d %h\n", f, dv);
+                write(f, dv);
+            end
+        end
+        if (n > 0) check_final;
+        $fclose(fh);
+        if (n < 2) begin fails = fails + 1; $display("FAIL: only %0d baseline streams replayed", n); end
+        if (fails == 0) $display("PASS: configmem_fabulous_equiv -- %0d checks, %0d baseline streams, 0 failures", checks, n);
+        else $display("FAIL: configmem_fabulous_equiv -- %0d failures / %0d checks", fails, checks);
+        $finish;
+    end
+endmodule

@@ -1,0 +1,26 @@
+# Append-only evidence record (issue #136). Add new dated entries below; do not edit old ones.
+# Reproduce: flow/fabulous.sh   (FABulous 2.2.0, Icarus Verilog 13.0)
+
+2026-10-09  design/fabulous/tb_configmem_equiv.v  (adapter: flow/configmem_frames.py)
+  SCOPE : frame STORAGE only (FrameData/FrameStrobe -> ConfigBits). NOT a verification
+          of any hardware serial receiver / stream controller; none exists in this repo.
+  DUT   : FABulous-generated Tile/LOGIC4/LOGIC4_ConfigMem.v + Fabric/models_pack.v
+          (config_latch), unmodified, generated into gitignored flow/build/.
+          sha256 LOGIC4_ConfigMem.v = dcdfc776e732e5ed0043014bd4a4aefab0981baec9ea0f0d9a767df42a2e2686
+          sha256 models_pack.v      = 0bb111e18e1941b5c21d528ef60d2e3195ed311b99f59c35c9f2fc8543344a09
+  REF   : sim/bitstream/logic4_configmem.map (158 entries, ConfigBits idx -> frame*32+bit)
+          and the recorded sim/bitstream/{top_io,top_reg}.cfg + corpus/*.cfg vectors.
+  Method: legal frame writes (data, one-hot strobe, strobe release, FrameData scrambled)
+          with the full 158-bit ConfigBits (and ConfigBits_N == ~ConfigBits) compared after
+          each write. Walking-one and walking-zero on all 20x32 frame bits, alternating
+          patterns with single-frame inversion (retention), set/clear/overwrite sequences,
+          writes to unused positions (frame 4 bits 30-31, frames 5..19), data changes with no
+          strobe, 5000 random writes; then frame payloads of all 13 committed baseline
+          streams replayed (adapter only unpacks words, does not use the map) and final
+          ConfigBits compared with the recorded .cfg.
+  Result: PASS: configmem_fabulous_equiv -- 7274 checks, 13 baseline streams, 0 failures
+  Scratch mutations of the generated ConfigMem (flow/fabulous.sh fails if either passes):
+    select: frame2_bit5 latch enable FrameStrobe[2] -> FrameStrobe[3]
+            -> FAIL: configmem_fabulous_equiv -- 2525 failures / 7274 checks
+    map   : ConfigBits[100] <-> ConfigBits[101] output swap
+            -> FAIL: configmem_fabulous_equiv -- 2680 failures / 7274 checks

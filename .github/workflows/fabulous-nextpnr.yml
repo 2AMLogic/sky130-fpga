@@ -19,6 +19,7 @@ on:
       - 'design/rtl/lut4_slice.v'
       - 'flow/fabulous.sh'
       - 'flow/fabulous_summary.py'
+      - 'flow/configmem_frames.py'
       - 'flow/nextpnr.sh'
       - 'flow/nextpnr_io_overlay.py'
       - 'flow/bitstream.sh'
