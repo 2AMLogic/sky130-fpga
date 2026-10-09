@@ -96,7 +96,15 @@ corner-specific STA reports under `measurements/timing-characterization/corners/
 [G1](spec/framework-gaps.md#g1--pin-down-the-exact-fabulous-tilefabric-description-schema)
 (FABulous tile/fabric description schema) is largely closed: FABulous 2.2.0 is
 pinned and a tile description is committed under `design/fabulous/` (the
-generator accepts it; `nextpnr` itself has not been run). The
+generator accepts it, and pinned `nextpnr` loads the generated model, places
+and routes a trivial design, and emits FASM — issue #87, log in
+`design/fabulous/nextpnr.log`; this is "the model is accepted", not a
+bitstream-correctness or timing claim). Two open decision records are
+Proposed, pending operator ratification:
+[ADR-0004](spec/decisions/0004-g1-tile-description-discrepancies.md) (G1
+tile-description discrepancies) and
+[ADR-0005](spec/decisions/0005-nextpnr-io-and-constant-handling.md) (IO and
+constant handling for the nextpnr flow). The
 **bitstream-level-tests rung has not been started**: it is gated on
 [G5](spec/framework-gaps.md#g5--bitstream-level-functional-verification-rtltile-description-correctness)
 (bitstream-level functional verification) and
