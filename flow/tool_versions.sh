@@ -198,6 +198,14 @@ print_tool_version_banner() {
 # with a re-run of `flow/fabulous.sh --update-log` and design/README.md.
 RECORDED_FABULOUS_VERSION="2.2.0"
 
+# uv that resolves FABulous's transitive dependencies into flow/build/fab-venv.
+# Pinned so CI (.github/workflows/fabulous-nextpnr.yml installs exactly this
+# into a runner-local venv) uses the same resolver as the host that produced
+# design/fabulous/generator.log. Transitive package versions are still
+# resolved at install time, so that log can drift; a pinned lockfile is out
+# of scope here.
+RECORDED_UV_VERSION="0.12.1"
+
 # yosys + nextpnr-generic (FABulous `fabulous` viaduct uarch) used by
 # flow/nextpnr.sh (issue #87, G1 caveat 1). Pinned as the YosysHQ OSS CAD
 # Suite nightly below (yosys 0.69+260 dcd59343b, nextpnr-0.11.1-54-g861c57be),

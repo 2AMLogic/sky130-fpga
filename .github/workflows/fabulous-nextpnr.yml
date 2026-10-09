@@ -1,0 +1,112 @@
+# Reproduces the G1 evidence logs (design/fabulous/generator.log and
+# design/fabulous/nextpnr.log) from a fresh run of flow/fabulous.sh and
+# flow/nextpnr.sh in their default (verify, non --update-log) mode; either
+# script exits non-zero if its normalized log differs from the committed copy.
+#
+# Separate from signoff.yml and rtl-sim.yml on purpose (those are not edited
+# for unrelated checks). Path-filtered only, no push/schedule trigger.
+#
+# Tool pins live only in flow/tool_versions.sh; this file never repeats a
+# version. The scripts install everything into the gitignored flow/build/ on
+# this runner (uv venv for FABulous, unpacked OSS CAD Suite for yosys +
+# nextpnr); nothing is installed outside the job's own runner.
+name: fabulous-nextpnr
+
+on:
+  pull_request:
+    paths:
+      - 'design/fabulous/**'
+      - 'design/rtl/lut4_slice.v'
+      - 'flow/fabulous.sh'
+      - 'flow/fabulous_summary.py'
+      - 'flow/nextpnr.sh'
+      - 'flow/nextpnr_io_overlay.py'
+      - 'flow/tool_versions.sh'
+      - '.github/workflows/fabulous-nextpnr.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  reproduce-g1-logs:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read pinned tool versions
+        id: pins
+        run: |
+          source flow/tool_versions.sh
+          {
+            echo "oss_tarball=${RECORDED_OSS_CAD_TARBALL}"
+            echo "oss_sha256=${RECORDED_OSS_CAD_SHA256}"
+            echo "uv_version=${RECORDED_UV_VERSION}"
+          } >> "$GITHUB_OUTPUT"
+
+      # nextpnr.sh downloads this tarball into flow/build/dl/ and verifies the
+      # pinned sha256 itself, so a poisoned or stale cache entry is refetched.
+      - name: Cache pinned OSS CAD Suite tarball
+        uses: actions/cache@v4
+        with:
+          path: flow/build/dl
+          key: oss-cad-${{ steps.pins.outputs.oss_tarball }}-${{ steps.pins.outputs.oss_sha256 }}
+
+      # python3-tk: FABulous 2.2.0 imports tkinter at module load
+      # (fabulous_repl.py), and flow/fabulous.sh builds its venv on the
+      # runner's system python3, which ships without tkinter.
+      - name: Install runner prerequisites (uv, iverilog, python3-tk)
+        env:
+          UV_VERSION: ${{ steps.pins.outputs.uv_version }}
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends iverilog python3-tk
+          python3 -m venv "$RUNNER_TEMP/uv-venv"
+          "$RUNNER_TEMP/uv-venv/bin/pip" install --quiet "uv==${UV_VERSION}"
+          echo "$RUNNER_TEMP/uv-venv/bin" >> "$GITHUB_PATH"
+
+      # FABulous shells out to `yosys` (BEL Verilog -> JSON) and the runner has
+      # none. flow/nextpnr.sh only unpacks the pinned OSS CAD Suite *after* it
+      # has run flow/fabulous.sh, so unpack it here first (same tarball, same
+      # sha256 check, same tool subset and .pin stamp nextpnr.sh writes, so
+      # nextpnr.sh reuses this tree) and put its bin/ on PATH for both steps.
+      - name: Unpack pinned OSS CAD Suite (yosys for FABulous)
+        run: |
+          source flow/tool_versions.sh
+          TGZ="flow/build/dl/$RECORDED_OSS_CAD_TARBALL"
+          mkdir -p flow/build/dl
+          if [[ ! -f "$TGZ" ]] || ! echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet -; then
+            curl -fsSL -o "$TGZ" \
+              "https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${RECORDED_OSS_CAD_TAG}/${RECORDED_OSS_CAD_TARBALL}"
+            echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet -
+          fi
+          rm -rf flow/build/oss-cad-suite
+          mkdir -p flow/build/oss-cad-suite
+          tar -xzf "$TGZ" -C flow/build/oss-cad-suite --strip-components=1 \
+            oss-cad-suite/bin oss-cad-suite/lib oss-cad-suite/libexec \
+            oss-cad-suite/share/yosys oss-cad-suite/share/nextpnr oss-cad-suite/etc
+          echo "$RECORDED_OSS_CAD_SHA256" > flow/build/oss-cad-suite/.pin
+          echo "$PWD/flow/build/oss-cad-suite/bin" >> "$GITHUB_PATH"
+          flow/build/oss-cad-suite/bin/yosys -V
+
+      - name: Reproduce generator.log (flow/fabulous.sh)
+        run: ./flow/fabulous.sh
+
+      - name: Reproduce nextpnr.log (flow/nextpnr.sh)
+        run: ./flow/nextpnr.sh
+
+      - name: Confirm committed logs are untouched
+        run: git diff --exit-code -- design/fabulous
+
+      - name: Upload raw and normalized logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fabulous-nextpnr-logs
+          path: |
+            flow/build/fabulous-raw.log
+            flow/build/fabulous-norm.log
+            flow/build/nextpnr-norm.log
+            flow/build/nextpnr-run/raw.log
+          if-no-files-found: warn
+          retention-days: 14
