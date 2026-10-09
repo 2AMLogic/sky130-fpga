@@ -36,6 +36,7 @@ TESTBENCHES=(
     "tb_lut4_slice:${RTL_DIR}/lut4_slice.v"
     "tb_logic_tile:${RTL_DIR}/lut4_slice.v ${RTL_DIR}/logic_tile.v"
     "tb_switch_matrix:${RTL_DIR}/logic_tile_switch_matrix.v"
+    "tb_logic_tile_routed:${RTL_DIR}/lut4_slice.v ${RTL_DIR}/logic_tile_switch_matrix.v ${RTL_DIR}/logic_tile_routed.v"
 )
 
 overall_status=0
