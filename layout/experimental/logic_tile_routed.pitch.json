@@ -1,0 +1,61 @@
+{
+  "component_count": 667,
+  "core_area_um2": 4754.56,
+  "def_units_per_um": 1000,
+  "die_area_um2": 5527.18,
+  "net_count": 323,
+  "note": "Observation of the ADR-0004-Proposed stand-in matrix; not a pitch commitment (spec/tile-spec.md defers it).",
+  "routed_length_um_by_layer": {
+    "li1": 0.0,
+    "met1": 2940.08,
+    "met2": 4398.71,
+    "met3": 2126.96,
+    "met4": 299.0,
+    "met5": 0.0
+  },
+  "routed_segments_by_layer": {
+    "li1": 0,
+    "met1": 1036,
+    "met2": 976,
+    "met3": 275,
+    "met4": 23,
+    "met5": 0
+  },
+  "schema": "sky130-fpga.routed-pitch-measurement/1",
+  "status": "experimental-measurement",
+  "track_pitch_um": {
+    "li1": {
+      "X": 0.46,
+      "Y": 0.34
+    },
+    "met1": {
+      "X": 0.34,
+      "Y": 0.34
+    },
+    "met2": {
+      "X": 0.46,
+      "Y": 0.46
+    },
+    "met3": {
+      "X": 0.68,
+      "Y": 0.68
+    },
+    "met4": {
+      "X": 0.92,
+      "Y": 0.92
+    },
+    "met5": {
+      "X": 3.4,
+      "Y": 3.4
+    }
+  },
+  "utilization_pct": 43.6579,
+  "via_instances_by_name": {
+    "L1M1_PR_MR": 699,
+    "M1M2_PR": 937,
+    "M1M2_PR_MR": 19,
+    "M2M3_PR": 298,
+    "M3M4_PR": 41
+  },
+  "wirelength_um_reported": 9764
+}
