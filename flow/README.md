@@ -89,9 +89,9 @@ the top of every run, with a warning if they differ from the table above
 (`RECORDED_KLT_VERSION` / `RECORDED_OPENROAD_VERSION` in that file;
 `flow/sta-sweep.sh` compares against `RECORDED_STA_KLT_VERSION` /
 `RECORDED_STA_OPENROAD_VERSION` instead). This is
-**informational, not enforced** — this repo has no CI and no pinned
-container image (a possible follow-up, out of scope here), so a mismatch
-does not abort the script.
+**informational, not enforced** — there is no pinned container image, so a
+mismatch does not abort the script. (CI exists: see "Continuous integration"
+below for what it does and does not reproduce.)
 
 ### Recorded PDK revision
 
@@ -176,6 +176,37 @@ klayout-tools#2903, and worked around by
 sweep runs annotation-complete at every corner (record
 `20261008-234741-dc615b4`). The `26Q3-2276` image was not re-tested, and
 the `flow/sdf-resim.sh` leg was not re-examined.
+
+## Continuous integration
+
+`.github/workflows/flow-evidence.yml` (issue #109) runs
+`flow/audit-evidence.sh` on pull requests touching `flow/`,
+`design/rtl/logic_tile.v`, `layout/` or `measurements/`. It needs no
+toolchain, so it is exactly reproducible on a stock runner and fails on a
+drifted claim or pinned script hash (the #53 failure mode). Other workflows:
+`signoff.yml` (manifest re-grade), `rtl-sim.yml` (Icarus testbenches),
+`fabulous-nextpnr.yml` (G1 logs).
+
+Not run in CI, and why (recorded as the finding of issue #109 rather than
+weakening any check mode):
+
+- `flow/layout.sh` (and `flow/lvs.sh`, which re-runs its check mode)
+  regenerates GDS/DEF byte-for-byte against artifacts produced by klt
+  `RECORDED_KLT_VERSION` and OpenROAD `RECORDED_OPENROAD_VERSION`. Those are
+  development builds (git-suffixed klt; a specific OpenROAD build) with no
+  published package or download this repo can fetch from the pins: PyPI
+  carries only plain `klayout-tools` releases, which per
+  `RECORDED_*_KLT_VERSION` notes do not regenerate byte-identically.
+- `flow/layout_routed.sh` likewise needs the pinned `openroad`.
+- All klt flows also need a sky130A install at `RECORDED_PDK_VERSION`
+  (an open_pdks commit); no reproducible, pinned fetch of that revision is
+  recorded in `flow/tool_versions.sh`.
+- `flow/sta-sweep.sh` (18 corners) and `flow/sdf-resim.sh` are too heavy for
+  per-PR CI; a scheduled job is a possible later step.
+
+Unblocking these requires published artifacts for the pinned OpenROAD and PDK
+revisions (or re-stamping the committed artifacts under a fetchable
+toolchain); pins would still live only in `flow/tool_versions.sh`.
 
 ## Current contents
 

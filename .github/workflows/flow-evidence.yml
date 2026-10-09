@@ -1,0 +1,36 @@
+# Per-PR evidence-flow check: runs flow/audit-evidence.sh (issue #109).
+#
+# Separate from signoff.yml, rtl-sim.yml and fabulous-nextpnr.yml on purpose
+# (signoff.yml's bytes are bound by the item-10 envelope). Path-filtered only.
+#
+# audit-evidence.sh needs no klt, OpenROAD, yosys, PDK install or network: it
+# re-derives the claim -> harness -> pinned-PDK audit from committed files and
+# flow/tool_versions.sh (the single pin source; no version is repeated here).
+# It exits non-zero on a drifted claim or script hash.
+#
+# The klt-driven check modes (layout.sh, drc.sh, lvs.sh, layout_routed.sh) and
+# the heavy sta-sweep.sh / sdf-resim.sh legs are deliberately NOT run here; see
+# flow/README.md "Continuous integration" for the specific blockers.
+name: flow-evidence
+
+on:
+  pull_request:
+    paths:
+      - 'flow/**'
+      - 'design/rtl/logic_tile.v'
+      - 'layout/**'
+      - 'measurements/**'
+      - '.github/workflows/flow-evidence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Audit claim-to-harness evidence
+        run: ./flow/audit-evidence.sh
