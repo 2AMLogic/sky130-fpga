@@ -17,6 +17,10 @@
 #      top_ports.v (top-level ports; no IO BEL -> "must be PAD") and
 #      top_const.v (a tied-off LUT input; no constant driver -> "Failed to
 #      find a route ... $PACKER_GND").
+#   5. ADR-0005 (spec/decisions/0005-*.md): top_io.v -- top-level ports on
+#      harness pad BELs (flow/nextpnr_io_overlay.py, scratch copy of the model;
+#      not a tile type) and constants folded into the LUT truth table -- packs,
+#      places and routes; a check asserts no cell pin uses $PACKER_GND/VCC.
 #   * writes design/fabulous/nextpnr.log (committed evidence), and
 #   * checks the FASM carries the expected LUT truth table.
 #
@@ -72,6 +76,17 @@ FAB_ROOT="$BUILD/fabulous-run" nextpnr-generic --uarch fabulous --json "$W/top.j
     -o fasm="$W/top.fasm"
 echo "# --- top.fasm ---"
 cat "$W/top.fasm"
+# ADR-0005 scheme: top-level ports on harness pad BELs + constants folded.
+echo "# --- ADR-0005 design: top_io.v (ports + constant-folded LUTs) ---"
+echo "\$ nextpnr_io_overlay.py <fabulous-run>/.FABulous <run>/io-model/.FABulous   (harness pad model)"
+python3 "$REPO/flow/nextpnr_io_overlay.py" "$BUILD/fabulous-run/.FABulous" "$W/io-model/.FABulous"
+echo "\$ yosys -p 'synth_fabulous -top top -extra-plib prims.v -extra-plib io_prims.v -extra-map io_map.v -cells-map cells_map.v -json top_io.json' top_io.v"
+yosys -q -p "synth_fabulous -top top -extra-plib $SRC/prims.v -extra-plib $SRC/io_prims.v -extra-map $SRC/io_map.v -cells-map $SRC/cells_map.v -json $W/top_io.json" "$SRC/top_io.v"
+echo "\$ FAB_ROOT=<run>/io-model nextpnr-generic --uarch fabulous --json top_io.json -o pcf=top_io.pcf -o fasm=top_io.fasm"
+FAB_ROOT="$W/io-model" nextpnr-generic --uarch fabulous --json "$W/top_io.json" \
+    -o pcf="$SRC/top_io.pcf" -o fasm="$W/top_io.fasm" --write "$W/top_io.post.json"
+echo "# --- top_io.fasm ---"
+cat "$W/top_io.fasm"
 } >"$RAW" 2>&1 || { echo "yosys/nextpnr FAILED; see $RAW" >&2; tail -20 "$RAW" >&2; exit 1; }
 
 # Expected-FAIL probes. Each must fail in nextpnr with the recorded message;
@@ -103,12 +118,24 @@ probe const "$SRC/top_const.v" 'Failed to find a route .*\$PACKER_GND' \
 grep -q "Routing design failed" "$W/probe-const.log"
 
 grep -q "Routing complete" "$RAW"
+# ADR-0005 constant check: nextpnr always creates the $PACKER_GND/VCC nets and
+# their driver cells; what must not survive packing is any *sink* on them.
+python3 - "$W/top_io.post.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))["modules"]["top"]
+bits = {b for n in ("$PACKER_GND", "$PACKER_VCC") for b in d["netnames"][n]["bits"]}
+users = [(c, p) for c, v in d["cells"].items() if not c.endswith("_DRV")
+         for p, bs in v["connections"].items() if bits & set(bs)]
+if users:
+    sys.exit("constant driver needed by: %s" % users)
+print("no cell pin uses $PACKER_GND/$PACKER_VCC")
+PY
 grep -q "Program finished normally" "$RAW"
 # parity LUT: INIT = 16'h6996
 grep -q "A.INIT\[15:0\] = 'b0110100110010110" "$W/top.fasm"
 
 NORM="$BUILD/nextpnr-norm.log"
-sed -e "s#$BUILD/fabulous-run#<fabulous-run>#g" -e "s#$W#<run>#g" "$RAW" \
+sed -e "s#$SRC/#<nextpnr-src>/#g" -e "s#$BUILD/fabulous-run#<fabulous-run>#g" -e "s#$W#<run>#g" "$RAW" \
   | grep -v -E 'iteration #|^Info: .*([Tt]ime|Checksum)' >"$NORM"
 
 if [[ "${1:-}" == "--update-log" ]]; then
