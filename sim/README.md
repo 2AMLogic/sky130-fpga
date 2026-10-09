@@ -224,7 +224,10 @@ selects). Example: BEL A `INIT[0]` is `cfg[0]` = frame 4 bit 2 = position 130.
   routed (`<design>.mapped.json`), with port directions and BEL INIT/FF
   matching the placed cells. Wire hops and CAP loop-back pips are in the
   generated spec with zero bits and must lie on a traced pad-to-logic or
-  loop-back path.
+  loop-back path. Because these zero-bit pips (pad pips, wire hops and CAP
+  loop-backs) carry no bits, an explicit `= 0` on one cannot be encoded and is
+  rejected rather than treated as an active route; a disabled pip is spelled by
+  omitting the line (`= 1` is accepted as the bare feature).
 
 ### Runtime semantics modelled around `cfg`
 

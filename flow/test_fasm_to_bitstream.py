@@ -213,6 +213,25 @@ class AssemblerRejectTests(unittest.TestCase):
         # port directions: swap the two designs' netlists
         self.rej(good, "top_io")
 
+    def test_disabled_zero_bit_pips_are_rejected(self):
+        # an explicit `= 0` on a zero-bit pip disables it; it must never be
+        # traced as an active route (judge repro on PR #114)
+        good = fasm("top_reg")
+        for line in ("X1Y2.IOB_O.N1BEG3", "X1Y0.IOB_O.S1BEG1",      # pad pips
+                     "X1Y2.N1BEG3.N1END3", "X2Y1.E1END3.W1BEG0",    # CAP wire pips
+                     "X0Y1.W1END3.E1BEG0"):
+            self.assertIn(line + "\n", good)
+            bad = good.replace(line + "\n", line + " = 0\n")
+            self.rej(bad, "top_reg")                    # full assembly + cross-check
+            self.rej(bad)                               # bit assembly alone
+        self.rej("X1Y0.IOA_O.S1BEG0 = 0\n")
+        self.rej("X1Y0.S1BEG0.S1END0 = 0\n")
+        # `= 1` is the explicit spelling of the bare (enabled) feature
+        a = F.assemble(good.replace("X1Y2.IOB_O.N1BEG3\n", "X1Y2.IOB_O.N1BEG3 = 1\n")
+                       .replace("X2Y1.E1END3.W1BEG0\n", "X2Y1.E1END3.W1BEG0 = 1\n"),
+                       SNAP, mapped("top_reg"))
+        self.assertEqual(a["cfg"], F.assemble(good, SNAP, mapped("top_reg"))["cfg"])
+
     def test_snapshot_consistency_errors(self):
         text = (FIX / "logic4_configmem.map").read_text()
         self.assertEqual(len(text.splitlines()), F.CFG_BITS)

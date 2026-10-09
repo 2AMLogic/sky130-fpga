@@ -29,7 +29,8 @@ features must exist in the generated bitStreamSpec; the only FASM lines that
 are dropped from the bit assembly are the overlay's zero-bit pad pips, and they
 are listed, counted and cross-checked against nextpnr's routed netlist.
 Unknown features, out-of-range selections, conflicting bit assignments,
-duplicates and malformed lines are errors (AsmError / BitstreamError).
+duplicates, malformed lines and an explicit `= 0` on a zero-bit (pad, wire or
+CAP) pip are errors (AsmError / BitstreamError).
 """
 import argparse
 import hashlib
@@ -178,6 +179,10 @@ def assemble(fasm_text, snap, mapped):
         # pad pip: only the overlay's, only on the overlay's tiles, no bits.
         parts = name.split(".")
         if len(parts) == 2 and (tile, parts[0], parts[1]) in pads and it["hi"] is None:
+            if it["bits"] == "0":
+                # an explicit `= 0` disables the pip; it must not count as a route
+                raise AsmError(f"line {it['line']}: disabled pad pip {tile}.{name} = 0 "
+                               f"(pad pips are zero-bit; omit the line instead)")
             if (tile, name) in seen:
                 raise AsmError(f"line {it['line']}: duplicate {tile}.{name}")
             seen.add((tile, name))
@@ -195,6 +200,11 @@ def assemble(fasm_text, snap, mapped):
             if tile != ltile:
                 if spec[key]:
                     raise AsmError(f"line {it['line']}: unexpected config bits on {tile}.{key}")
+                if val == 0:
+                    # zero-bit CAP/wire pip: `= 0` would carry no bits yet still be
+                    # traced as an active route, so it is rejected outright
+                    raise AsmError(f"line {it['line']}: disabled zero-bit pip {tile}.{key} = 0 "
+                                   f"(omit the line instead)")
                 n_cap += 1
             else:
                 n_logic += 1
