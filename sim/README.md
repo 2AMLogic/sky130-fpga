@@ -326,7 +326,15 @@ the `sky130_fd_sc_hd` behavioral models instead of `design/rtl/`. It exits
 nonzero if iverilog or the PDK models are missing, on any compile or
 simulation error, or if a PASS line is absent; `--negative` additionally shows
 that wrong bitstream-vs-oracle pairings (baseline N1, corpus N3: `casc2_s1.bin`
-vs the `casc_fan` oracle) and a corrupted netlist copy all FAIL. An empty or
+vs the `casc_fan` oracle) and a corrupted netlist copy all FAIL, where "FAIL"
+means a *completed* run (exit 0) ending in the testbench's terminal functional
+summary (`FAIL: tb_logic_tile_bitstream[<design>] (N checks, M failures, K
+perturbations survived)`). A crash, nonzero exit, empty/missing verdict,
+setup/loader/input-open FAIL, or conflicting verdicts is an infrastructure
+failure that fails the script (issue #141); N2 needs both fixture runs to
+complete and at least one functional FAIL. The classifier lives in
+`flow/gate_sim_verdict.sh` and is regression-tested without iverilog/PDK by
+`flow/test_gate_sim_verdict.sh`. An empty or
 missing index, a missing fixture file, an unrecognised oracle, or a loaded cfg
 differing from the recorded `.cfg` is an error. Expected routing failures have
 no bitstream and are not simulated.

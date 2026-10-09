@@ -20,11 +20,15 @@
 #   ./flow/gate-sim-bitstream.sh --negative   # also prove wrong results FAIL
 # Exit: nonzero on missing iverilog/vvp, missing PDK models, compile error,
 # simulation error, missing PASS line, or (with --negative) a negative case
-# that is wrongly accepted.
+# that is wrongly accepted OR whose run did not complete with the terminal
+# functional FAIL summary (crash, missing verdict, setup/loader FAIL or
+# conflicting verdicts are infrastructure failures; issue #141).
 # Scratch output: flow/build/gate-sim-bitstream/ (gitignored).
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=flow/gate_sim_verdict.sh
+source "$SCRIPT_DIR/gate_sim_verdict.sh"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$SCRIPT_DIR/build/gate-sim-bitstream"
 TB_NAME="tb_logic_tile_bitstream"
@@ -64,13 +68,18 @@ build() {  # build <netlist> <out.vvp>
         2>"$BUILD_DIR/build.log" || { echo "error: compile failed (see $BUILD_DIR/build.log)" >&2; return 1; }
 }
 
-# run_one <vvp> <bin> <wiring> <design> <log> ; prints log; returns 0 iff PASS line and vvp ok
-run_one() {
+# run_vvp <vvp> <bin> <wiring> <design> <log> ; prints rc-aware verdict to stdout:
+# PASS | FUNC_FAIL | INFRA (classification lives in gate_sim_verdict.sh)
+run_vvp() {
     local vvp_bin="$1" bin="$2" wiring="$3" dname="$4" log="$5" rc=0
-    vvp "$vvp_bin" +bin="$bin" +map="$BS_DIR/logic4_configmem.map" +wiring="$wiring" \
+    ${GATE_SIM_VVP:-vvp} "$vvp_bin" +bin="$bin" +map="$BS_DIR/logic4_configmem.map" +wiring="$wiring" \
         +design="$dname" +mutate >"$log" 2>&1 || rc=$?
-    [[ "$rc" -eq 0 ]] || return 1
-    grep -q "^PASS: ${TB_NAME}\[${dname}\]" "$log" && ! grep -q "^FAIL" "$log"
+    gs_classify "$rc" "$log" "$TB_NAME" "$dname"
+}
+
+# run_one: returns 0 iff the run completed with a PASS verdict (positive checks)
+run_one() {
+    [[ "$(run_vvp "$@")" == PASS ]]
 }
 
 build "$NETLIST" "$BUILD_DIR/$TB_NAME.vvp" || exit 1
@@ -137,37 +146,49 @@ fi
 
 if [[ "$NEGATIVE" -eq 1 ]]; then
     echo "=== negative checks (each MUST be reported as FAIL by the same pass criterion) ==="
+    # neg_verdict <label> <verdict> <log>: prints OK line and returns 0 on FUNC_FAIL;
+    # PASS = wrongly accepted, INFRA = infrastructure failure (both set status=1).
+    neg_check() {
+        local label="$1" verdict="$2" log="$3"
+        case "$verdict" in
+            FUNC_FAIL) echo "negative $label OK: completed functional rejection -> $(grep -m1 -E '^FAIL' "$log")"; return 0 ;;
+            PASS) echo "error: negative $label was ACCEPTED" >&2 ;;
+            *) echo "error: negative $label did not complete with a recognised functional verdict (infrastructure failure; see $log)" >&2
+               tail -n 15 "$log" >&2 || true ;;
+        esac
+        return 1
+    }
     # N1: wrong program for the oracle -- top_io bitstream judged as the registered design.
-    if run_one "$BUILD_DIR/$TB_NAME.vvp" "$BS_DIR/top_io.bin" "$BS_DIR/top_reg.wiring" reg "$BUILD_DIR/neg_wrong_bitstream.log"; then
-        echo "error: negative N1 (wrong bitstream vs oracle) was ACCEPTED" >&2; status=1
-    else
-        echo "negative N1 OK: top_io.bin judged against the reg oracle -> $(grep -m1 -E '^(FAIL|PASS)' "$BUILD_DIR/neg_wrong_bitstream.log" || echo 'no PASS line')"
-    fi
+    v="$(run_vvp "$BUILD_DIR/$TB_NAME.vvp" "$BS_DIR/top_io.bin" "$BS_DIR/top_reg.wiring" reg "$BUILD_DIR/neg_wrong_bitstream.log")"
+    neg_check "N1 (wrong bitstream vs oracle)" "$v" "$BUILD_DIR/neg_wrong_bitstream.log" || status=1
     # N3: wrong program for a corpus case with internal routing -- casc2_s1.bin
     # judged against the casc_fan oracle and wiring.
-    if run_one "$BUILD_DIR/$TB_NAME.vvp" "$CORPUS_DIR/casc2_s1.bin" "$CORPUS_DIR/casc_fan_s1.wiring" casc_fan "$BUILD_DIR/neg_wrong_corpus.log"; then
-        echo "error: negative N3 (wrong corpus bitstream vs oracle) was ACCEPTED" >&2; status=1
-    else
-        echo "negative N3 OK: casc2_s1.bin judged against the casc_fan oracle -> $(grep -m1 -E '^(FAIL|PASS)' "$BUILD_DIR/neg_wrong_corpus.log" || echo 'no PASS line')"
-    fi
+    v="$(run_vvp "$BUILD_DIR/$TB_NAME.vvp" "$CORPUS_DIR/casc2_s1.bin" "$CORPUS_DIR/casc_fan_s1.wiring" casc_fan "$BUILD_DIR/neg_wrong_corpus.log")"
+    neg_check "N3 (wrong corpus bitstream vs oracle)" "$v" "$BUILD_DIR/neg_wrong_corpus.log" || status=1
     # N2: corrupted netlist (scratch copy; every nand2_1 -> nor2_1).
     sed 's/sky130_fd_sc_hd__nand2_1/sky130_fd_sc_hd__nor2_1/g' "$NETLIST" >"$BUILD_DIR/corrupt.synth.v"
     if cmp -s "$NETLIST" "$BUILD_DIR/corrupt.synth.v"; then
         echo "error: negative N2 could not corrupt the netlist copy" >&2; status=1
     elif build "$BUILD_DIR/corrupt.synth.v" "$BUILD_DIR/corrupt.vvp"; then
-        n2ok=1
+        n2_func=0; n2_bad=0
         for entry in "comb:top_io" "reg:top_reg"; do
             dname="${entry%%:*}"; stem="${entry#*:}"
-            if run_one "$BUILD_DIR/corrupt.vvp" "$BS_DIR/$stem.bin" "$BS_DIR/$stem.wiring" "$dname" "$BUILD_DIR/neg_corrupt_$dname.log"; then
-                n2ok=0
-            fi
-            echo "negative N2 [$dname]: $(grep -m1 -E '^(FAIL|PASS)' "$BUILD_DIR/neg_corrupt_$dname.log" || echo 'no PASS line')"
+            v="$(run_vvp "$BUILD_DIR/corrupt.vvp" "$BS_DIR/$stem.bin" "$BS_DIR/$stem.wiring" "$dname" "$BUILD_DIR/neg_corrupt_$dname.log")"
+            echo "negative N2 [$dname]: $v $(grep -m1 -E '^(FAIL|PASS)' "$BUILD_DIR/neg_corrupt_$dname.log" || echo '(no verdict line)')"
+            case "$v" in
+                FUNC_FAIL) n2_func=$((n2_func + 1)) ;;
+                PASS) ;;
+                *) n2_bad=$((n2_bad + 1))
+                   echo "error: negative N2 [$dname] did not complete with a recognised verdict (infrastructure failure; see $BUILD_DIR/neg_corrupt_$dname.log)" >&2
+                   tail -n 15 "$BUILD_DIR/neg_corrupt_$dname.log" >&2 || true ;;
+            esac
         done
-        # a corrupted netlist is only required to be caught by at least one fixture it affects
-        if grep -q '^PASS' "$BUILD_DIR/neg_corrupt_comb.log" && grep -q '^PASS' "$BUILD_DIR/neg_corrupt_reg.log"; then
+        # both runs must complete; a corrupted netlist need only be caught by at least one fixture
+        if [[ "$n2_bad" -gt 0 ]]; then status=1
+        elif [[ "$n2_func" -eq 0 ]]; then
             echo "error: negative N2 (corrupted netlist) was ACCEPTED by both fixtures" >&2; status=1
         else
-            echo "negative N2 OK: corrupted netlist rejected"
+            echo "negative N2 OK: corrupted netlist rejected by a completed functional FAIL ($n2_func/2 fixtures)"
         fi
     else
         status=1
