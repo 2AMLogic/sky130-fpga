@@ -1,0 +1,2988 @@
+*SPEF "IEEE 1481-1999"
+*DESIGN "logic_tile"
+*DATE "canonicalized (see flow/sta_sanitize_names.py)"
+*VENDOR "2AM Logic"
+*PROGRAM "klt extract"
+*VERSION "0.7.0+g6fd0278268cc"
+*DESIGN_FLOW "NAME_SCOPE LOCAL" "PIN_CAP NONE"
+*DIVIDER /
+*DELIMITER :
+*BUS_DELIMITER [ ]
+*T_UNIT 1 PS
+*C_UNIT 1 FF
+*R_UNIT 1 OHM
+*L_UNIT 1 HENRY
+
+*PORTS
+VGND B
+VPWR B
+ce\[0\] B
+ce\[1\] B
+ce\[2\] B
+ce\[3\] B
+clk B
+in\[0\] B
+in\[10\] B
+in\[11\] B
+in\[12\] B
+in\[13\] B
+in\[14\] B
+in\[15\] B
+in\[1\] B
+in\[2\] B
+in\[3\] B
+in\[4\] B
+in\[5\] B
+in\[6\] B
+in\[7\] B
+in\[8\] B
+in\[9\] B
+lut_init\[0\] B
+lut_init\[10\] B
+lut_init\[11\] B
+lut_init\[12\] B
+lut_init\[13\] B
+lut_init\[14\] B
+lut_init\[15\] B
+lut_init\[16\] B
+lut_init\[17\] B
+lut_init\[18\] B
+lut_init\[19\] B
+lut_init\[1\] B
+lut_init\[20\] B
+lut_init\[21\] B
+lut_init\[22\] B
+lut_init\[23\] B
+lut_init\[24\] B
+lut_init\[25\] B
+lut_init\[26\] B
+lut_init\[27\] B
+lut_init\[28\] B
+lut_init\[29\] B
+lut_init\[2\] B
+lut_init\[30\] B
+lut_init\[31\] B
+lut_init\[32\] B
+lut_init\[33\] B
+lut_init\[34\] B
+lut_init\[35\] B
+lut_init\[36\] B
+lut_init\[37\] B
+lut_init\[38\] B
+lut_init\[39\] B
+lut_init\[3\] B
+lut_init\[40\] B
+lut_init\[41\] B
+lut_init\[42\] B
+lut_init\[43\] B
+lut_init\[44\] B
+lut_init\[45\] B
+lut_init\[46\] B
+lut_init\[47\] B
+lut_init\[48\] B
+lut_init\[49\] B
+lut_init\[4\] B
+lut_init\[50\] B
+lut_init\[51\] B
+lut_init\[52\] B
+lut_init\[53\] B
+lut_init\[54\] B
+lut_init\[55\] B
+lut_init\[56\] B
+lut_init\[57\] B
+lut_init\[58\] B
+lut_init\[59\] B
+lut_init\[5\] B
+lut_init\[60\] B
+lut_init\[61\] B
+lut_init\[62\] B
+lut_init\[63\] B
+lut_init\[6\] B
+lut_init\[7\] B
+lut_init\[8\] B
+lut_init\[9\] B
+out\[0\] B
+out\[1\] B
+out\[2\] B
+out\[3\] B
+reg_sel\[0\] B
+reg_sel\[1\] B
+reg_sel\[2\] B
+reg_sel\[3\] B
+rst B
+
+*D_NET VGND 80.409114
+*CONN
+*P VGND B
+*CAP
+1 VGND:2 77.610834
+2 VGND:2 VPWR:2 0.349850
+3 VGND:2 ce\[0\]:2 0.039746
+4 VGND:2 ce\[1\]:2 0.021177
+5 VGND:2 ce\[2\]:2 0.008995
+6 VGND:2 ce\[3\]:2 0.025674
+7 VGND:2 clk:2 0.008995
+8 VGND:2 clknet_0_clk:2 0.026986
+9 VGND:2 clknet_1_0__leaf_clk:2 0.008995
+10 VGND:2 clknet_1_1__leaf_clk:2 0.008995
+11 VGND:2 g_slice_0__u_slice___00_:2 0.008995
+12 VGND:2 g_slice_0__u_slice___01_:2 0.004051
+13 VGND:2 g_slice_0__u_slice___02_:2 0.017991
+14 VGND:2 g_slice_0__u_slice___03_:2 0.028226
+15 VGND:2 g_slice_0__u_slice___04_:2 0.031636
+16 VGND:2 g_slice_0__u_slice___05_:2 0.047313
+17 VGND:2 g_slice_0__u_slice__ff_q:2 0.026986
+18 VGND:2 g_slice_1__u_slice___01_:2 0.013052
+19 VGND:2 g_slice_1__u_slice___02_:2 0.017004
+20 VGND:2 g_slice_1__u_slice___03_:2 0.014574
+21 VGND:2 g_slice_1__u_slice___05_:2 0.027087
+22 VGND:2 g_slice_1__u_slice__ff_q:2 0.029197
+23 VGND:2 g_slice_2__u_slice___01_:2 0.017991
+24 VGND:2 g_slice_2__u_slice___02_:2 0.008995
+25 VGND:2 g_slice_2__u_slice___03_:2 0.012053
+26 VGND:2 g_slice_2__u_slice___05_:2 0.045771
+27 VGND:2 g_slice_2__u_slice___06_:2 0.008995
+28 VGND:2 g_slice_2__u_slice___08_:2 0.008995
+29 VGND:2 g_slice_2__u_slice__ff_q:2 0.008995
+30 VGND:2 g_slice_3__u_slice___01_:2 0.013072
+31 VGND:2 g_slice_3__u_slice___02_:2 0.017991
+32 VGND:2 g_slice_3__u_slice___03_:2 0.008995
+33 VGND:2 g_slice_3__u_slice___04_:2 0.008995
+34 VGND:2 g_slice_3__u_slice___05_:2 0.026986
+35 VGND:2 g_slice_3__u_slice__ff_q:2 0.034593
+36 VGND:2 in\[0\]:2 0.072927
+37 VGND:2 in\[11\]:2 0.009850
+38 VGND:2 in\[12\]:2 0.044977
+39 VGND:2 in\[13\]:2 0.048024
+40 VGND:2 in\[15\]:2 0.017991
+41 VGND:2 in\[1\]:2 0.053670
+42 VGND:2 in\[2\]:2 0.012181
+43 VGND:2 in\[3\]:2 0.008995
+44 VGND:2 in\[4\]:2 0.044008
+45 VGND:2 in\[5\]:2 0.067321
+46 VGND:2 in\[6\]:2 0.014566
+47 VGND:2 in\[8\]:2 0.083089
+48 VGND:2 in\[9\]:2 0.059280
+49 VGND:2 lut_init\[0\]:2 0.009989
+50 VGND:2 lut_init\[10\]:2 0.016909
+51 VGND:2 lut_init\[11\]:2 0.008995
+52 VGND:2 lut_init\[13\]:2 0.003186
+53 VGND:2 lut_init\[14\]:2 0.008995
+54 VGND:2 lut_init\[15\]:2 0.008995
+55 VGND:2 lut_init\[16\]:2 0.008995
+56 VGND:2 lut_init\[18\]:2 0.017991
+57 VGND:2 lut_init\[19\]:2 0.017991
+58 VGND:2 lut_init\[20\]:2 0.018554
+59 VGND:2 lut_init\[21\]:2 0.008995
+60 VGND:2 lut_init\[22\]:2 0.008995
+61 VGND:2 lut_init\[24\]:2 0.003957
+62 VGND:2 lut_init\[25\]:2 0.003957
+63 VGND:2 lut_init\[27\]:2 0.003186
+64 VGND:2 lut_init\[28\]:2 0.008856
+65 VGND:2 lut_init\[31\]:2 0.010588
+66 VGND:2 lut_init\[32\]:2 0.007914
+67 VGND:2 lut_init\[34\]:2 0.000942
+68 VGND:2 lut_init\[35\]:2 0.008995
+69 VGND:2 lut_init\[36\]:2 0.007914
+70 VGND:2 lut_init\[38\]:2 0.000942
+71 VGND:2 lut_init\[39\]:2 0.008995
+72 VGND:2 lut_init\[3\]:2 0.026986
+73 VGND:2 lut_init\[40\]:2 0.008856
+74 VGND:2 lut_init\[41\]:2 0.010588
+75 VGND:2 lut_init\[44\]:2 0.007914
+76 VGND:2 lut_init\[45\]:2 0.012181
+77 VGND:2 lut_init\[46\]:2 0.018933
+78 VGND:2 lut_init\[47\]:2 0.053972
+79 VGND:2 lut_init\[48\]:2 0.017991
+80 VGND:2 lut_init\[49\]:2 0.021948
+81 VGND:2 lut_init\[4\]:2 0.008995
+82 VGND:2 lut_init\[50\]:2 0.031141
+83 VGND:2 lut_init\[51\]:2 0.017991
+84 VGND:2 lut_init\[52\]:2 0.017991
+85 VGND:2 lut_init\[53\]:2 0.017991
+86 VGND:2 lut_init\[54\]:2 0.058325
+87 VGND:2 lut_init\[55\]:2 0.017991
+88 VGND:2 lut_init\[56\]:2 0.017069
+89 VGND:2 lut_init\[57\]:2 0.008995
+90 VGND:2 lut_init\[58\]:2 0.014574
+91 VGND:2 lut_init\[59\]:2 0.020846
+92 VGND:2 lut_init\[5\]:2 0.008995
+93 VGND:2 lut_init\[60\]:2 0.022770
+94 VGND:2 lut_init\[61\]:2 0.063541
+95 VGND:2 lut_init\[62\]:2 0.022770
+96 VGND:2 lut_init\[63\]:2 0.017991
+97 VGND:2 lut_init\[6\]:2 0.008995
+98 VGND:2 lut_init\[7\]:2 0.008995
+99 VGND:2 lut_init\[8\]:2 0.008995
+100 VGND:2 lut_init\[9\]:2 0.008995
+101 VGND:2 out\[0\]:2 0.026986
+102 VGND:2 out\[1\]:2 0.026986
+103 VGND:2 out\[2\]:2 0.053972
+104 VGND:2 out\[3\]:2 0.044977
+105 VGND:2 reg_sel\[0\]:2 0.067321
+106 VGND:2 reg_sel\[1\]:2 0.031037
+107 VGND:2 reg_sel\[2\]:2 0.060746
+108 VGND:2 reg_sel\[3\]:2 0.049613
+109 VGND:2 rst:2 0.123650
+*RES
+1 VGND VGND:2 28119.639400
+*END
+
+*D_NET VPWR 74.512431
+*CONN
+*P VPWR B
+*CAP
+1 VPWR:2 72.162396
+2 VPWR:2 ce\[0\]:2 0.017991
+3 VPWR:2 ce\[1\]:2 0.017991
+4 VPWR:2 ce\[2\]:2 0.009655
+5 VPWR:2 ce\[3\]:2 0.019196
+6 VPWR:2 clknet_0_clk:2 0.031320
+7 VPWR:2 clknet_1_0__leaf_clk:2 0.008995
+8 VPWR:2 clknet_1_1__leaf_clk:2 0.020815
+9 VPWR:2 g_slice_0__u_slice___01_:2 0.008995
+10 VPWR:2 g_slice_0__u_slice___02_:2 0.008995
+11 VPWR:2 g_slice_0__u_slice___03_:2 0.008995
+12 VPWR:2 g_slice_0__u_slice___05_:2 0.067321
+13 VPWR:2 g_slice_0__u_slice___06_:2 0.011497
+14 VPWR:2 g_slice_0__u_slice___07_:2 0.021843
+15 VPWR:2 g_slice_0__u_slice___08_:2 0.008995
+16 VPWR:2 g_slice_0__u_slice__ff_q:2 0.042546
+17 VPWR:2 g_slice_1__u_slice___00_:2 0.008995
+18 VPWR:2 g_slice_1__u_slice___01_:2 0.027115
+19 VPWR:2 g_slice_1__u_slice___02_:2 0.008995
+20 VPWR:2 g_slice_1__u_slice___03_:2 0.022930
+21 VPWR:2 g_slice_1__u_slice___04_:2 0.017069
+22 VPWR:2 g_slice_1__u_slice___05_:2 0.008995
+23 VPWR:2 g_slice_1__u_slice___06_:2 0.012353
+24 VPWR:2 g_slice_1__u_slice___07_:2 0.026337
+25 VPWR:2 g_slice_1__u_slice___08_:2 0.008262
+26 VPWR:2 g_slice_1__u_slice__ff_q:2 0.017991
+27 VPWR:2 g_slice_2__u_slice___00_:2 0.008995
+28 VPWR:2 g_slice_2__u_slice___01_:2 0.017629
+29 VPWR:2 g_slice_2__u_slice___02_:2 0.008995
+30 VPWR:2 g_slice_2__u_slice___04_:2 0.012992
+31 VPWR:2 g_slice_2__u_slice___05_:2 0.017991
+32 VPWR:2 g_slice_2__u_slice___06_:2 0.008995
+33 VPWR:2 g_slice_2__u_slice___07_:2 0.005276
+34 VPWR:2 g_slice_2__u_slice___08_:2 0.008995
+35 VPWR:2 g_slice_2__u_slice__ff_q:2 0.008995
+36 VPWR:2 g_slice_3__u_slice___00_:2 0.008995
+37 VPWR:2 g_slice_3__u_slice___02_:2 0.017991
+38 VPWR:2 g_slice_3__u_slice___03_:2 0.016418
+39 VPWR:2 g_slice_3__u_slice___04_:2 0.011993
+40 VPWR:2 g_slice_3__u_slice___05_:2 0.044593
+41 VPWR:2 g_slice_3__u_slice___06_:2 0.021934
+42 VPWR:2 g_slice_3__u_slice___07_:2 0.008995
+43 VPWR:2 g_slice_3__u_slice___08_:2 0.011713
+44 VPWR:2 g_slice_3__u_slice__ff_q:2 0.008995
+45 VPWR:2 in\[0\]:2 0.073269
+46 VPWR:2 in\[10\]:2 0.043208
+47 VPWR:2 in\[11\]:2 0.031575
+48 VPWR:2 in\[12\]:2 0.073886
+49 VPWR:2 in\[13\]:2 0.072052
+50 VPWR:2 in\[14\]:2 0.040334
+51 VPWR:2 in\[15\]:2 0.061511
+52 VPWR:2 in\[1\]:2 0.026986
+53 VPWR:2 in\[2\]:2 0.017991
+54 VPWR:2 in\[3\]:2 0.017991
+55 VPWR:2 in\[4\]:2 0.030172
+56 VPWR:2 in\[5\]:2 0.067321
+57 VPWR:2 in\[6\]:2 0.040334
+58 VPWR:2 in\[7\]:2 0.043332
+59 VPWR:2 in\[8\]:2 0.077909
+60 VPWR:2 in\[9\]:2 0.040315
+61 VPWR:2 lut_init\[10\]:2 0.008995
+62 VPWR:2 lut_init\[11\]:2 0.003186
+63 VPWR:2 lut_init\[12\]:2 0.008995
+64 VPWR:2 lut_init\[13\]:2 0.008995
+65 VPWR:2 lut_init\[14\]:2 0.008995
+66 VPWR:2 lut_init\[15\]:2 0.019584
+67 VPWR:2 lut_init\[16\]:2 0.008995
+68 VPWR:2 lut_init\[18\]:2 0.008995
+69 VPWR:2 lut_init\[19\]:2 0.008995
+70 VPWR:2 lut_init\[20\]:2 0.008995
+71 VPWR:2 lut_init\[21\]:2 0.010588
+72 VPWR:2 lut_init\[24\]:2 0.008995
+73 VPWR:2 lut_init\[29\]:2 0.003186
+74 VPWR:2 lut_init\[31\]:2 0.008995
+75 VPWR:2 lut_init\[3\]:2 0.021177
+76 VPWR:2 lut_init\[43\]:2 0.003186
+77 VPWR:2 lut_init\[45\]:2 0.008995
+78 VPWR:2 lut_init\[46\]:2 0.008995
+79 VPWR:2 lut_init\[47\]:2 0.053972
+80 VPWR:2 lut_init\[48\]:2 0.017991
+81 VPWR:2 lut_init\[49\]:2 0.017991
+82 VPWR:2 lut_init\[4\]:2 0.008995
+83 VPWR:2 lut_init\[50\]:2 0.017991
+84 VPWR:2 lut_init\[51\]:2 0.017991
+85 VPWR:2 lut_init\[52\]:2 0.008995
+86 VPWR:2 lut_init\[53\]:2 0.008995
+87 VPWR:2 lut_init\[54\]:2 0.008995
+88 VPWR:2 lut_init\[55\]:2 0.036031
+89 VPWR:2 lut_init\[5\]:2 0.008995
+90 VPWR:2 lut_init\[60\]:2 0.008995
+91 VPWR:2 lut_init\[61\]:2 0.008995
+92 VPWR:2 lut_init\[62\]:2 0.049330
+93 VPWR:2 lut_init\[63\]:2 0.008995
+94 VPWR:2 lut_init\[6\]:2 0.008995
+95 VPWR:2 lut_init\[7\]:2 0.008995
+96 VPWR:2 lut_init\[8\]:2 0.016298
+97 VPWR:2 lut_init\[9\]:2 0.008995
+98 VPWR:2 out\[0\]:2 0.021468
+99 VPWR:2 out\[1\]:2 0.026986
+100 VPWR:2 out\[2\]:2 0.048454
+101 VPWR:2 out\[3\]:2 0.051092
+102 VPWR:2 reg_sel\[0\]:2 0.017991
+103 VPWR:2 reg_sel\[1\]:2 0.026986
+104 VPWR:2 reg_sel\[2\]:2 0.044977
+105 VPWR:2 reg_sel\[3\]:2 0.044977
+106 VPWR:2 rst:2 0.098849
+*RES
+1 VPWR VPWR:2 26279.503800
+*END
+
+*D_NET ce\[0\] 2.987150
+*CONN
+*P ce\[0\] B
+*I g_slice_0__u_slice___16_:B B
+*I g_slice_0__u_slice___15_:A B
+*CAP
+1 ce\[0\]:2 2.940962
+2 ce\[0\]:2 ce\[3\]:2 0.005247
+3 ce\[0\]:2 clknet_0_clk:2 0.002624
+4 ce\[0\]:2 g_slice_0__u_slice___06_:2 0.004876
+5 ce\[0\]:2 g_slice_0__u_slice___07_:2 0.004819
+6 ce\[0\]:2 g_slice_0__u_slice__ff_q:2 0.002624
+7 ce\[0\]:2 g_slice_3__u_slice___00_:2 0.005436
+8 ce\[0\]:2 g_slice_3__u_slice___05_:2 0.002624
+9 ce\[0\]:2 g_slice_3__u_slice___07_:2 0.004819
+10 ce\[0\]:2 g_slice_3__u_slice__ff_q:2 0.002624
+11 ce\[0\]:2 in\[10\]:2 0.002624
+12 ce\[0\]:2 in\[11\]:2 0.002624
+13 ce\[0\]:2 rst:2 0.005247
+*RES
+1 ce[0] ce\[0\]:2 57.967400
+2 ce[0] g_slice_0__u_slice___16_:B 0.000000
+3 ce[0] g_slice_0__u_slice___15_:A 0.000000
+*END
+
+*D_NET ce\[1\] 2.122970
+*CONN
+*P ce\[1\] B
+*I g_slice_1__u_slice___16_:B B
+*I g_slice_1__u_slice___15_:A B
+*CAP
+1 ce\[1\]:2 2.078938
+2 ce\[1\]:2 ce\[2\]:2 0.005696
+3 ce\[1\]:2 ce\[3\]:2 0.005247
+4 ce\[1\]:2 g_slice_1__u_slice___06_:2 0.003677
+5 ce\[1\]:2 g_slice_1__u_slice___07_:2 0.005048
+6 ce\[1\]:2 g_slice_1__u_slice__ff_q:2 0.002624
+7 ce\[1\]:2 g_slice_2__u_slice___05_:2 0.002624
+8 ce\[1\]:2 g_slice_2__u_slice___08_:2 0.004310
+9 ce\[1\]:2 g_slice_3__u_slice__ff_q:2 0.002624
+10 ce\[1\]:2 in\[10\]:2 0.002624
+11 ce\[1\]:2 in\[11\]:2 0.002624
+12 ce\[1\]:2 out\[2\]:2 0.004310
+13 ce\[1\]:2 rst:2 0.002624
+*RES
+1 ce[1] ce\[1\]:2 49.234700
+2 ce[1] g_slice_1__u_slice___16_:B 0.000000
+3 ce[1] g_slice_1__u_slice___15_:A 0.000000
+*END
+
+*D_NET ce\[2\] 1.688658
+*CONN
+*P ce\[2\] B
+*I g_slice_2__u_slice___16_:B B
+*I g_slice_2__u_slice___15_:A B
+*CAP
+1 ce\[2\]:2 1.666755
+2 ce\[2\]:2 ce\[3\]:2 0.007402
+3 ce\[2\]:2 g_slice_2__u_slice___05_:2 0.003620
+4 ce\[2\]:2 g_slice_2__u_slice___06_:2 0.005813
+5 ce\[2\]:2 rst:2 0.005068
+*RES
+1 ce[2] ce\[2\]:2 43.309200
+2 ce[2] g_slice_2__u_slice___16_:B 0.000000
+3 ce[2] g_slice_2__u_slice___15_:A 0.000000
+*END
+
+*D_NET ce\[3\] 2.578233
+*CONN
+*P ce\[3\] B
+*I g_slice_3__u_slice___16_:B B
+*I g_slice_3__u_slice___15_:A B
+*CAP
+1 ce\[3\]:2 2.493199
+2 ce\[3\]:2 g_slice_2__u_slice___05_:2 0.018278
+3 ce\[3\]:2 g_slice_2__u_slice___06_:2 0.004876
+4 ce\[3\]:2 g_slice_2__u_slice___07_:2 0.004819
+5 ce\[3\]:2 g_slice_2__u_slice___08_:2 0.004819
+6 ce\[3\]:2 g_slice_2__u_slice__ff_q:2 0.005247
+7 ce\[3\]:2 g_slice_3__u_slice___06_:2 0.004876
+8 ce\[3\]:2 g_slice_3__u_slice___07_:2 0.008054
+9 ce\[3\]:2 g_slice_3__u_slice__ff_q:2 0.005247
+10 ce\[3\]:2 in\[0\]:2 0.008867
+11 ce\[3\]:2 in\[10\]:2 0.002624
+12 ce\[3\]:2 in\[11\]:2 0.003620
+13 ce\[3\]:2 out\[2\]:2 0.005422
+14 ce\[3\]:2 reg_sel\[2\]:2 0.003038
+15 ce\[3\]:2 rst:2 0.005247
+*RES
+1 ce[3] ce\[3\]:2 55.686900
+2 ce[3] g_slice_3__u_slice___16_:B 0.000000
+3 ce[3] g_slice_3__u_slice___15_:A 0.000000
+*END
+
+*D_NET clk 3.165199
+*CONN
+*P clk B
+*I clkbuf_0_clk:A B
+*CAP
+1 clk:2 3.088012
+2 clk:2 clknet_0_clk:2 0.002624
+3 clk:2 g_slice_1__u_slice___05_:2 0.002624
+4 clk:2 g_slice_1__u_slice__ff_q:2 0.002624
+5 clk:2 g_slice_3__u_slice___05_:2 0.002624
+6 clk:2 in\[0\]:2 0.006244
+7 clk:2 in\[10\]:2 0.003620
+8 clk:2 in\[11\]:2 0.003620
+9 clk:2 in\[12\]:2 0.006244
+10 clk:2 in\[13\]:2 0.006244
+11 clk:2 in\[14\]:2 0.006244
+12 clk:2 in\[15\]:2 0.006244
+13 clk:2 in\[1\]:2 0.006244
+14 clk:2 in\[2\]:2 0.006244
+15 clk:2 in\[9\]:2 0.005247
+16 clk:2 out\[2\]:2 0.002624
+17 clk:2 out\[3\]:2 0.002624
+18 clk:2 reg_sel\[2\]:2 0.002624
+19 clk:2 reg_sel\[3\]:2 0.002624
+*RES
+1 clk clk:2 50.868900
+2 clk clkbuf_0_clk:A 0.000000
+*END
+
+*D_NET clknet_0_clk 3.128683
+*CONN
+*I clkbuf_1_1__f_clk:A B
+*I clkbuf_1_0__f_clk:A B
+*I clkbuf_0_clk:X B
+*CAP
+1 clknet_0_clk:2 3.067335
+2 clknet_0_clk:2 clknet_1_0__leaf_clk:2 0.016148
+3 clknet_0_clk:2 clknet_1_1__leaf_clk:2 0.002624
+4 clknet_0_clk:2 g_slice_0__u_slice___05_:2 0.002624
+5 clknet_0_clk:2 g_slice_0__u_slice__ff_q:2 0.002624
+6 clknet_0_clk:2 g_slice_2__u_slice___05_:2 0.002624
+7 clknet_0_clk:2 g_slice_3__u_slice___00_:2 0.002624
+8 clknet_0_clk:2 in\[10\]:2 0.002624
+9 clknet_0_clk:2 in\[11\]:2 0.002624
+10 clknet_0_clk:2 in\[9\]:2 0.018772
+11 clknet_0_clk:2 rst:2 0.008060
+*RES
+1 clknet_0_clk:1 clknet_0_clk:2 349.546500
+2 clknet_0_clk:1 clkbuf_1_1__f_clk:A 0.000000
+3 clknet_0_clk:1 clkbuf_1_0__f_clk:A 0.000000
+4 clknet_0_clk:1 clkbuf_0_clk:X 0.000000
+*END
+
+*D_NET clknet_1_0__leaf_clk 1.830496
+*CONN
+*I g_slice_0__u_slice___19_:CLK B
+*I g_slice_1__u_slice___19_:CLK B
+*I clkbuf_1_0__f_clk:X B
+*CAP
+1 clknet_1_0__leaf_clk:2 1.807558
+2 clknet_1_0__leaf_clk:2 g_slice_0__u_slice___00_:2 0.004477
+3 clknet_1_0__leaf_clk:2 g_slice_0__u_slice___05_:2 0.002624
+4 clknet_1_0__leaf_clk:2 g_slice_0__u_slice__ff_q:2 0.005342
+5 clknet_1_0__leaf_clk:2 g_slice_2__u_slice___01_:2 0.002624
+6 clknet_1_0__leaf_clk:2 in\[9\]:2 0.002624
+7 clknet_1_0__leaf_clk:2 rst:2 0.005247
+*RES
+1 clknet_1_0__leaf_clk:1 clknet_1_0__leaf_clk:2 341.984900
+2 clknet_1_0__leaf_clk:1 g_slice_0__u_slice___19_:CLK 0.000000
+3 clknet_1_0__leaf_clk:1 g_slice_1__u_slice___19_:CLK 0.000000
+4 clknet_1_0__leaf_clk:1 clkbuf_1_0__f_clk:X 0.000000
+*END
+
+*D_NET clknet_1_1__leaf_clk 2.364826
+*CONN
+*I g_slice_2__u_slice___19_:CLK B
+*I g_slice_3__u_slice___19_:CLK B
+*I clkbuf_1_1__f_clk:X B
+*CAP
+1 clknet_1_1__leaf_clk:2 2.362202
+2 clknet_1_1__leaf_clk:2 in\[11\]:2 0.002624
+*RES
+1 clknet_1_1__leaf_clk:1 clknet_1_1__leaf_clk:2 347.025000
+2 clknet_1_1__leaf_clk:1 g_slice_2__u_slice___19_:CLK 0.000000
+3 clknet_1_1__leaf_clk:1 g_slice_3__u_slice___19_:CLK 0.000000
+4 clknet_1_1__leaf_clk:1 clkbuf_1_1__f_clk:X 0.000000
+*END
+
+*D_NET g_slice_0__u_slice___00_ 0.694156
+*CONN
+*I g_slice_0__u_slice___19_:D B
+*I g_slice_0__u_slice___18_:X B
+*CAP
+1 g_slice_0__u_slice___00_:2 0.684243
+2 g_slice_0__u_slice___00_:2 g_slice_2__u_slice___05_:2 0.005436
+3 g_slice_0__u_slice___00_:2 in\[10\]:2 0.004477
+*RES
+1 g_slice_0__u_slice___00_:1 g_slice_0__u_slice___00_:2 143.941000
+2 g_slice_0__u_slice___00_:1 g_slice_0__u_slice___19_:D 0.000000
+3 g_slice_0__u_slice___00_:1 g_slice_0__u_slice___18_:X 0.000000
+*END
+
+*D_NET g_slice_0__u_slice___01_ 3.052736
+*CONN
+*I g_slice_0__u_slice___13_:A0 B
+*I g_slice_0__u_slice___09_:X B
+*CAP
+1 g_slice_0__u_slice___01_:2 2.934731
+2 g_slice_0__u_slice___01_:2 g_slice_0__u_slice___02_:2 0.007580
+3 g_slice_0__u_slice___01_:2 g_slice_0__u_slice___04_:2 0.004956
+4 g_slice_0__u_slice___01_:2 g_slice_0__u_slice___05_:2 0.002624
+5 g_slice_0__u_slice___01_:2 g_slice_0__u_slice__ff_q:2 0.002624
+6 g_slice_0__u_slice___01_:2 g_slice_1__u_slice___01_:2 0.007580
+7 g_slice_0__u_slice___01_:2 g_slice_1__u_slice___02_:2 0.008539
+8 g_slice_0__u_slice___01_:2 g_slice_1__u_slice___03_:2 0.002624
+9 g_slice_0__u_slice___01_:2 g_slice_1__u_slice___04_:2 0.005901
+10 g_slice_0__u_slice___01_:2 g_slice_1__u_slice___05_:2 0.012790
+11 g_slice_0__u_slice___01_:2 g_slice_3__u_slice___05_:2 0.002624
+12 g_slice_0__u_slice___01_:2 in\[0\]:2 0.007020
+13 g_slice_0__u_slice___01_:2 in\[12\]:2 0.002624
+14 g_slice_0__u_slice___01_:2 in\[13\]:2 0.002624
+15 g_slice_0__u_slice___01_:2 in\[14\]:2 0.003620
+16 g_slice_0__u_slice___01_:2 in\[15\]:2 0.005068
+17 g_slice_0__u_slice___01_:2 in\[1\]:2 0.002624
+18 g_slice_0__u_slice___01_:2 in\[2\]:2 0.002624
+19 g_slice_0__u_slice___01_:2 in\[3\]:2 0.002624
+20 g_slice_0__u_slice___01_:2 in\[4\]:2 0.002624
+21 g_slice_0__u_slice___01_:2 in\[5\]:2 0.002624
+22 g_slice_0__u_slice___01_:2 in\[6\]:2 0.004637
+23 g_slice_0__u_slice___01_:2 in\[7\]:2 0.004202
+24 g_slice_0__u_slice___01_:2 in\[8\]:2 0.006244
+25 g_slice_0__u_slice___01_:2 out\[1\]:2 0.002718
+26 g_slice_0__u_slice___01_:2 out\[2\]:2 0.002624
+27 g_slice_0__u_slice___01_:2 reg_sel\[1\]:2 0.003038
+28 g_slice_0__u_slice___01_:2 rst:2 0.002624
+*RES
+1 g_slice_0__u_slice___01_:1 g_slice_0__u_slice___01_:2 200.701700
+2 g_slice_0__u_slice___01_:1 g_slice_0__u_slice___13_:A0 0.000000
+3 g_slice_0__u_slice___01_:1 g_slice_0__u_slice___09_:X 0.000000
+*END
+
+*D_NET g_slice_0__u_slice___02_ 1.332522
+*CONN
+*I g_slice_0__u_slice___13_:A1 B
+*I g_slice_0__u_slice___10_:X B
+*CAP
+1 g_slice_0__u_slice___02_:2 1.280743
+2 g_slice_0__u_slice___02_:2 g_slice_0__u_slice___04_:2 0.004310
+3 g_slice_0__u_slice___02_:2 g_slice_0__u_slice___05_:2 0.012533
+4 g_slice_0__u_slice___02_:2 g_slice_1__u_slice___01_:2 0.004310
+5 g_slice_0__u_slice___02_:2 in\[0\]:2 0.002624
+6 g_slice_0__u_slice___02_:2 in\[13\]:2 0.002624
+7 g_slice_0__u_slice___02_:2 in\[15\]:2 0.005068
+8 g_slice_0__u_slice___02_:2 in\[3\]:2 0.000582
+9 g_slice_0__u_slice___02_:2 lut_init\[10\]:2 0.003620
+10 g_slice_0__u_slice___02_:2 lut_init\[11\]:2 0.003620
+11 g_slice_0__u_slice___02_:2 lut_init\[12\]:2 0.003620
+12 g_slice_0__u_slice___02_:2 lut_init\[13\]:2 0.003620
+13 g_slice_0__u_slice___02_:2 lut_init\[17\]:2 0.002624
+14 g_slice_0__u_slice___02_:2 out\[2\]:2 0.002624
+*RES
+1 g_slice_0__u_slice___02_:1 g_slice_0__u_slice___02_:2 157.870600
+2 g_slice_0__u_slice___02_:1 g_slice_0__u_slice___13_:A1 0.000000
+3 g_slice_0__u_slice___02_:1 g_slice_0__u_slice___10_:X 0.000000
+*END
+
+*D_NET g_slice_0__u_slice___03_ 1.760592
+*CONN
+*I g_slice_0__u_slice___13_:A2 B
+*I g_slice_0__u_slice___11_:X B
+*CAP
+1 g_slice_0__u_slice___03_:2 1.701063
+2 g_slice_0__u_slice___03_:2 g_slice_0__u_slice___05_:2 0.005068
+3 g_slice_0__u_slice___03_:2 g_slice_3__u_slice___02_:2 0.004310
+4 g_slice_0__u_slice___03_:2 in\[0\]:2 0.007020
+5 g_slice_0__u_slice___03_:2 in\[12\]:2 0.003620
+6 g_slice_0__u_slice___03_:2 in\[13\]:2 0.002624
+7 g_slice_0__u_slice___03_:2 in\[1\]:2 0.002718
+8 g_slice_0__u_slice___03_:2 in\[4\]:2 0.002624
+9 g_slice_0__u_slice___03_:2 in\[5\]:2 0.003620
+10 g_slice_0__u_slice___03_:2 lut_init\[19\]:2 0.011619
+11 g_slice_0__u_slice___03_:2 lut_init\[54\]:2 0.002624
+12 g_slice_0__u_slice___03_:2 lut_init\[60\]:2 0.003186
+13 g_slice_0__u_slice___03_:2 lut_init\[62\]:2 0.002624
+14 g_slice_0__u_slice___03_:2 lut_init\[63\]:2 0.002624
+15 g_slice_0__u_slice___03_:2 out\[1\]:2 0.002624
+16 g_slice_0__u_slice___03_:2 reg_sel\[1\]:2 0.002624
+*RES
+1 g_slice_0__u_slice___03_:1 g_slice_0__u_slice___03_:2 182.613900
+2 g_slice_0__u_slice___03_:1 g_slice_0__u_slice___13_:A2 0.000000
+3 g_slice_0__u_slice___03_:1 g_slice_0__u_slice___11_:X 0.000000
+*END
+
+*D_NET g_slice_0__u_slice___04_ 1.049845
+*CONN
+*I g_slice_0__u_slice___13_:A3 B
+*I g_slice_0__u_slice___12_:X B
+*CAP
+1 g_slice_0__u_slice___04_:2 1.029033
+2 g_slice_0__u_slice___04_:2 g_slice_0__u_slice___05_:2 0.005068
+3 g_slice_0__u_slice___04_:2 in\[0\]:2 0.002624
+4 g_slice_0__u_slice___04_:2 in\[12\]:2 0.002624
+5 g_slice_0__u_slice___04_:2 in\[13\]:2 0.002624
+6 g_slice_0__u_slice___04_:2 in\[1\]:2 0.002624
+7 g_slice_0__u_slice___04_:2 in\[5\]:2 0.002624
+8 g_slice_0__u_slice___04_:2 out\[2\]:2 0.002624
+*RES
+1 g_slice_0__u_slice___04_:1 g_slice_0__u_slice___04_:2 171.933400
+2 g_slice_0__u_slice___04_:1 g_slice_0__u_slice___13_:A3 0.000000
+3 g_slice_0__u_slice___04_:1 g_slice_0__u_slice___12_:X 0.000000
+*END
+
+*D_NET g_slice_0__u_slice___05_ 4.394283
+*CONN
+*I g_slice_0__u_slice___18_:A2 B
+*I g_slice_0__u_slice___14_:A0 B
+*I g_slice_0__u_slice___13_:X B
+*CAP
+1 g_slice_0__u_slice___05_:2 4.256371
+2 g_slice_0__u_slice___05_:2 g_slice_0__u_slice___07_:2 0.003437
+3 g_slice_0__u_slice___05_:2 g_slice_0__u_slice___08_:2 0.001485
+4 g_slice_0__u_slice___05_:2 g_slice_0__u_slice__ff_q:2 0.005661
+5 g_slice_0__u_slice___05_:2 g_slice_1__u_slice___01_:2 0.003620
+6 g_slice_0__u_slice___05_:2 g_slice_1__u_slice___02_:2 0.003620
+7 g_slice_0__u_slice___05_:2 g_slice_2__u_slice___05_:2 0.002624
+8 g_slice_0__u_slice___05_:2 g_slice_3__u_slice___01_:2 0.005068
+9 g_slice_0__u_slice___05_:2 g_slice_3__u_slice___02_:2 0.003620
+10 g_slice_0__u_slice___05_:2 g_slice_3__u_slice___03_:2 0.005068
+11 g_slice_0__u_slice___05_:2 g_slice_3__u_slice___04_:2 0.006244
+12 g_slice_0__u_slice___05_:2 in\[0\]:2 0.003620
+13 g_slice_0__u_slice___05_:2 in\[10\]:2 0.003437
+14 g_slice_0__u_slice___05_:2 in\[12\]:2 0.003620
+15 g_slice_0__u_slice___05_:2 in\[13\]:2 0.003620
+16 g_slice_0__u_slice___05_:2 in\[14\]:2 0.003620
+17 g_slice_0__u_slice___05_:2 in\[15\]:2 0.002624
+18 g_slice_0__u_slice___05_:2 in\[1\]:2 0.006244
+19 g_slice_0__u_slice___05_:2 in\[4\]:2 0.017909
+20 g_slice_0__u_slice___05_:2 in\[5\]:2 0.003620
+21 g_slice_0__u_slice___05_:2 in\[6\]:2 0.002624
+22 g_slice_0__u_slice___05_:2 in\[7\]:2 0.004310
+23 g_slice_0__u_slice___05_:2 in\[8\]:2 0.003620
+24 g_slice_0__u_slice___05_:2 in\[9\]:2 0.002624
+25 g_slice_0__u_slice___05_:2 lut_init\[0\]:2 0.002624
+26 g_slice_0__u_slice___05_:2 out\[0\]:2 0.002624
+27 g_slice_0__u_slice___05_:2 out\[1\]:2 0.003620
+28 g_slice_0__u_slice___05_:2 out\[2\]:2 0.003620
+29 g_slice_0__u_slice___05_:2 reg_sel\[0\]:2 0.014618
+30 g_slice_0__u_slice___05_:2 reg_sel\[1\]:2 0.003620
+31 g_slice_0__u_slice___05_:2 rst:2 0.005247
+*RES
+1 g_slice_0__u_slice___05_:1 g_slice_0__u_slice___05_:2 314.138100
+2 g_slice_0__u_slice___05_:1 g_slice_0__u_slice___18_:A2 0.000000
+3 g_slice_0__u_slice___05_:1 g_slice_0__u_slice___14_:A0 0.000000
+4 g_slice_0__u_slice___05_:1 g_slice_0__u_slice___13_:X 0.000000
+*END
+
+*D_NET g_slice_0__u_slice___06_ 0.754973
+*CONN
+*I g_slice_0__u_slice___18_:A1 B
+*I g_slice_0__u_slice___15_:Y B
+*CAP
+1 g_slice_0__u_slice___06_:2 0.733130
+2 g_slice_0__u_slice___06_:2 g_slice_0__u_slice___07_:2 0.005276
+3 g_slice_0__u_slice___06_:2 g_slice_2__u_slice___05_:2 0.005276
+4 g_slice_0__u_slice___06_:2 in\[10\]:2 0.011291
+*RES
+1 g_slice_0__u_slice___06_:1 g_slice_0__u_slice___06_:2 134.060800
+2 g_slice_0__u_slice___06_:1 g_slice_0__u_slice___18_:A1 0.000000
+3 g_slice_0__u_slice___06_:1 g_slice_0__u_slice___15_:Y 0.000000
+*END
+
+*D_NET g_slice_0__u_slice___07_ 0.809244
+*CONN
+*I g_slice_0__u_slice___17_:B B
+*I g_slice_0__u_slice___16_:Y B
+*CAP
+1 g_slice_0__u_slice___07_:2 0.785577
+2 g_slice_0__u_slice___07_:2 g_slice_0__u_slice___08_:2 0.006934
+3 g_slice_0__u_slice___07_:2 g_slice_2__u_slice___05_:2 0.005276
+4 g_slice_0__u_slice___07_:2 in\[10\]:2 0.008833
+5 g_slice_0__u_slice___07_:2 rst:2 0.002624
+*RES
+1 g_slice_0__u_slice___07_:1 g_slice_0__u_slice___07_:2 166.672100
+2 g_slice_0__u_slice___07_:1 g_slice_0__u_slice___17_:B 0.000000
+3 g_slice_0__u_slice___07_:1 g_slice_0__u_slice___16_:Y 0.000000
+*END
+
+*D_NET g_slice_0__u_slice___08_ 0.746145
+*CONN
+*I g_slice_0__u_slice___18_:B1 B
+*I g_slice_0__u_slice___17_:Y B
+*CAP
+1 g_slice_0__u_slice___08_:2 0.729869
+2 g_slice_0__u_slice___08_:2 in\[10\]:2 0.002624
+3 g_slice_0__u_slice___08_:2 in\[11\]:2 0.004819
+4 g_slice_0__u_slice___08_:2 rst:2 0.008833
+*RES
+1 g_slice_0__u_slice___08_:1 g_slice_0__u_slice___08_:2 174.141800
+2 g_slice_0__u_slice___08_:1 g_slice_0__u_slice___18_:B1 0.000000
+3 g_slice_0__u_slice___08_:1 g_slice_0__u_slice___17_:Y 0.000000
+*END
+
+*D_NET g_slice_0__u_slice__ff_q 2.721861
+*CONN
+*I g_slice_0__u_slice___19_:Q B
+*I g_slice_0__u_slice___16_:A B
+*I g_slice_0__u_slice___14_:A1 B
+*CAP
+1 g_slice_0__u_slice__ff_q:2 2.673253
+2 g_slice_0__u_slice__ff_q:2 g_slice_1__u_slice___02_:2 0.002624
+3 g_slice_0__u_slice__ff_q:2 g_slice_1__u_slice___04_:2 0.005247
+4 g_slice_0__u_slice__ff_q:2 g_slice_2__u_slice___05_:2 0.002624
+5 g_slice_0__u_slice__ff_q:2 in\[1\]:2 0.002624
+6 g_slice_0__u_slice__ff_q:2 in\[4\]:2 0.002624
+7 g_slice_0__u_slice__ff_q:2 in\[6\]:2 0.002624
+8 g_slice_0__u_slice__ff_q:2 in\[7\]:2 0.002624
+9 g_slice_0__u_slice__ff_q:2 in\[8\]:2 0.003620
+10 g_slice_0__u_slice__ff_q:2 in\[9\]:2 0.002624
+11 g_slice_0__u_slice__ff_q:2 lut_init\[0\]:2 0.002624
+12 g_slice_0__u_slice__ff_q:2 out\[0\]:2 0.004310
+13 g_slice_0__u_slice__ff_q:2 reg_sel\[0\]:2 0.009192
+14 g_slice_0__u_slice__ff_q:2 rst:2 0.005247
+*RES
+1 g_slice_0__u_slice__ff_q:1 g_slice_0__u_slice__ff_q:2 216.167200
+2 g_slice_0__u_slice__ff_q:1 g_slice_0__u_slice___19_:Q 0.000000
+3 g_slice_0__u_slice__ff_q:1 g_slice_0__u_slice___16_:A 0.000000
+4 g_slice_0__u_slice__ff_q:1 g_slice_0__u_slice___14_:A1 0.000000
+*END
+
+*D_NET g_slice_1__u_slice___00_ 0.980511
+*CONN
+*I g_slice_1__u_slice___19_:D B
+*I g_slice_1__u_slice___18_:X B
+*CAP
+1 g_slice_1__u_slice___00_:2 0.956397
+2 g_slice_1__u_slice___00_:2 g_slice_1__u_slice___07_:2 0.004477
+3 g_slice_1__u_slice___00_:2 g_slice_1__u_slice___08_:2 0.004477
+4 g_slice_1__u_slice___00_:2 g_slice_3__u_slice___05_:2 0.005247
+5 g_slice_1__u_slice___00_:2 in\[9\]:2 0.005436
+6 g_slice_1__u_slice___00_:2 rst:2 0.004477
+*RES
+1 g_slice_1__u_slice___00_:1 g_slice_1__u_slice___00_:2 146.911700
+2 g_slice_1__u_slice___00_:1 g_slice_1__u_slice___19_:D 0.000000
+3 g_slice_1__u_slice___00_:1 g_slice_1__u_slice___18_:X 0.000000
+*END
+
+*D_NET g_slice_1__u_slice___01_ 2.811377
+*CONN
+*I g_slice_1__u_slice___13_:A0 B
+*I g_slice_1__u_slice___09_:X B
+*CAP
+1 g_slice_1__u_slice___01_:2 2.700857
+2 g_slice_1__u_slice___01_:2 g_slice_1__u_slice___05_:2 0.002718
+3 g_slice_1__u_slice___01_:2 g_slice_3__u_slice___05_:2 0.002624
+4 g_slice_1__u_slice___01_:2 in\[0\]:2 0.002624
+5 g_slice_1__u_slice___01_:2 in\[12\]:2 0.002624
+6 g_slice_1__u_slice___01_:2 in\[13\]:2 0.002624
+7 g_slice_1__u_slice___01_:2 in\[14\]:2 0.003620
+8 g_slice_1__u_slice___01_:2 in\[15\]:2 0.003620
+9 g_slice_1__u_slice___01_:2 in\[1\]:2 0.007260
+10 g_slice_1__u_slice___01_:2 in\[3\]:2 0.002624
+11 g_slice_1__u_slice___01_:2 in\[4\]:2 0.002624
+12 g_slice_1__u_slice___01_:2 in\[5\]:2 0.002624
+13 g_slice_1__u_slice___01_:2 in\[6\]:2 0.004956
+14 g_slice_1__u_slice___01_:2 in\[7\]:2 0.008205
+15 g_slice_1__u_slice___01_:2 in\[8\]:2 0.006244
+16 g_slice_1__u_slice___01_:2 lut_init\[10\]:2 0.003620
+17 g_slice_1__u_slice___01_:2 lut_init\[11\]:2 0.005068
+18 g_slice_1__u_slice___01_:2 lut_init\[12\]:2 0.014232
+19 g_slice_1__u_slice___01_:2 lut_init\[13\]:2 0.008539
+20 g_slice_1__u_slice___01_:2 lut_init\[14\]:2 0.005247
+21 g_slice_1__u_slice___01_:2 lut_init\[15\]:2 0.005901
+22 g_slice_1__u_slice___01_:2 lut_init\[17\]:2 0.002718
+23 g_slice_1__u_slice___01_:2 out\[1\]:2 0.004956
+24 g_slice_1__u_slice___01_:2 out\[2\]:2 0.002624
+25 g_slice_1__u_slice___01_:2 reg_sel\[1\]:2 0.002624
+*RES
+1 g_slice_1__u_slice___01_:1 g_slice_1__u_slice___01_:2 197.069000
+2 g_slice_1__u_slice___01_:1 g_slice_1__u_slice___13_:A0 0.000000
+3 g_slice_1__u_slice___01_:1 g_slice_1__u_slice___09_:X 0.000000
+*END
+
+*D_NET g_slice_1__u_slice___02_ 1.694909
+*CONN
+*I g_slice_1__u_slice___13_:A1 B
+*I g_slice_1__u_slice___10_:X B
+*CAP
+1 g_slice_1__u_slice___02_:2 1.654596
+2 g_slice_1__u_slice___02_:2 g_slice_1__u_slice___03_:2 0.002624
+3 g_slice_1__u_slice___02_:2 in\[0\]:2 0.002624
+4 g_slice_1__u_slice___02_:2 in\[15\]:2 0.002624
+5 g_slice_1__u_slice___02_:2 in\[4\]:2 0.002624
+6 g_slice_1__u_slice___02_:2 in\[7\]:2 0.002624
+7 g_slice_1__u_slice___02_:2 lut_init\[50\]:2 0.009019
+8 g_slice_1__u_slice___02_:2 lut_init\[55\]:2 0.006555
+9 g_slice_1__u_slice___02_:2 out\[0\]:2 0.008995
+10 g_slice_1__u_slice___02_:2 rst:2 0.002624
+*RES
+1 g_slice_1__u_slice___02_:1 g_slice_1__u_slice___02_:2 161.690200
+2 g_slice_1__u_slice___02_:1 g_slice_1__u_slice___13_:A1 0.000000
+3 g_slice_1__u_slice___02_:1 g_slice_1__u_slice___10_:X 0.000000
+*END
+
+*D_NET g_slice_1__u_slice___03_ 1.673178
+*CONN
+*I g_slice_1__u_slice___13_:A2 B
+*I g_slice_1__u_slice___11_:X B
+*CAP
+1 g_slice_1__u_slice___03_:2 1.633304
+2 g_slice_1__u_slice___03_:2 g_slice_1__u_slice___04_:2 0.002624
+3 g_slice_1__u_slice___03_:2 in\[0\]:2 0.002624
+4 g_slice_1__u_slice___03_:2 in\[4\]:2 0.014174
+5 g_slice_1__u_slice___03_:2 in\[5\]:2 0.003620
+6 g_slice_1__u_slice___03_:2 lut_init\[50\]:2 0.005247
+7 g_slice_1__u_slice___03_:2 lut_init\[52\]:2 0.002718
+8 g_slice_1__u_slice___03_:2 lut_init\[55\]:2 0.005247
+9 g_slice_1__u_slice___03_:2 reg_sel\[0\]:2 0.003620
+*RES
+1 g_slice_1__u_slice___03_:1 g_slice_1__u_slice___03_:2 182.005700
+2 g_slice_1__u_slice___03_:1 g_slice_1__u_slice___13_:A2 0.000000
+3 g_slice_1__u_slice___03_:1 g_slice_1__u_slice___11_:X 0.000000
+*END
+
+*D_NET g_slice_1__u_slice___04_ 1.220100
+*CONN
+*I g_slice_1__u_slice___13_:A3 B
+*I g_slice_1__u_slice___12_:X B
+*CAP
+1 g_slice_1__u_slice___04_:2 1.204554
+2 g_slice_1__u_slice___04_:2 in\[0\]:2 0.002624
+3 g_slice_1__u_slice___04_:2 in\[4\]:2 0.002718
+4 g_slice_1__u_slice___04_:2 in\[7\]:2 0.002624
+5 g_slice_1__u_slice___04_:2 out\[0\]:2 0.007580
+*RES
+1 g_slice_1__u_slice___04_:1 g_slice_1__u_slice___04_:2 173.877800
+2 g_slice_1__u_slice___04_:1 g_slice_1__u_slice___13_:A3 0.000000
+3 g_slice_1__u_slice___04_:1 g_slice_1__u_slice___12_:X 0.000000
+*END
+
+*D_NET g_slice_1__u_slice___05_ 2.096243
+*CONN
+*I g_slice_1__u_slice___18_:A2 B
+*I g_slice_1__u_slice___14_:A0 B
+*I g_slice_1__u_slice___13_:X B
+*CAP
+1 g_slice_1__u_slice___05_:2 2.039735
+2 g_slice_1__u_slice___05_:2 g_slice_1__u_slice___07_:2 0.003437
+3 g_slice_1__u_slice___05_:2 g_slice_3__u_slice___05_:2 0.002624
+4 g_slice_1__u_slice___05_:2 in\[1\]:2 0.002624
+5 g_slice_1__u_slice___05_:2 in\[4\]:2 0.006244
+6 g_slice_1__u_slice___05_:2 in\[6\]:2 0.005068
+7 g_slice_1__u_slice___05_:2 in\[7\]:2 0.004397
+8 g_slice_1__u_slice___05_:2 in\[8\]:2 0.009839
+9 g_slice_1__u_slice___05_:2 in\[9\]:2 0.002624
+10 g_slice_1__u_slice___05_:2 lut_init\[0\]:2 0.002624
+11 g_slice_1__u_slice___05_:2 out\[1\]:2 0.003997
+12 g_slice_1__u_slice___05_:2 reg_sel\[1\]:2 0.013030
+*RES
+1 g_slice_1__u_slice___05_:1 g_slice_1__u_slice___05_:2 306.357500
+2 g_slice_1__u_slice___05_:1 g_slice_1__u_slice___18_:A2 0.000000
+3 g_slice_1__u_slice___05_:1 g_slice_1__u_slice___14_:A0 0.000000
+4 g_slice_1__u_slice___05_:1 g_slice_1__u_slice___13_:X 0.000000
+*END
+
+*D_NET g_slice_1__u_slice___06_ 0.724281
+*CONN
+*I g_slice_1__u_slice___18_:A1 B
+*I g_slice_1__u_slice___15_:Y B
+*CAP
+1 g_slice_1__u_slice___06_:2 0.694833
+2 g_slice_1__u_slice___06_:2 g_slice_1__u_slice___07_:2 0.002624
+3 g_slice_1__u_slice___06_:2 g_slice_1__u_slice__ff_q:2 0.014775
+4 g_slice_1__u_slice___06_:2 g_slice_3__u_slice___05_:2 0.004991
+5 g_slice_1__u_slice___06_:2 g_slice_3__u_slice__ff_q:2 0.007058
+*RES
+1 g_slice_1__u_slice___06_:1 g_slice_1__u_slice___06_:2 146.479400
+2 g_slice_1__u_slice___06_:1 g_slice_1__u_slice___18_:A1 0.000000
+3 g_slice_1__u_slice___06_:1 g_slice_1__u_slice___15_:Y 0.000000
+*END
+
+*D_NET g_slice_1__u_slice___07_ 1.175769
+*CONN
+*I g_slice_1__u_slice___17_:B B
+*I g_slice_1__u_slice___16_:Y B
+*CAP
+1 g_slice_1__u_slice___07_:2 1.139857
+2 g_slice_1__u_slice___07_:2 g_slice_1__u_slice___08_:2 0.009113
+3 g_slice_1__u_slice___07_:2 g_slice_1__u_slice__ff_q:2 0.007443
+4 g_slice_1__u_slice___07_:2 g_slice_3__u_slice___05_:2 0.008833
+5 g_slice_1__u_slice___07_:2 g_slice_3__u_slice__ff_q:2 0.005276
+6 g_slice_1__u_slice___07_:2 rst:2 0.005247
+*RES
+1 g_slice_1__u_slice___07_:1 g_slice_1__u_slice___07_:2 170.397800
+2 g_slice_1__u_slice___07_:1 g_slice_1__u_slice___17_:B 0.000000
+3 g_slice_1__u_slice___07_:1 g_slice_1__u_slice___16_:Y 0.000000
+*END
+
+*D_NET g_slice_1__u_slice___08_ 0.617259
+*CONN
+*I g_slice_1__u_slice___18_:B1 B
+*I g_slice_1__u_slice___17_:Y B
+*CAP
+1 g_slice_1__u_slice___08_:2 0.601917
+2 g_slice_1__u_slice___08_:2 in\[9\]:2 0.004819
+3 g_slice_1__u_slice___08_:2 rst:2 0.010523
+*RES
+1 g_slice_1__u_slice___08_:1 g_slice_1__u_slice___08_:2 173.459200
+2 g_slice_1__u_slice___08_:1 g_slice_1__u_slice___18_:B1 0.000000
+3 g_slice_1__u_slice___08_:1 g_slice_1__u_slice___17_:Y 0.000000
+*END
+
+*D_NET g_slice_1__u_slice__ff_q 1.755612
+*CONN
+*I g_slice_1__u_slice___19_:Q B
+*I g_slice_1__u_slice___16_:A B
+*I g_slice_1__u_slice___14_:A1 B
+*CAP
+1 g_slice_1__u_slice__ff_q:2 1.721061
+2 g_slice_1__u_slice__ff_q:2 g_slice_3__u_slice___05_:2 0.005342
+3 g_slice_1__u_slice__ff_q:2 in\[12\]:2 0.009839
+4 g_slice_1__u_slice__ff_q:2 in\[1\]:2 0.002624
+5 g_slice_1__u_slice__ff_q:2 in\[4\]:2 0.003620
+6 g_slice_1__u_slice__ff_q:2 in\[6\]:2 0.007878
+7 g_slice_1__u_slice__ff_q:2 in\[9\]:2 0.002624
+8 g_slice_1__u_slice__ff_q:2 lut_init\[0\]:2 0.002624
+*RES
+1 g_slice_1__u_slice__ff_q:1 g_slice_1__u_slice__ff_q:2 207.191300
+2 g_slice_1__u_slice__ff_q:1 g_slice_1__u_slice___19_:Q 0.000000
+3 g_slice_1__u_slice__ff_q:1 g_slice_1__u_slice___16_:A 0.000000
+4 g_slice_1__u_slice__ff_q:1 g_slice_1__u_slice___14_:A1 0.000000
+*END
+
+*D_NET g_slice_2__u_slice___00_ 0.819894
+*CONN
+*I g_slice_2__u_slice___19_:D B
+*I g_slice_2__u_slice___18_:X B
+*CAP
+1 g_slice_2__u_slice___00_:2 0.819894
+*RES
+1 g_slice_2__u_slice___00_:1 g_slice_2__u_slice___00_:2 145.374100
+2 g_slice_2__u_slice___00_:1 g_slice_2__u_slice___19_:D 0.000000
+3 g_slice_2__u_slice___00_:1 g_slice_2__u_slice___18_:X 0.000000
+*END
+
+*D_NET g_slice_2__u_slice___01_ 1.645326
+*CONN
+*I g_slice_2__u_slice___13_:A0 B
+*I g_slice_2__u_slice___09_:X B
+*CAP
+1 g_slice_2__u_slice___01_:2 1.639884
+2 g_slice_2__u_slice___01_:2 in\[10\]:2 0.002818
+3 g_slice_2__u_slice___01_:2 in\[9\]:2 0.002624
+*RES
+1 g_slice_2__u_slice___01_:1 g_slice_2__u_slice___01_:2 187.173600
+2 g_slice_2__u_slice___01_:1 g_slice_2__u_slice___13_:A0 0.000000
+3 g_slice_2__u_slice___01_:1 g_slice_2__u_slice___09_:X 0.000000
+*END
+
+*D_NET g_slice_2__u_slice___02_ 1.270084
+*CONN
+*I g_slice_2__u_slice___13_:A1 B
+*I g_slice_2__u_slice___10_:X B
+*CAP
+1 g_slice_2__u_slice___02_:2 1.246542
+2 g_slice_2__u_slice___02_:2 g_slice_2__u_slice___03_:2 0.000060
+3 g_slice_2__u_slice___02_:2 g_slice_2__u_slice___04_:2 0.010306
+4 g_slice_2__u_slice___02_:2 in\[10\]:2 0.010552
+5 g_slice_2__u_slice___02_:2 in\[11\]:2 0.002624
+*RES
+1 g_slice_2__u_slice___02_:1 g_slice_2__u_slice___02_:2 157.282700
+2 g_slice_2__u_slice___02_:1 g_slice_2__u_slice___13_:A1 0.000000
+3 g_slice_2__u_slice___02_:1 g_slice_2__u_slice___10_:X 0.000000
+*END
+
+*D_NET g_slice_2__u_slice___03_ 0.622533
+*CONN
+*I g_slice_2__u_slice___13_:A2 B
+*I g_slice_2__u_slice___11_:X B
+*CAP
+1 g_slice_2__u_slice___03_:2 0.622533
+*RES
+1 g_slice_2__u_slice___03_:1 g_slice_2__u_slice___03_:2 170.692200
+2 g_slice_2__u_slice___03_:1 g_slice_2__u_slice___13_:A2 0.000000
+3 g_slice_2__u_slice___03_:1 g_slice_2__u_slice___11_:X 0.000000
+*END
+
+*D_NET g_slice_2__u_slice___04_ 0.807213
+*CONN
+*I g_slice_2__u_slice___13_:A3 B
+*I g_slice_2__u_slice___12_:X B
+*CAP
+1 g_slice_2__u_slice___04_:2 0.804589
+2 g_slice_2__u_slice___04_:2 in\[11\]:2 0.002624
+*RES
+1 g_slice_2__u_slice___04_:1 g_slice_2__u_slice___04_:2 169.571200
+2 g_slice_2__u_slice___04_:1 g_slice_2__u_slice___13_:A3 0.000000
+3 g_slice_2__u_slice___04_:1 g_slice_2__u_slice___12_:X 0.000000
+*END
+
+*D_NET g_slice_2__u_slice___05_ 2.931872
+*CONN
+*I g_slice_2__u_slice___18_:A2 B
+*I g_slice_2__u_slice___14_:A0 B
+*I g_slice_2__u_slice___13_:X B
+*CAP
+1 g_slice_2__u_slice___05_:2 2.860866
+2 g_slice_2__u_slice___05_:2 g_slice_2__u_slice___06_:2 0.003437
+3 g_slice_2__u_slice___05_:2 g_slice_2__u_slice___07_:2 0.004310
+4 g_slice_2__u_slice___05_:2 g_slice_2__u_slice___08_:2 0.009704
+5 g_slice_2__u_slice___05_:2 g_slice_3__u_slice___00_:2 0.005436
+6 g_slice_2__u_slice___05_:2 g_slice_3__u_slice___05_:2 0.002624
+7 g_slice_2__u_slice___05_:2 g_slice_3__u_slice___07_:2 0.005276
+8 g_slice_2__u_slice___05_:2 g_slice_3__u_slice__ff_q:2 0.002624
+9 g_slice_2__u_slice___05_:2 in\[10\]:2 0.007020
+10 g_slice_2__u_slice___05_:2 in\[11\]:2 0.002624
+11 g_slice_2__u_slice___05_:2 in\[12\]:2 0.006244
+12 g_slice_2__u_slice___05_:2 out\[2\]:2 0.006621
+13 g_slice_2__u_slice___05_:2 rst:2 0.015086
+*RES
+1 g_slice_2__u_slice___05_:1 g_slice_2__u_slice___05_:2 315.213600
+2 g_slice_2__u_slice___05_:1 g_slice_2__u_slice___18_:A2 0.000000
+3 g_slice_2__u_slice___05_:1 g_slice_2__u_slice___14_:A0 0.000000
+4 g_slice_2__u_slice___05_:1 g_slice_2__u_slice___13_:X 0.000000
+*END
+
+*D_NET g_slice_2__u_slice___06_ 0.919467
+*CONN
+*I g_slice_2__u_slice___18_:A1 B
+*I g_slice_2__u_slice___15_:Y B
+*CAP
+1 g_slice_2__u_slice___06_:2 0.908512
+2 g_slice_2__u_slice___06_:2 g_slice_2__u_slice___08_:2 0.003055
+3 g_slice_2__u_slice___06_:2 in\[11\]:2 0.005276
+4 g_slice_2__u_slice___06_:2 rst:2 0.002624
+*RES
+1 g_slice_2__u_slice___06_:1 g_slice_2__u_slice___06_:2 148.817000
+2 g_slice_2__u_slice___06_:1 g_slice_2__u_slice___18_:A1 0.000000
+3 g_slice_2__u_slice___06_:1 g_slice_2__u_slice___15_:Y 0.000000
+*END
+
+*D_NET g_slice_2__u_slice___07_ 0.551369
+*CONN
+*I g_slice_2__u_slice___17_:B B
+*I g_slice_2__u_slice___16_:Y B
+*CAP
+1 g_slice_2__u_slice___07_:2 0.542496
+2 g_slice_2__u_slice___07_:2 g_slice_2__u_slice___08_:2 0.008873
+*RES
+1 g_slice_2__u_slice___07_:1 g_slice_2__u_slice___07_:2 164.645300
+2 g_slice_2__u_slice___07_:1 g_slice_2__u_slice___17_:B 0.000000
+3 g_slice_2__u_slice___07_:1 g_slice_2__u_slice___16_:Y 0.000000
+*END
+
+*D_NET g_slice_2__u_slice___08_ 0.974199
+*CONN
+*I g_slice_2__u_slice___18_:B1 B
+*I g_slice_2__u_slice___17_:Y B
+*CAP
+1 g_slice_2__u_slice___08_:2 0.966299
+2 g_slice_2__u_slice___08_:2 in\[11\]:2 0.005276
+3 g_slice_2__u_slice___08_:2 rst:2 0.002624
+*RES
+1 g_slice_2__u_slice___08_:1 g_slice_2__u_slice___08_:2 176.922100
+2 g_slice_2__u_slice___08_:1 g_slice_2__u_slice___18_:B1 0.000000
+3 g_slice_2__u_slice___08_:1 g_slice_2__u_slice___17_:Y 0.000000
+*END
+
+*D_NET g_slice_2__u_slice__ff_q 1.146767
+*CONN
+*I g_slice_2__u_slice___19_:Q B
+*I g_slice_2__u_slice___16_:A B
+*I g_slice_2__u_slice___14_:A1 B
+*CAP
+1 g_slice_2__u_slice__ff_q:2 1.123550
+2 g_slice_2__u_slice__ff_q:2 in\[0\]:2 0.006244
+3 g_slice_2__u_slice__ff_q:2 in\[10\]:2 0.002624
+4 g_slice_2__u_slice__ff_q:2 in\[11\]:2 0.003620
+5 g_slice_2__u_slice__ff_q:2 in\[12\]:2 0.005068
+6 g_slice_2__u_slice__ff_q:2 reg_sel\[2\]:2 0.005661
+*RES
+1 g_slice_2__u_slice__ff_q:1 g_slice_2__u_slice__ff_q:2 199.907600
+2 g_slice_2__u_slice__ff_q:1 g_slice_2__u_slice___19_:Q 0.000000
+3 g_slice_2__u_slice__ff_q:1 g_slice_2__u_slice___16_:A 0.000000
+4 g_slice_2__u_slice__ff_q:1 g_slice_2__u_slice___14_:A1 0.000000
+*END
+
+*D_NET g_slice_3__u_slice___00_ 0.860904
+*CONN
+*I g_slice_3__u_slice___19_:D B
+*I g_slice_3__u_slice___18_:X B
+*CAP
+1 g_slice_3__u_slice___00_:2 0.851950
+2 g_slice_3__u_slice___00_:2 in\[10\]:2 0.004477
+3 g_slice_3__u_slice___00_:2 in\[11\]:2 0.004477
+*RES
+1 g_slice_3__u_slice___00_:1 g_slice_3__u_slice___00_:2 145.785700
+2 g_slice_3__u_slice___00_:1 g_slice_3__u_slice___19_:D 0.000000
+3 g_slice_3__u_slice___00_:1 g_slice_3__u_slice___18_:X 0.000000
+*END
+
+*D_NET g_slice_3__u_slice___01_ 0.774539
+*CONN
+*I g_slice_3__u_slice___13_:A0 B
+*I g_slice_3__u_slice___09_:X B
+*CAP
+1 g_slice_3__u_slice___01_:2 0.758158
+2 g_slice_3__u_slice___01_:2 g_slice_3__u_slice___02_:2 0.004310
+3 g_slice_3__u_slice___01_:2 g_slice_3__u_slice___04_:2 0.004397
+4 g_slice_3__u_slice___01_:2 in\[13\]:2 0.002718
+5 g_slice_3__u_slice___01_:2 in\[4\]:2 0.004956
+*RES
+1 g_slice_3__u_slice___01_:1 g_slice_3__u_slice___01_:2 177.401700
+2 g_slice_3__u_slice___01_:1 g_slice_3__u_slice___13_:A0 0.000000
+3 g_slice_3__u_slice___01_:1 g_slice_3__u_slice___09_:X 0.000000
+*END
+
+*D_NET g_slice_3__u_slice___02_ 1.279810
+*CONN
+*I g_slice_3__u_slice___13_:A1 B
+*I g_slice_3__u_slice___10_:X B
+*CAP
+1 g_slice_3__u_slice___02_:2 1.222493
+2 g_slice_3__u_slice___02_:2 g_slice_3__u_slice___04_:2 0.002624
+3 g_slice_3__u_slice___02_:2 in\[0\]:2 0.002624
+4 g_slice_3__u_slice___02_:2 in\[12\]:2 0.002624
+5 g_slice_3__u_slice___02_:2 in\[13\]:2 0.002624
+6 g_slice_3__u_slice___02_:2 in\[1\]:2 0.002624
+7 g_slice_3__u_slice___02_:2 in\[4\]:2 0.002624
+8 g_slice_3__u_slice___02_:2 in\[5\]:2 0.003620
+9 g_slice_3__u_slice___02_:2 lut_init\[54\]:2 0.003620
+10 g_slice_3__u_slice___02_:2 lut_init\[56\]:2 0.005276
+11 g_slice_3__u_slice___02_:2 lut_init\[59\]:2 0.002718
+12 g_slice_3__u_slice___02_:2 lut_init\[60\]:2 0.003620
+13 g_slice_3__u_slice___02_:2 lut_init\[61\]:2 0.002624
+14 g_slice_3__u_slice___02_:2 lut_init\[62\]:2 0.003620
+15 g_slice_3__u_slice___02_:2 lut_init\[63\]:2 0.008995
+16 g_slice_3__u_slice___02_:2 lut_init\[8\]:2 0.007480
+*RES
+1 g_slice_3__u_slice___02_:1 g_slice_3__u_slice___02_:2 157.451800
+2 g_slice_3__u_slice___02_:1 g_slice_3__u_slice___13_:A1 0.000000
+3 g_slice_3__u_slice___02_:1 g_slice_3__u_slice___10_:X 0.000000
+*END
+
+*D_NET g_slice_3__u_slice___03_ 0.849950
+*CONN
+*I g_slice_3__u_slice___13_:A2 B
+*I g_slice_3__u_slice___11_:X B
+*CAP
+1 g_slice_3__u_slice___03_:2 0.826668
+2 g_slice_3__u_slice___03_:2 in\[12\]:2 0.014414
+3 g_slice_3__u_slice___03_:2 in\[13\]:2 0.002624
+4 g_slice_3__u_slice___03_:2 in\[5\]:2 0.003620
+5 g_slice_3__u_slice___03_:2 lut_init\[51\]:2 0.002624
+*RES
+1 g_slice_3__u_slice___03_:1 g_slice_3__u_slice___03_:2 173.122200
+2 g_slice_3__u_slice___03_:1 g_slice_3__u_slice___13_:A2 0.000000
+3 g_slice_3__u_slice___03_:1 g_slice_3__u_slice___11_:X 0.000000
+*END
+
+*D_NET g_slice_3__u_slice___04_ 1.489527
+*CONN
+*I g_slice_3__u_slice___13_:A3 B
+*I g_slice_3__u_slice___12_:X B
+*CAP
+1 g_slice_3__u_slice___04_:2 1.462107
+2 g_slice_3__u_slice___04_:2 in\[12\]:2 0.004397
+3 g_slice_3__u_slice___04_:2 in\[13\]:2 0.002624
+4 g_slice_3__u_slice___04_:2 in\[14\]:2 0.004637
+5 g_slice_3__u_slice___04_:2 in\[4\]:2 0.002624
+6 g_slice_3__u_slice___04_:2 in\[5\]:2 0.008205
+7 g_slice_3__u_slice___04_:2 reg_sel\[1\]:2 0.004933
+*RES
+1 g_slice_3__u_slice___04_:1 g_slice_3__u_slice___04_:2 175.950700
+2 g_slice_3__u_slice___04_:1 g_slice_3__u_slice___13_:A3 0.000000
+3 g_slice_3__u_slice___04_:1 g_slice_3__u_slice___12_:X 0.000000
+*END
+
+*D_NET g_slice_3__u_slice___05_ 3.204409
+*CONN
+*I g_slice_3__u_slice___18_:A2 B
+*I g_slice_3__u_slice___14_:A0 B
+*I g_slice_3__u_slice___13_:X B
+*CAP
+1 g_slice_3__u_slice___05_:2 3.143928
+2 g_slice_3__u_slice___05_:2 g_slice_3__u_slice___08_:2 0.004310
+3 g_slice_3__u_slice___05_:2 in\[0\]:2 0.002624
+4 g_slice_3__u_slice___05_:2 in\[10\]:2 0.003437
+5 g_slice_3__u_slice___05_:2 in\[12\]:2 0.002624
+6 g_slice_3__u_slice___05_:2 in\[13\]:2 0.002624
+7 g_slice_3__u_slice___05_:2 in\[1\]:2 0.002624
+8 g_slice_3__u_slice___05_:2 in\[4\]:2 0.002718
+9 g_slice_3__u_slice___05_:2 in\[6\]:2 0.003620
+10 g_slice_3__u_slice___05_:2 in\[7\]:2 0.003620
+11 g_slice_3__u_slice___05_:2 in\[8\]:2 0.003620
+12 g_slice_3__u_slice___05_:2 in\[9\]:2 0.015367
+13 g_slice_3__u_slice___05_:2 lut_init\[0\]:2 0.002624
+14 g_slice_3__u_slice___05_:2 out\[2\]:2 0.002624
+15 g_slice_3__u_slice___05_:2 out\[3\]:2 0.002798
+16 g_slice_3__u_slice___05_:2 rst:2 0.005247
+*RES
+1 g_slice_3__u_slice___05_:1 g_slice_3__u_slice___05_:2 318.282000
+2 g_slice_3__u_slice___05_:1 g_slice_3__u_slice___18_:A2 0.000000
+3 g_slice_3__u_slice___05_:1 g_slice_3__u_slice___14_:A0 0.000000
+4 g_slice_3__u_slice___05_:1 g_slice_3__u_slice___13_:X 0.000000
+*END
+
+*D_NET g_slice_3__u_slice___06_ 0.931801
+*CONN
+*I g_slice_3__u_slice___18_:A1 B
+*I g_slice_3__u_slice___15_:Y B
+*CAP
+1 g_slice_3__u_slice___06_:2 0.894455
+2 g_slice_3__u_slice___06_:2 g_slice_3__u_slice___07_:2 0.002624
+3 g_slice_3__u_slice___06_:2 g_slice_3__u_slice___08_:2 0.005276
+4 g_slice_3__u_slice___06_:2 g_slice_3__u_slice__ff_q:2 0.012551
+5 g_slice_3__u_slice___06_:2 in\[10\]:2 0.008995
+6 g_slice_3__u_slice___06_:2 in\[11\]:2 0.005276
+7 g_slice_3__u_slice___06_:2 rst:2 0.002624
+*RES
+1 g_slice_3__u_slice___06_:1 g_slice_3__u_slice___06_:2 148.610500
+2 g_slice_3__u_slice___06_:1 g_slice_3__u_slice___18_:A1 0.000000
+3 g_slice_3__u_slice___06_:1 g_slice_3__u_slice___15_:Y 0.000000
+*END
+
+*D_NET g_slice_3__u_slice___07_ 0.636954
+*CONN
+*I g_slice_3__u_slice___17_:B B
+*I g_slice_3__u_slice___16_:Y B
+*CAP
+1 g_slice_3__u_slice___07_:2 0.627368
+2 g_slice_3__u_slice___07_:2 g_slice_3__u_slice___08_:2 0.004310
+3 g_slice_3__u_slice___07_:2 in\[10\]:2 0.005276
+*RES
+1 g_slice_3__u_slice___07_:1 g_slice_3__u_slice___07_:2 164.951200
+2 g_slice_3__u_slice___07_:1 g_slice_3__u_slice___17_:B 0.000000
+3 g_slice_3__u_slice___07_:1 g_slice_3__u_slice___16_:Y 0.000000
+*END
+
+*D_NET g_slice_3__u_slice___08_ 1.021249
+*CONN
+*I g_slice_3__u_slice___18_:B1 B
+*I g_slice_3__u_slice___17_:Y B
+*CAP
+1 g_slice_3__u_slice___08_:2 0.979759
+2 g_slice_3__u_slice___08_:2 g_slice_3__u_slice__ff_q:2 0.010552
+3 g_slice_3__u_slice___08_:2 in\[10\]:2 0.015367
+4 g_slice_3__u_slice___08_:2 in\[11\]:2 0.015571
+*RES
+1 g_slice_3__u_slice___08_:1 g_slice_3__u_slice___08_:2 176.869000
+2 g_slice_3__u_slice___08_:1 g_slice_3__u_slice___18_:B1 0.000000
+3 g_slice_3__u_slice___08_:1 g_slice_3__u_slice___17_:Y 0.000000
+*END
+
+*D_NET g_slice_3__u_slice__ff_q 1.912711
+*CONN
+*I g_slice_3__u_slice___19_:Q B
+*I g_slice_3__u_slice___16_:A B
+*I g_slice_3__u_slice___14_:A1 B
+*CAP
+1 g_slice_3__u_slice__ff_q:2 1.880395
+2 g_slice_3__u_slice__ff_q:2 in\[0\]:2 0.002624
+3 g_slice_3__u_slice__ff_q:2 in\[10\]:2 0.002624
+4 g_slice_3__u_slice__ff_q:2 in\[11\]:2 0.006672
+5 g_slice_3__u_slice__ff_q:2 in\[12\]:2 0.002624
+6 g_slice_3__u_slice__ff_q:2 in\[13\]:2 0.004217
+7 g_slice_3__u_slice__ff_q:2 out\[2\]:2 0.002624
+8 g_slice_3__u_slice__ff_q:2 out\[3\]:2 0.003997
+9 g_slice_3__u_slice__ff_q:2 rst:2 0.006934
+*RES
+1 g_slice_3__u_slice__ff_q:1 g_slice_3__u_slice__ff_q:2 208.112700
+2 g_slice_3__u_slice__ff_q:1 g_slice_3__u_slice___19_:Q 0.000000
+3 g_slice_3__u_slice__ff_q:1 g_slice_3__u_slice___16_:A 0.000000
+4 g_slice_3__u_slice__ff_q:1 g_slice_3__u_slice___14_:A1 0.000000
+*END
+
+*D_NET in\[0\] 8.315070
+*CONN
+*P in\[0\] B
+*I g_slice_0__u_slice___12_:S0 B
+*I g_slice_0__u_slice___11_:S0 B
+*I g_slice_0__u_slice___10_:S0 B
+*I g_slice_0__u_slice___09_:S0 B
+*CAP
+1 in\[0\]:2 8.068859
+2 in\[0\]:2 in\[10\]:2 0.002624
+3 in\[0\]:2 in\[11\]:2 0.003620
+4 in\[0\]:2 in\[12\]:2 0.015111
+5 in\[0\]:2 in\[13\]:2 0.009415
+6 in\[0\]:2 in\[14\]:2 0.003620
+7 in\[0\]:2 in\[15\]:2 0.003620
+8 in\[0\]:2 in\[1\]:2 0.008867
+9 in\[0\]:2 in\[2\]:2 0.003620
+10 in\[0\]:2 in\[3\]:2 0.007930
+11 in\[0\]:2 in\[4\]:2 0.014864
+12 in\[0\]:2 in\[5\]:2 0.016525
+13 in\[0\]:2 in\[6\]:2 0.003620
+14 in\[0\]:2 in\[7\]:2 0.003620
+15 in\[0\]:2 in\[8\]:2 0.003620
+16 in\[0\]:2 in\[9\]:2 0.002624
+17 in\[0\]:2 lut_init\[0\]:2 0.002624
+18 in\[0\]:2 lut_init\[10\]:2 0.010633
+19 in\[0\]:2 lut_init\[13\]:2 0.002624
+20 in\[0\]:2 lut_init\[14\]:2 0.006840
+21 in\[0\]:2 lut_init\[15\]:2 0.005247
+22 in\[0\]:2 lut_init\[18\]:2 0.006934
+23 in\[0\]:2 lut_init\[19\]:2 0.006934
+24 in\[0\]:2 lut_init\[1\]:2 0.002878
+25 in\[0\]:2 lut_init\[2\]:2 0.006747
+26 in\[0\]:2 lut_init\[31\]:2 0.002624
+27 in\[0\]:2 lut_init\[47\]:2 0.002624
+28 in\[0\]:2 lut_init\[48\]:2 0.002624
+29 in\[0\]:2 lut_init\[49\]:2 0.002624
+30 in\[0\]:2 lut_init\[4\]:2 0.002624
+31 in\[0\]:2 lut_init\[50\]:2 0.002624
+32 in\[0\]:2 lut_init\[51\]:2 0.002624
+33 in\[0\]:2 lut_init\[52\]:2 0.008995
+34 in\[0\]:2 lut_init\[53\]:2 0.002624
+35 in\[0\]:2 lut_init\[54\]:2 0.006244
+36 in\[0\]:2 lut_init\[55\]:2 0.002624
+37 in\[0\]:2 lut_init\[5\]:2 0.002624
+38 in\[0\]:2 lut_init\[60\]:2 0.002624
+39 in\[0\]:2 lut_init\[61\]:2 0.003620
+40 in\[0\]:2 lut_init\[62\]:2 0.002624
+41 in\[0\]:2 lut_init\[63\]:2 0.002624
+42 in\[0\]:2 lut_init\[6\]:2 0.004310
+43 in\[0\]:2 lut_init\[7\]:2 0.002624
+44 in\[0\]:2 lut_init\[8\]:2 0.002624
+45 in\[0\]:2 lut_init\[9\]:2 0.002624
+46 in\[0\]:2 out\[0\]:2 0.002624
+47 in\[0\]:2 out\[1\]:2 0.002624
+48 in\[0\]:2 out\[2\]:2 0.005247
+49 in\[0\]:2 out\[3\]:2 0.002624
+50 in\[0\]:2 reg_sel\[0\]:2 0.003620
+51 in\[0\]:2 reg_sel\[1\]:2 0.002624
+52 in\[0\]:2 reg_sel\[2\]:2 0.004310
+53 in\[0\]:2 rst:2 0.002624
+*RES
+1 in[0] in\[0\]:2 514.967400
+2 in[0] g_slice_0__u_slice___12_:S0 0.000000
+3 in[0] g_slice_0__u_slice___11_:S0 0.000000
+4 in[0] g_slice_0__u_slice___10_:S0 0.000000
+5 in[0] g_slice_0__u_slice___09_:S0 0.000000
+*END
+
+*D_NET in\[10\] 2.937880
+*CONN
+*P in\[10\] B
+*I g_slice_2__u_slice___13_:S1 B
+*CAP
+1 in\[10\]:2 2.921433
+2 in\[10\]:2 in\[11\]:2 0.003620
+3 in\[10\]:2 out\[2\]:2 0.007580
+4 in\[10\]:2 rst:2 0.005247
+*RES
+1 in[10] in\[10\]:2 54.625000
+2 in[10] g_slice_2__u_slice___13_:S1 0.000000
+*END
+
+*D_NET in\[11\] 3.588833
+*CONN
+*P in\[11\] B
+*I g_slice_2__u_slice___13_:S0 B
+*CAP
+1 in\[11\]:2 3.579886
+2 in\[11\]:2 out\[2\]:2 0.006323
+3 in\[11\]:2 rst:2 0.002624
+*RES
+1 in[11] in\[11\]:2 139.075300
+2 in[11] g_slice_2__u_slice___13_:S0 0.000000
+*END
+
+*D_NET in\[12\] 7.471527
+*CONN
+*P in\[12\] B
+*I g_slice_3__u_slice___12_:S0 B
+*I g_slice_3__u_slice___11_:S0 B
+*I g_slice_3__u_slice___10_:S0 B
+*I g_slice_3__u_slice___09_:S0 B
+*CAP
+1 in\[12\]:2 7.273933
+2 in\[12\]:2 in\[13\]:2 0.019202
+3 in\[12\]:2 in\[14\]:2 0.003620
+4 in\[12\]:2 in\[15\]:2 0.003620
+5 in\[12\]:2 in\[1\]:2 0.009864
+6 in\[12\]:2 in\[2\]:2 0.003620
+7 in\[12\]:2 in\[3\]:2 0.006244
+8 in\[12\]:2 in\[4\]:2 0.011874
+9 in\[12\]:2 in\[5\]:2 0.012308
+10 in\[12\]:2 in\[6\]:2 0.003620
+11 in\[12\]:2 in\[7\]:2 0.003620
+12 in\[12\]:2 in\[8\]:2 0.003620
+13 in\[12\]:2 in\[9\]:2 0.002624
+14 in\[12\]:2 lut_init\[0\]:2 0.002624
+15 in\[12\]:2 lut_init\[11\]:2 0.007240
+16 in\[12\]:2 lut_init\[14\]:2 0.003620
+17 in\[12\]:2 lut_init\[15\]:2 0.003620
+18 in\[12\]:2 lut_init\[48\]:2 0.007871
+19 in\[12\]:2 lut_init\[49\]:2 0.002624
+20 in\[12\]:2 lut_init\[4\]:2 0.002624
+21 in\[12\]:2 lut_init\[50\]:2 0.003206
+22 in\[12\]:2 lut_init\[51\]:2 0.009558
+23 in\[12\]:2 lut_init\[52\]:2 0.002878
+24 in\[12\]:2 lut_init\[53\]:2 0.002624
+25 in\[12\]:2 lut_init\[54\]:2 0.003620
+26 in\[12\]:2 lut_init\[55\]:2 0.006934
+27 in\[12\]:2 lut_init\[5\]:2 0.002624
+28 in\[12\]:2 lut_init\[60\]:2 0.006244
+29 in\[12\]:2 lut_init\[61\]:2 0.009285
+30 in\[12\]:2 lut_init\[63\]:2 0.000582
+31 in\[12\]:2 lut_init\[6\]:2 0.004310
+32 in\[12\]:2 lut_init\[7\]:2 0.002624
+33 in\[12\]:2 out\[0\]:2 0.007871
+34 in\[12\]:2 out\[1\]:2 0.003620
+35 in\[12\]:2 out\[2\]:2 0.003620
+36 in\[12\]:2 reg_sel\[1\]:2 0.003620
+37 in\[12\]:2 reg_sel\[2\]:2 0.005068
+38 in\[12\]:2 rst:2 0.005247
+*RES
+1 in[12] in\[12\]:2 499.045700
+2 in[12] g_slice_3__u_slice___12_:S0 0.000000
+3 in[12] g_slice_3__u_slice___11_:S0 0.000000
+4 in[12] g_slice_3__u_slice___10_:S0 0.000000
+5 in[12] g_slice_3__u_slice___09_:S0 0.000000
+*END
+
+*D_NET in\[13\] 5.910312
+*CONN
+*P in\[13\] B
+*I g_slice_3__u_slice___12_:S1 B
+*I g_slice_3__u_slice___11_:S1 B
+*I g_slice_3__u_slice___10_:S1 B
+*I g_slice_3__u_slice___09_:S1 B
+*CAP
+1 in\[13\]:2 5.750636
+2 in\[13\]:2 in\[14\]:2 0.003620
+3 in\[13\]:2 in\[15\]:2 0.003620
+4 in\[13\]:2 in\[1\]:2 0.010554
+5 in\[13\]:2 in\[2\]:2 0.003620
+6 in\[13\]:2 in\[3\]:2 0.006244
+7 in\[13\]:2 in\[4\]:2 0.006244
+8 in\[13\]:2 in\[5\]:2 0.013484
+9 in\[13\]:2 in\[6\]:2 0.003620
+10 in\[13\]:2 in\[7\]:2 0.003620
+11 in\[13\]:2 in\[8\]:2 0.003620
+12 in\[13\]:2 in\[9\]:2 0.002624
+13 in\[13\]:2 lut_init\[0\]:2 0.002624
+14 in\[13\]:2 lut_init\[14\]:2 0.003437
+15 in\[13\]:2 lut_init\[48\]:2 0.008359
+16 in\[13\]:2 lut_init\[49\]:2 0.021283
+17 in\[13\]:2 lut_init\[51\]:2 0.010538
+18 in\[13\]:2 lut_init\[52\]:2 0.004637
+19 in\[13\]:2 lut_init\[54\]:2 0.009895
+20 in\[13\]:2 lut_init\[60\]:2 0.003620
+21 in\[13\]:2 lut_init\[61\]:2 0.007240
+22 in\[13\]:2 lut_init\[63\]:2 0.004637
+23 in\[13\]:2 out\[0\]:2 0.002624
+24 in\[13\]:2 out\[1\]:2 0.002624
+25 in\[13\]:2 out\[2\]:2 0.002624
+26 in\[13\]:2 out\[3\]:2 0.002624
+27 in\[13\]:2 reg_sel\[1\]:2 0.002624
+28 in\[13\]:2 reg_sel\[2\]:2 0.006792
+29 in\[13\]:2 rst:2 0.002624
+*RES
+1 in[13] in\[13\]:2 157.700500
+2 in[13] g_slice_3__u_slice___12_:S1 0.000000
+3 in[13] g_slice_3__u_slice___11_:S1 0.000000
+4 in[13] g_slice_3__u_slice___10_:S1 0.000000
+5 in[13] g_slice_3__u_slice___09_:S1 0.000000
+*END
+
+*D_NET in\[14\] 3.347868
+*CONN
+*P in\[14\] B
+*I g_slice_3__u_slice___13_:S1 B
+*CAP
+1 in\[14\]:2 3.256802
+2 in\[14\]:2 in\[15\]:2 0.014594
+3 in\[14\]:2 in\[1\]:2 0.007240
+4 in\[14\]:2 in\[2\]:2 0.007240
+5 in\[14\]:2 in\[3\]:2 0.008688
+6 in\[14\]:2 in\[4\]:2 0.007240
+7 in\[14\]:2 in\[5\]:2 0.007240
+8 in\[14\]:2 in\[6\]:2 0.003620
+9 in\[14\]:2 in\[7\]:2 0.003620
+10 in\[14\]:2 in\[8\]:2 0.003620
+11 in\[14\]:2 in\[9\]:2 0.003620
+12 in\[14\]:2 lut_init\[0\]:2 0.002624
+13 in\[14\]:2 out\[1\]:2 0.003620
+14 in\[14\]:2 out\[2\]:2 0.003620
+15 in\[14\]:2 out\[3\]:2 0.003620
+16 in\[14\]:2 reg_sel\[1\]:2 0.003620
+17 in\[14\]:2 reg_sel\[2\]:2 0.003620
+18 in\[14\]:2 reg_sel\[3\]:2 0.003620
+*RES
+1 in[14] in\[14\]:2 42.753400
+2 in[14] g_slice_3__u_slice___13_:S1 0.000000
+*END
+
+*D_NET in\[15\] 3.662344
+*CONN
+*P in\[15\] B
+*I g_slice_3__u_slice___13_:S0 B
+*CAP
+1 in\[15\]:2 3.580597
+2 in\[15\]:2 in\[1\]:2 0.007240
+3 in\[15\]:2 in\[2\]:2 0.006757
+4 in\[15\]:2 in\[3\]:2 0.003620
+5 in\[15\]:2 in\[4\]:2 0.014752
+6 in\[15\]:2 in\[5\]:2 0.007240
+7 in\[15\]:2 in\[6\]:2 0.003620
+8 in\[15\]:2 in\[7\]:2 0.003620
+9 in\[15\]:2 in\[8\]:2 0.003620
+10 in\[15\]:2 in\[9\]:2 0.002624
+11 in\[15\]:2 lut_init\[0\]:2 0.002624
+12 in\[15\]:2 out\[1\]:2 0.003620
+13 in\[15\]:2 out\[2\]:2 0.003620
+14 in\[15\]:2 out\[3\]:2 0.003620
+15 in\[15\]:2 reg_sel\[1\]:2 0.003620
+16 in\[15\]:2 reg_sel\[2\]:2 0.003620
+17 in\[15\]:2 reg_sel\[3\]:2 0.003620
+18 in\[15\]:2 rst:2 0.004310
+*RES
+1 in[15] in\[15\]:2 131.545200
+2 in[15] g_slice_3__u_slice___13_:S0 0.000000
+*END
+
+*D_NET in\[1\] 6.711415
+*CONN
+*P in\[1\] B
+*I g_slice_0__u_slice___12_:S1 B
+*I g_slice_0__u_slice___11_:S1 B
+*I g_slice_0__u_slice___10_:S1 B
+*I g_slice_0__u_slice___09_:S1 B
+*CAP
+1 in\[1\]:2 6.553708
+2 in\[1\]:2 in\[2\]:2 0.004310
+3 in\[1\]:2 in\[3\]:2 0.008867
+4 in\[1\]:2 in\[4\]:2 0.008867
+5 in\[1\]:2 in\[5\]:2 0.007930
+6 in\[1\]:2 in\[6\]:2 0.003620
+7 in\[1\]:2 in\[7\]:2 0.003620
+8 in\[1\]:2 in\[8\]:2 0.006244
+9 in\[1\]:2 in\[9\]:2 0.007354
+10 in\[1\]:2 lut_init\[0\]:2 0.005247
+11 in\[1\]:2 lut_init\[10\]:2 0.009019
+12 in\[1\]:2 lut_init\[11\]:2 0.010538
+13 in\[1\]:2 lut_init\[14\]:2 0.002624
+14 in\[1\]:2 lut_init\[15\]:2 0.002624
+15 in\[1\]:2 lut_init\[18\]:2 0.008995
+16 in\[1\]:2 lut_init\[19\]:2 0.002624
+17 in\[1\]:2 lut_init\[1\]:2 0.004637
+18 in\[1\]:2 lut_init\[48\]:2 0.002624
+19 in\[1\]:2 lut_init\[49\]:2 0.002624
+20 in\[1\]:2 lut_init\[4\]:2 0.013952
+21 in\[1\]:2 lut_init\[51\]:2 0.002624
+22 in\[1\]:2 lut_init\[54\]:2 0.002624
+23 in\[1\]:2 lut_init\[5\]:2 0.008539
+24 in\[1\]:2 lut_init\[62\]:2 0.002624
+25 in\[1\]:2 lut_init\[63\]:2 0.002624
+26 in\[1\]:2 out\[1\]:2 0.002624
+27 in\[1\]:2 out\[2\]:2 0.003620
+28 in\[1\]:2 out\[3\]:2 0.003620
+29 in\[1\]:2 reg_sel\[1\]:2 0.002624
+30 in\[1\]:2 reg_sel\[2\]:2 0.003620
+31 in\[1\]:2 reg_sel\[3\]:2 0.003620
+32 in\[1\]:2 rst:2 0.002624
+*RES
+1 in[1] in\[1\]:2 164.070400
+2 in[1] g_slice_0__u_slice___12_:S1 0.000000
+3 in[1] g_slice_0__u_slice___11_:S1 0.000000
+4 in[1] g_slice_0__u_slice___10_:S1 0.000000
+5 in[1] g_slice_0__u_slice___09_:S1 0.000000
+*END
+
+*D_NET in\[2\] 1.855616
+*CONN
+*P in\[2\] B
+*I g_slice_0__u_slice___13_:S1 B
+*CAP
+1 in\[2\]:2 1.807924
+2 in\[2\]:2 in\[3\]:2 0.006244
+3 in\[2\]:2 in\[4\]:2 0.003620
+4 in\[2\]:2 in\[5\]:2 0.006244
+5 in\[2\]:2 in\[6\]:2 0.003620
+6 in\[2\]:2 in\[7\]:2 0.003620
+7 in\[2\]:2 in\[8\]:2 0.003620
+8 in\[2\]:2 in\[9\]:2 0.003620
+9 in\[2\]:2 lut_init\[0\]:2 0.002624
+10 in\[2\]:2 out\[2\]:2 0.003620
+11 in\[2\]:2 out\[3\]:2 0.003620
+12 in\[2\]:2 reg_sel\[2\]:2 0.003620
+13 in\[2\]:2 reg_sel\[3\]:2 0.003620
+*RES
+1 in[2] in\[2\]:2 37.763000
+2 in[2] g_slice_0__u_slice___13_:S1 0.000000
+*END
+
+*D_NET in\[3\] 2.409739
+*CONN
+*P in\[3\] B
+*I g_slice_0__u_slice___13_:S0 B
+*CAP
+1 in\[3\]:2 2.364874
+2 in\[3\]:2 in\[4\]:2 0.008033
+3 in\[3\]:2 in\[5\]:2 0.002624
+4 in\[3\]:2 in\[6\]:2 0.003620
+5 in\[3\]:2 in\[7\]:2 0.003620
+6 in\[3\]:2 in\[8\]:2 0.003620
+7 in\[3\]:2 in\[9\]:2 0.003620
+8 in\[3\]:2 lut_init\[0\]:2 0.002624
+9 in\[3\]:2 out\[2\]:2 0.006244
+10 in\[3\]:2 out\[3\]:2 0.003620
+11 in\[3\]:2 reg_sel\[2\]:2 0.003620
+12 in\[3\]:2 reg_sel\[3\]:2 0.003620
+*RES
+1 in[3] in\[3\]:2 125.118400
+2 in[3] g_slice_0__u_slice___13_:S0 0.000000
+*END
+
+*D_NET in\[4\] 7.860136
+*CONN
+*P in\[4\] B
+*I g_slice_1__u_slice___12_:S0 B
+*I g_slice_1__u_slice___11_:S0 B
+*I g_slice_1__u_slice___10_:S0 B
+*I g_slice_1__u_slice___09_:S0 B
+*CAP
+1 in\[4\]:2 7.698743
+2 in\[4\]:2 in\[5\]:2 0.018152
+3 in\[4\]:2 in\[6\]:2 0.003620
+4 in\[4\]:2 in\[7\]:2 0.003620
+5 in\[4\]:2 in\[8\]:2 0.003620
+6 in\[4\]:2 in\[9\]:2 0.003620
+7 in\[4\]:2 lut_init\[0\]:2 0.002624
+8 in\[4\]:2 lut_init\[10\]:2 0.002624
+9 in\[4\]:2 lut_init\[11\]:2 0.002624
+10 in\[4\]:2 lut_init\[13\]:2 0.002624
+11 in\[4\]:2 lut_init\[14\]:2 0.002624
+12 in\[4\]:2 lut_init\[15\]:2 0.002624
+13 in\[4\]:2 lut_init\[17\]:2 0.000582
+14 in\[4\]:2 lut_init\[19\]:2 0.000103
+15 in\[4\]:2 lut_init\[23\]:2 0.002878
+16 in\[4\]:2 lut_init\[24\]:2 0.007871
+17 in\[4\]:2 lut_init\[25\]:2 0.002878
+18 in\[4\]:2 lut_init\[26\]:2 0.006747
+19 in\[4\]:2 lut_init\[28\]:2 0.007580
+20 in\[4\]:2 lut_init\[29\]:2 0.002624
+21 in\[4\]:2 lut_init\[31\]:2 0.002624
+22 in\[4\]:2 lut_init\[47\]:2 0.007871
+23 in\[4\]:2 lut_init\[52\]:2 0.000557
+24 in\[4\]:2 lut_init\[61\]:2 0.009285
+25 in\[4\]:2 out\[0\]:2 0.005342
+26 in\[4\]:2 out\[1\]:2 0.002624
+27 in\[4\]:2 out\[2\]:2 0.006244
+28 in\[4\]:2 out\[3\]:2 0.003620
+29 in\[4\]:2 reg_sel\[0\]:2 0.019856
+30 in\[4\]:2 reg_sel\[1\]:2 0.005247
+31 in\[4\]:2 reg_sel\[2\]:2 0.003620
+32 in\[4\]:2 reg_sel\[3\]:2 0.003620
+33 in\[4\]:2 rst:2 0.011244
+*RES
+1 in[4] in\[4\]:2 504.447500
+2 in[4] g_slice_1__u_slice___12_:S0 0.000000
+3 in[4] g_slice_1__u_slice___11_:S0 0.000000
+4 in[4] g_slice_1__u_slice___10_:S0 0.000000
+5 in[4] g_slice_1__u_slice___09_:S0 0.000000
+*END
+
+*D_NET in\[5\] 5.284414
+*CONN
+*P in\[5\] B
+*I g_slice_1__u_slice___12_:S1 B
+*I g_slice_1__u_slice___11_:S1 B
+*I g_slice_1__u_slice___10_:S1 B
+*I g_slice_1__u_slice___09_:S1 B
+*CAP
+1 in\[5\]:2 5.177439
+2 in\[5\]:2 in\[6\]:2 0.003620
+3 in\[5\]:2 in\[7\]:2 0.003620
+4 in\[5\]:2 in\[8\]:2 0.003620
+5 in\[5\]:2 in\[9\]:2 0.003620
+6 in\[5\]:2 lut_init\[0\]:2 0.007354
+7 in\[5\]:2 lut_init\[14\]:2 0.003620
+8 in\[5\]:2 lut_init\[15\]:2 0.003620
+9 in\[5\]:2 lut_init\[21\]:2 0.004637
+10 in\[5\]:2 lut_init\[24\]:2 0.006757
+11 in\[5\]:2 lut_init\[25\]:2 0.012513
+12 in\[5\]:2 lut_init\[28\]:2 0.002624
+13 in\[5\]:2 lut_init\[47\]:2 0.004310
+14 in\[5\]:2 lut_init\[48\]:2 0.003620
+15 in\[5\]:2 lut_init\[49\]:2 0.003620
+16 in\[5\]:2 lut_init\[50\]:2 0.003620
+17 in\[5\]:2 lut_init\[51\]:2 0.003620
+18 in\[5\]:2 out\[0\]:2 0.003620
+19 in\[5\]:2 out\[1\]:2 0.003620
+20 in\[5\]:2 out\[2\]:2 0.003620
+21 in\[5\]:2 out\[3\]:2 0.003620
+22 in\[5\]:2 reg_sel\[0\]:2 0.003620
+23 in\[5\]:2 reg_sel\[1\]:2 0.003620
+24 in\[5\]:2 reg_sel\[2\]:2 0.003620
+25 in\[5\]:2 reg_sel\[3\]:2 0.003620
+26 in\[5\]:2 rst:2 0.003620
+*RES
+1 in[5] in\[5\]:2 129.297400
+2 in[5] g_slice_1__u_slice___12_:S1 0.000000
+3 in[5] g_slice_1__u_slice___11_:S1 0.000000
+4 in[5] g_slice_1__u_slice___10_:S1 0.000000
+5 in[5] g_slice_1__u_slice___09_:S1 0.000000
+*END
+
+*D_NET in\[6\] 2.399482
+*CONN
+*P in\[6\] B
+*I g_slice_1__u_slice___13_:S1 B
+*CAP
+1 in\[6\]:2 2.364303
+2 in\[6\]:2 in\[8\]:2 0.003620
+3 in\[6\]:2 in\[9\]:2 0.003620
+4 in\[6\]:2 lut_init\[0\]:2 0.003620
+5 in\[6\]:2 out\[2\]:2 0.003620
+6 in\[6\]:2 out\[3\]:2 0.003620
+7 in\[6\]:2 reg_sel\[2\]:2 0.003620
+8 in\[6\]:2 reg_sel\[3\]:2 0.003620
+9 in\[6\]:2 rst:2 0.009839
+*RES
+1 in[6] in\[6\]:2 34.473700
+2 in[6] g_slice_1__u_slice___13_:S1 0.000000
+*END
+
+*D_NET in\[7\] 2.745617
+*CONN
+*P in\[7\] B
+*I g_slice_1__u_slice___13_:S0 B
+*CAP
+1 in\[7\]:2 2.712585
+2 in\[7\]:2 in\[8\]:2 0.003620
+3 in\[7\]:2 in\[9\]:2 0.003620
+4 in\[7\]:2 lut_init\[0\]:2 0.003620
+5 in\[7\]:2 out\[2\]:2 0.003620
+6 in\[7\]:2 out\[3\]:2 0.003620
+7 in\[7\]:2 reg_sel\[1\]:2 0.005068
+8 in\[7\]:2 reg_sel\[2\]:2 0.003620
+9 in\[7\]:2 reg_sel\[3\]:2 0.003620
+10 in\[7\]:2 rst:2 0.002624
+*RES
+1 in[7] in\[7\]:2 123.458600
+2 in[7] g_slice_1__u_slice___13_:S0 0.000000
+*END
+
+*D_NET in\[8\] 8.395618
+*CONN
+*P in\[8\] B
+*I g_slice_2__u_slice___12_:S0 B
+*I g_slice_2__u_slice___11_:S0 B
+*I g_slice_2__u_slice___10_:S0 B
+*I g_slice_2__u_slice___09_:S0 B
+*CAP
+1 in\[8\]:2 8.270406
+2 in\[8\]:2 in\[9\]:2 0.008867
+3 in\[8\]:2 lut_init\[0\]:2 0.010974
+4 in\[8\]:2 lut_init\[32\]:2 0.002624
+5 in\[8\]:2 lut_init\[33\]:2 0.009285
+6 in\[8\]:2 lut_init\[34\]:2 0.002624
+7 in\[8\]:2 lut_init\[35\]:2 0.002624
+8 in\[8\]:2 lut_init\[36\]:2 0.002624
+9 in\[8\]:2 lut_init\[37\]:2 0.009285
+10 in\[8\]:2 lut_init\[38\]:2 0.002624
+11 in\[8\]:2 lut_init\[39\]:2 0.003620
+12 in\[8\]:2 lut_init\[3\]:2 0.012487
+13 in\[8\]:2 lut_init\[40\]:2 0.002624
+14 in\[8\]:2 lut_init\[41\]:2 0.003620
+15 in\[8\]:2 lut_init\[42\]:2 0.004310
+16 in\[8\]:2 lut_init\[43\]:2 0.002624
+17 in\[8\]:2 lut_init\[44\]:2 0.002624
+18 in\[8\]:2 lut_init\[45\]:2 0.005247
+19 in\[8\]:2 lut_init\[46\]:2 0.004310
+20 in\[8\]:2 lut_init\[47\]:2 0.011491
+21 in\[8\]:2 out\[2\]:2 0.003620
+22 in\[8\]:2 out\[3\]:2 0.003620
+23 in\[8\]:2 reg_sel\[1\]:2 0.002624
+24 in\[8\]:2 reg_sel\[2\]:2 0.003620
+25 in\[8\]:2 reg_sel\[3\]:2 0.003620
+26 in\[8\]:2 rst:2 0.003620
+*RES
+1 in[8] in\[8\]:2 491.144200
+2 in[8] g_slice_2__u_slice___12_:S0 0.000000
+3 in[8] g_slice_2__u_slice___11_:S0 0.000000
+4 in[8] g_slice_2__u_slice___10_:S0 0.000000
+5 in[8] g_slice_2__u_slice___09_:S0 0.000000
+*END
+
+*D_NET in\[9\] 5.867815
+*CONN
+*P in\[9\] B
+*I g_slice_2__u_slice___12_:S1 B
+*I g_slice_2__u_slice___11_:S1 B
+*I g_slice_2__u_slice___10_:S1 B
+*I g_slice_2__u_slice___09_:S1 B
+*CAP
+1 in\[9\]:2 5.823455
+2 in\[9\]:2 lut_init\[0\]:2 0.006244
+3 in\[9\]:2 lut_init\[32\]:2 0.002624
+4 in\[9\]:2 lut_init\[36\]:2 0.002624
+5 in\[9\]:2 lut_init\[37\]:2 0.003620
+6 in\[9\]:2 lut_init\[40\]:2 0.002624
+7 in\[9\]:2 lut_init\[41\]:2 0.003620
+8 in\[9\]:2 lut_init\[44\]:2 0.002624
+9 in\[9\]:2 lut_init\[45\]:2 0.007260
+10 in\[9\]:2 out\[2\]:2 0.002624
+11 in\[9\]:2 out\[3\]:2 0.002624
+12 in\[9\]:2 reg_sel\[2\]:2 0.002624
+13 in\[9\]:2 reg_sel\[3\]:2 0.002624
+14 in\[9\]:2 rst:2 0.002624
+*RES
+1 in[9] in\[9\]:2 161.060600
+2 in[9] g_slice_2__u_slice___12_:S1 0.000000
+3 in[9] g_slice_2__u_slice___11_:S1 0.000000
+4 in[9] g_slice_2__u_slice___10_:S1 0.000000
+5 in[9] g_slice_2__u_slice___09_:S1 0.000000
+*END
+
+*D_NET lut_init\[0\] 3.729091
+*CONN
+*P lut_init\[0\] B
+*I g_slice_0__u_slice___09_:A0 B
+*CAP
+1 lut_init\[0\]:2 3.715971
+2 lut_init\[0\]:2 out\[2\]:2 0.002624
+3 lut_init\[0\]:2 out\[3\]:2 0.002624
+4 lut_init\[0\]:2 reg_sel\[2\]:2 0.002624
+5 lut_init\[0\]:2 reg_sel\[3\]:2 0.002624
+6 lut_init\[0\]:2 rst:2 0.002624
+*RES
+1 lut_init[0] lut_init\[0\]:2 85.375700
+2 lut_init[0] g_slice_0__u_slice___09_:A0 0.000000
+*END
+
+*D_NET lut_init\[10\] 1.621917
+*CONN
+*P lut_init\[10\] B
+*I g_slice_0__u_slice___10_:A2 B
+*CAP
+1 lut_init\[10\]:2 1.584453
+2 lut_init\[10\]:2 lut_init\[11\]:2 0.006244
+3 lut_init\[10\]:2 lut_init\[12\]:2 0.003620
+4 lut_init\[10\]:2 lut_init\[13\]:2 0.003620
+5 lut_init\[10\]:2 lut_init\[14\]:2 0.002624
+6 lut_init\[10\]:2 lut_init\[15\]:2 0.002624
+7 lut_init\[10\]:2 lut_init\[17\]:2 0.002624
+8 lut_init\[10\]:2 lut_init\[18\]:2 0.002624
+9 lut_init\[10\]:2 out\[2\]:2 0.002624
+10 lut_init\[10\]:2 out\[3\]:2 0.003620
+11 lut_init\[10\]:2 reg_sel\[2\]:2 0.003620
+12 lut_init\[10\]:2 reg_sel\[3\]:2 0.003620
+*RES
+1 lut_init[10] lut_init\[10\]:2 53.391200
+2 lut_init[10] g_slice_0__u_slice___10_:A2 0.000000
+*END
+
+*D_NET lut_init\[11\] 1.408969
+*CONN
+*P lut_init\[11\] B
+*I g_slice_0__u_slice___10_:A3 B
+*CAP
+1 lut_init\[11\]:2 1.382939
+2 lut_init\[11\]:2 lut_init\[12\]:2 0.003620
+3 lut_init\[11\]:2 lut_init\[13\]:2 0.003620
+4 lut_init\[11\]:2 lut_init\[15\]:2 0.004310
+5 lut_init\[11\]:2 out\[2\]:2 0.003620
+6 lut_init\[11\]:2 out\[3\]:2 0.003620
+7 lut_init\[11\]:2 reg_sel\[2\]:2 0.003620
+8 lut_init\[11\]:2 reg_sel\[3\]:2 0.003620
+*RES
+1 lut_init[11] lut_init\[11\]:2 46.614100
+2 lut_init[11] g_slice_0__u_slice___10_:A3 0.000000
+*END
+
+*D_NET lut_init\[12\] 1.133451
+*CONN
+*P lut_init\[12\] B
+*I g_slice_0__u_slice___12_:A0 B
+*CAP
+1 lut_init\[12\]:2 1.113306
+2 lut_init\[12\]:2 lut_init\[17\]:2 0.009285
+3 lut_init\[12\]:2 out\[3\]:2 0.003620
+4 lut_init\[12\]:2 reg_sel\[2\]:2 0.003620
+5 lut_init\[12\]:2 reg_sel\[3\]:2 0.003620
+*RES
+1 lut_init[12] lut_init\[12\]:2 54.221900
+2 lut_init[12] g_slice_0__u_slice___12_:A0 0.000000
+*END
+
+*D_NET lut_init\[13\] 1.355408
+*CONN
+*P lut_init\[13\] B
+*I g_slice_0__u_slice___12_:A1 B
+*CAP
+1 lut_init\[13\]:2 1.327930
+2 lut_init\[13\]:2 lut_init\[16\]:2 0.005068
+3 lut_init\[13\]:2 lut_init\[17\]:2 0.007930
+4 lut_init\[13\]:2 out\[2\]:2 0.003620
+5 lut_init\[13\]:2 out\[3\]:2 0.003620
+6 lut_init\[13\]:2 reg_sel\[2\]:2 0.003620
+7 lut_init\[13\]:2 reg_sel\[3\]:2 0.003620
+*RES
+1 lut_init[13] lut_init\[13\]:2 29.100500
+2 lut_init[13] g_slice_0__u_slice___12_:A1 0.000000
+*END
+
+*D_NET lut_init\[14\] 1.785289
+*CONN
+*P lut_init\[14\] B
+*I g_slice_0__u_slice___12_:A2 B
+*CAP
+1 lut_init\[14\]:2 1.750085
+2 lut_init\[14\]:2 lut_init\[15\]:2 0.003620
+3 lut_init\[14\]:2 lut_init\[16\]:2 0.003620
+4 lut_init\[14\]:2 lut_init\[17\]:2 0.003620
+5 lut_init\[14\]:2 lut_init\[19\]:2 0.002624
+6 lut_init\[14\]:2 lut_init\[8\]:2 0.003620
+7 lut_init\[14\]:2 lut_init\[9\]:2 0.003620
+8 lut_init\[14\]:2 out\[2\]:2 0.003620
+9 lut_init\[14\]:2 out\[3\]:2 0.003620
+10 lut_init\[14\]:2 reg_sel\[2\]:2 0.003620
+11 lut_init\[14\]:2 reg_sel\[3\]:2 0.003620
+*RES
+1 lut_init[14] lut_init\[14\]:2 52.495000
+2 lut_init[14] g_slice_0__u_slice___12_:A2 0.000000
+*END
+
+*D_NET lut_init\[15\] 1.752688
+*CONN
+*P lut_init\[15\] B
+*I g_slice_0__u_slice___12_:A3 B
+*CAP
+1 lut_init\[15\]:2 1.719418
+2 lut_init\[15\]:2 lut_init\[16\]:2 0.003620
+3 lut_init\[15\]:2 lut_init\[17\]:2 0.003620
+4 lut_init\[15\]:2 lut_init\[19\]:2 0.004310
+5 lut_init\[15\]:2 lut_init\[8\]:2 0.003620
+6 lut_init\[15\]:2 lut_init\[9\]:2 0.003620
+7 lut_init\[15\]:2 out\[2\]:2 0.003620
+8 lut_init\[15\]:2 out\[3\]:2 0.003620
+9 lut_init\[15\]:2 reg_sel\[2\]:2 0.003620
+10 lut_init\[15\]:2 reg_sel\[3\]:2 0.003620
+*RES
+1 lut_init[15] lut_init\[15\]:2 49.464400
+2 lut_init[15] g_slice_0__u_slice___12_:A3 0.000000
+*END
+
+*D_NET lut_init\[16\] 1.217097
+*CONN
+*P lut_init\[16\] B
+*I g_slice_1__u_slice___09_:A0 B
+*CAP
+1 lut_init\[16\]:2 1.193351
+2 lut_init\[16\]:2 lut_init\[17\]:2 0.008576
+3 lut_init\[16\]:2 lut_init\[8\]:2 0.004310
+4 lut_init\[16\]:2 out\[3\]:2 0.003620
+5 lut_init\[16\]:2 reg_sel\[2\]:2 0.003620
+6 lut_init\[16\]:2 reg_sel\[3\]:2 0.003620
+*RES
+1 lut_init[16] lut_init\[16\]:2 55.131600
+2 lut_init[16] g_slice_1__u_slice___09_:A0 0.000000
+*END
+
+*D_NET lut_init\[17\] 1.492346
+*CONN
+*P lut_init\[17\] B
+*I g_slice_1__u_slice___09_:A1 B
+*CAP
+1 lut_init\[17\]:2 1.481850
+2 lut_init\[17\]:2 out\[2\]:2 0.002624
+3 lut_init\[17\]:2 out\[3\]:2 0.002624
+4 lut_init\[17\]:2 reg_sel\[2\]:2 0.002624
+5 lut_init\[17\]:2 reg_sel\[3\]:2 0.002624
+*RES
+1 lut_init[17] lut_init\[17\]:2 36.919800
+2 lut_init[17] g_slice_1__u_slice___09_:A1 0.000000
+*END
+
+*D_NET lut_init\[18\] 1.918861
+*CONN
+*P lut_init\[18\] B
+*I g_slice_1__u_slice___09_:A2 B
+*CAP
+1 lut_init\[18\]:2 1.884600
+2 lut_init\[18\]:2 lut_init\[7\]:2 0.006244
+3 lut_init\[18\]:2 lut_init\[8\]:2 0.002624
+4 lut_init\[18\]:2 lut_init\[9\]:2 0.002624
+5 lut_init\[18\]:2 out\[1\]:2 0.009285
+6 lut_init\[18\]:2 out\[2\]:2 0.003620
+7 lut_init\[18\]:2 out\[3\]:2 0.003620
+8 lut_init\[18\]:2 reg_sel\[2\]:2 0.003620
+9 lut_init\[18\]:2 reg_sel\[3\]:2 0.002624
+*RES
+1 lut_init[18] lut_init\[18\]:2 53.666000
+2 lut_init[18] g_slice_1__u_slice___09_:A2 0.000000
+*END
+
+*D_NET lut_init\[19\] 3.888910
+*CONN
+*P lut_init\[19\] B
+*I g_slice_1__u_slice___09_:A3 B
+*CAP
+1 lut_init\[19\]:2 3.762702
+2 lut_init\[19\]:2 lut_init\[47\]:2 0.003620
+3 lut_init\[19\]:2 lut_init\[48\]:2 0.003620
+4 lut_init\[19\]:2 lut_init\[49\]:2 0.003620
+5 lut_init\[19\]:2 lut_init\[4\]:2 0.003620
+6 lut_init\[19\]:2 lut_init\[50\]:2 0.003620
+7 lut_init\[19\]:2 lut_init\[51\]:2 0.003620
+8 lut_init\[19\]:2 lut_init\[52\]:2 0.003620
+9 lut_init\[19\]:2 lut_init\[53\]:2 0.003620
+10 lut_init\[19\]:2 lut_init\[54\]:2 0.003620
+11 lut_init\[19\]:2 lut_init\[55\]:2 0.003620
+12 lut_init\[19\]:2 lut_init\[56\]:2 0.003620
+13 lut_init\[19\]:2 lut_init\[57\]:2 0.005068
+14 lut_init\[19\]:2 lut_init\[58\]:2 0.003620
+15 lut_init\[19\]:2 lut_init\[59\]:2 0.003620
+16 lut_init\[19\]:2 lut_init\[5\]:2 0.008205
+17 lut_init\[19\]:2 lut_init\[60\]:2 0.003620
+18 lut_init\[19\]:2 lut_init\[61\]:2 0.003620
+19 lut_init\[19\]:2 lut_init\[62\]:2 0.003620
+20 lut_init\[19\]:2 lut_init\[63\]:2 0.003620
+21 lut_init\[19\]:2 lut_init\[6\]:2 0.003620
+22 lut_init\[19\]:2 lut_init\[7\]:2 0.002624
+23 lut_init\[19\]:2 lut_init\[8\]:2 0.006244
+24 lut_init\[19\]:2 lut_init\[9\]:2 0.006244
+25 lut_init\[19\]:2 out\[0\]:2 0.008205
+26 lut_init\[19\]:2 out\[1\]:2 0.007354
+27 lut_init\[19\]:2 reg_sel\[0\]:2 0.003620
+28 lut_init\[19\]:2 reg_sel\[1\]:2 0.003620
+29 lut_init\[19\]:2 reg_sel\[3\]:2 0.006244
+30 lut_init\[19\]:2 rst:2 0.003620
+*RES
+1 lut_init[19] lut_init\[19\]:2 55.492700
+2 lut_init[19] g_slice_1__u_slice___09_:A3 0.000000
+*END
+
+*D_NET lut_init\[1\] 2.376681
+*CONN
+*P lut_init\[1\] B
+*I g_slice_0__u_slice___09_:A1 B
+*CAP
+1 lut_init\[1\]:2 2.323087
+2 lut_init\[1\]:2 lut_init\[20\]:2 0.003620
+3 lut_init\[1\]:2 lut_init\[21\]:2 0.003620
+4 lut_init\[1\]:2 lut_init\[22\]:2 0.003620
+5 lut_init\[1\]:2 lut_init\[23\]:2 0.003620
+6 lut_init\[1\]:2 lut_init\[24\]:2 0.003620
+7 lut_init\[1\]:2 lut_init\[25\]:2 0.003620
+8 lut_init\[1\]:2 lut_init\[26\]:2 0.003620
+9 lut_init\[1\]:2 lut_init\[27\]:2 0.003620
+10 lut_init\[1\]:2 lut_init\[28\]:2 0.003620
+11 lut_init\[1\]:2 lut_init\[29\]:2 0.003620
+12 lut_init\[1\]:2 lut_init\[2\]:2 0.006244
+13 lut_init\[1\]:2 lut_init\[30\]:2 0.002624
+14 lut_init\[1\]:2 lut_init\[31\]:2 0.002624
+15 lut_init\[1\]:2 lut_init\[3\]:2 0.003278
+16 lut_init\[1\]:2 lut_init\[47\]:2 0.002624
+*RES
+1 lut_init[1] lut_init\[1\]:2 46.195500
+2 lut_init[1] g_slice_0__u_slice___09_:A1 0.000000
+*END
+
+*D_NET lut_init\[20\] 1.589582
+*CONN
+*P lut_init\[20\] B
+*I g_slice_1__u_slice___11_:A0 B
+*CAP
+1 lut_init\[20\]:2 1.576754
+2 lut_init\[20\]:2 lut_init\[47\]:2 0.002624
+3 lut_init\[20\]:2 lut_init\[52\]:2 0.007580
+4 lut_init\[20\]:2 lut_init\[61\]:2 0.002624
+*RES
+1 lut_init[20] lut_init\[20\]:2 58.953800
+2 lut_init[20] g_slice_1__u_slice___11_:A0 0.000000
+*END
+
+*D_NET lut_init\[21\] 1.366543
+*CONN
+*P lut_init\[21\] B
+*I g_slice_1__u_slice___11_:A1 B
+*CAP
+1 lut_init\[21\]:2 1.344948
+2 lut_init\[21\]:2 lut_init\[23\]:2 0.005995
+3 lut_init\[21\]:2 lut_init\[24\]:2 0.003137
+4 lut_init\[21\]:2 lut_init\[47\]:2 0.002624
+5 lut_init\[21\]:2 lut_init\[61\]:2 0.009839
+*RES
+1 lut_init[21] lut_init\[21\]:2 31.250300
+2 lut_init[21] g_slice_1__u_slice___11_:A1 0.000000
+*END
+
+*D_NET lut_init\[22\] 0.870498
+*CONN
+*P lut_init\[22\] B
+*I g_slice_1__u_slice___11_:A2 B
+*CAP
+1 lut_init\[22\]:2 0.870498
+*RES
+1 lut_init[22] lut_init\[22\]:2 47.070400
+2 lut_init[22] g_slice_1__u_slice___11_:A2 0.000000
+*END
+
+*D_NET lut_init\[23\] 0.929174
+*CONN
+*P lut_init\[23\] B
+*I g_slice_1__u_slice___11_:A3 B
+*CAP
+1 lut_init\[23\]:2 0.924106
+2 lut_init\[23\]:2 lut_init\[24\]:2 0.005068
+*RES
+1 lut_init[23] lut_init\[23\]:2 47.209900
+2 lut_init[23] g_slice_1__u_slice___11_:A3 0.000000
+*END
+
+*D_NET lut_init\[24\] 1.632232
+*CONN
+*P lut_init\[24\] B
+*I g_slice_1__u_slice___10_:A0 B
+*CAP
+1 lut_init\[24\]:2 1.616124
+2 lut_init\[24\]:2 lut_init\[25\]:2 0.002624
+3 lut_init\[24\]:2 lut_init\[47\]:2 0.003620
+4 lut_init\[24\]:2 lut_init\[61\]:2 0.007240
+5 lut_init\[24\]:2 reg_sel\[0\]:2 0.002624
+*RES
+1 lut_init[24] lut_init\[24\]:2 57.243400
+2 lut_init[24] g_slice_1__u_slice___10_:A0 0.000000
+*END
+
+*D_NET lut_init\[25\] 1.368336
+*CONN
+*P lut_init\[25\] B
+*I g_slice_1__u_slice___10_:A1 B
+*CAP
+1 lut_init\[25\]:2 1.355251
+2 lut_init\[25\]:2 lut_init\[26\]:2 0.006244
+3 lut_init\[25\]:2 lut_init\[27\]:2 0.004217
+4 lut_init\[25\]:2 lut_init\[47\]:2 0.002624
+*RES
+1 lut_init[25] lut_init\[25\]:2 34.633000
+2 lut_init[25] g_slice_1__u_slice___10_:A1 0.000000
+*END
+
+*D_NET lut_init\[26\] 0.911154
+*CONN
+*P lut_init\[26\] B
+*I g_slice_1__u_slice___10_:A2 B
+*CAP
+1 lut_init\[26\]:2 0.908017
+2 lut_init\[26\]:2 lut_init\[27\]:2 0.003137
+*RES
+1 lut_init[26] lut_init\[26\]:2 46.378600
+2 lut_init[26] g_slice_1__u_slice___10_:A2 0.000000
+*END
+
+*D_NET lut_init\[27\] 0.992705
+*CONN
+*P lut_init\[27\] B
+*I g_slice_1__u_slice___10_:A3 B
+*CAP
+1 lut_init\[27\]:2 0.989085
+2 lut_init\[27\]:2 lut_init\[47\]:2 0.003620
+*RES
+1 lut_init[27] lut_init\[27\]:2 43.014900
+2 lut_init[27] g_slice_1__u_slice___10_:A3 0.000000
+*END
+
+*D_NET lut_init\[28\] 1.353945
+*CONN
+*P lut_init\[28\] B
+*I g_slice_1__u_slice___12_:A0 B
+*CAP
+1 lut_init\[28\]:2 1.345260
+2 lut_init\[28\]:2 lut_init\[30\]:2 0.003437
+3 lut_init\[28\]:2 lut_init\[47\]:2 0.002624
+4 lut_init\[28\]:2 reg_sel\[0\]:2 0.002624
+*RES
+1 lut_init[28] lut_init\[28\]:2 59.972000
+2 lut_init[28] g_slice_1__u_slice___12_:A0 0.000000
+*END
+
+*D_NET lut_init\[29\] 1.233392
+*CONN
+*P lut_init\[29\] B
+*I g_slice_1__u_slice___12_:A1 B
+*CAP
+1 lut_init\[29\]:2 1.220550
+2 lut_init\[29\]:2 lut_init\[30\]:2 0.003620
+3 lut_init\[29\]:2 lut_init\[31\]:2 0.003620
+4 lut_init\[29\]:2 lut_init\[47\]:2 0.005602
+*RES
+1 lut_init[29] lut_init\[29\]:2 26.601500
+2 lut_init[29] g_slice_1__u_slice___12_:A1 0.000000
+*END
+
+*D_NET lut_init\[2\] 0.885764
+*CONN
+*P lut_init\[2\] B
+*I g_slice_0__u_slice___09_:A2 B
+*CAP
+1 lut_init\[2\]:2 0.882144
+2 lut_init\[2\]:2 lut_init\[30\]:2 0.003620
+*RES
+1 lut_init[2] lut_init\[2\]:2 46.075700
+2 lut_init[2] g_slice_0__u_slice___09_:A2 0.000000
+*END
+
+*D_NET lut_init\[30\] 1.148951
+*CONN
+*P lut_init\[30\] B
+*I g_slice_1__u_slice___12_:A2 B
+*CAP
+1 lut_init\[30\]:2 1.148951
+*RES
+1 lut_init[30] lut_init\[30\]:2 52.571800
+2 lut_init[30] g_slice_1__u_slice___12_:A2 0.000000
+*END
+
+*D_NET lut_init\[31\] 1.347165
+*CONN
+*P lut_init\[31\] B
+*I g_slice_1__u_slice___12_:A3 B
+*CAP
+1 lut_init\[31\]:2 1.335615
+2 lut_init\[31\]:2 lut_init\[3\]:2 0.007930
+3 lut_init\[31\]:2 lut_init\[47\]:2 0.003620
+*RES
+1 lut_init[31] lut_init\[31\]:2 46.453800
+2 lut_init[31] g_slice_1__u_slice___12_:A3 0.000000
+*END
+
+*D_NET lut_init\[32\] 1.530030
+*CONN
+*P lut_init\[32\] B
+*I g_slice_2__u_slice___09_:A0 B
+*CAP
+1 lut_init\[32\]:2 1.505772
+2 lut_init\[32\]:2 lut_init\[33\]:2 0.003620
+3 lut_init\[32\]:2 lut_init\[34\]:2 0.006395
+4 lut_init\[32\]:2 lut_init\[35\]:2 0.002624
+5 lut_init\[32\]:2 lut_init\[3\]:2 0.008995
+6 lut_init\[32\]:2 lut_init\[47\]:2 0.002624
+*RES
+1 lut_init[32] lut_init\[32\]:2 62.129500
+2 lut_init[32] g_slice_2__u_slice___09_:A0 0.000000
+*END
+
+*D_NET lut_init\[33\] 1.180460
+*CONN
+*P lut_init\[33\] B
+*I g_slice_2__u_slice___09_:A1 B
+*CAP
+1 lut_init\[33\]:2 1.173220
+2 lut_init\[33\]:2 lut_init\[3\]:2 0.003620
+3 lut_init\[33\]:2 lut_init\[47\]:2 0.003620
+*RES
+1 lut_init[33] lut_init\[33\]:2 27.086600
+2 lut_init[33] g_slice_2__u_slice___09_:A1 0.000000
+*END
+
+*D_NET lut_init\[34\] 0.821197
+*CONN
+*P lut_init\[34\] B
+*I g_slice_2__u_slice___09_:A2 B
+*CAP
+1 lut_init\[34\]:2 0.821197
+*RES
+1 lut_init[34] lut_init\[34\]:2 49.158000
+2 lut_init[34] g_slice_2__u_slice___09_:A2 0.000000
+*END
+
+*D_NET lut_init\[35\] 1.181711
+*CONN
+*P lut_init\[35\] B
+*I g_slice_2__u_slice___09_:A3 B
+*CAP
+1 lut_init\[35\]:2 1.176463
+2 lut_init\[35\]:2 lut_init\[3\]:2 0.002624
+3 lut_init\[35\]:2 lut_init\[47\]:2 0.002624
+*RES
+1 lut_init[35] lut_init\[35\]:2 49.454600
+2 lut_init[35] g_slice_2__u_slice___09_:A3 0.000000
+*END
+
+*D_NET lut_init\[36\] 1.530030
+*CONN
+*P lut_init\[36\] B
+*I g_slice_2__u_slice___11_:A0 B
+*CAP
+1 lut_init\[36\]:2 1.505772
+2 lut_init\[36\]:2 lut_init\[37\]:2 0.003620
+3 lut_init\[36\]:2 lut_init\[38\]:2 0.006395
+4 lut_init\[36\]:2 lut_init\[39\]:2 0.002624
+5 lut_init\[36\]:2 lut_init\[3\]:2 0.008995
+6 lut_init\[36\]:2 lut_init\[47\]:2 0.002624
+*RES
+1 lut_init[36] lut_init\[36\]:2 62.129500
+2 lut_init[36] g_slice_2__u_slice___11_:A0 0.000000
+*END
+
+*D_NET lut_init\[37\] 1.179941
+*CONN
+*P lut_init\[37\] B
+*I g_slice_2__u_slice___11_:A1 B
+*CAP
+1 lut_init\[37\]:2 1.172701
+2 lut_init\[37\]:2 lut_init\[3\]:2 0.003620
+3 lut_init\[37\]:2 lut_init\[47\]:2 0.003620
+*RES
+1 lut_init[37] lut_init\[37\]:2 27.086600
+2 lut_init[37] g_slice_2__u_slice___11_:A1 0.000000
+*END
+
+*D_NET lut_init\[38\] 0.821197
+*CONN
+*P lut_init\[38\] B
+*I g_slice_2__u_slice___11_:A2 B
+*CAP
+1 lut_init\[38\]:2 0.821197
+*RES
+1 lut_init[38] lut_init\[38\]:2 49.158000
+2 lut_init[38] g_slice_2__u_slice___11_:A2 0.000000
+*END
+
+*D_NET lut_init\[39\] 1.075234
+*CONN
+*P lut_init\[39\] B
+*I g_slice_2__u_slice___11_:A3 B
+*CAP
+1 lut_init\[39\]:2 1.067994
+2 lut_init\[39\]:2 lut_init\[3\]:2 0.003620
+3 lut_init\[39\]:2 lut_init\[47\]:2 0.003620
+*RES
+1 lut_init[39] lut_init\[39\]:2 43.923100
+2 lut_init[39] g_slice_2__u_slice___11_:A3 0.000000
+*END
+
+*D_NET lut_init\[3\] 2.017984
+*CONN
+*P lut_init\[3\] B
+*I g_slice_0__u_slice___09_:A3 B
+*CAP
+1 lut_init\[3\]:2 2.015360
+2 lut_init\[3\]:2 lut_init\[47\]:2 0.002624
+*RES
+1 lut_init[3] lut_init\[3\]:2 55.594700
+2 lut_init[3] g_slice_0__u_slice___09_:A3 0.000000
+*END
+
+*D_NET lut_init\[40\] 1.495904
+*CONN
+*P lut_init\[40\] B
+*I g_slice_2__u_slice___10_:A0 B
+*CAP
+1 lut_init\[40\]:2 1.478351
+2 lut_init\[40\]:2 lut_init\[41\]:2 0.006244
+3 lut_init\[40\]:2 lut_init\[42\]:2 0.003437
+4 lut_init\[40\]:2 lut_init\[44\]:2 0.002624
+5 lut_init\[40\]:2 lut_init\[45\]:2 0.002624
+6 lut_init\[40\]:2 lut_init\[46\]:2 0.002624
+*RES
+1 lut_init[40] lut_init\[40\]:2 61.825900
+2 lut_init[40] g_slice_2__u_slice___10_:A0 0.000000
+*END
+
+*D_NET lut_init\[41\] 1.239102
+*CONN
+*P lut_init\[41\] B
+*I g_slice_2__u_slice___10_:A1 B
+*CAP
+1 lut_init\[41\]:2 1.223608
+2 lut_init\[41\]:2 lut_init\[44\]:2 0.006806
+3 lut_init\[41\]:2 lut_init\[45\]:2 0.003620
+4 lut_init\[41\]:2 lut_init\[46\]:2 0.005068
+*RES
+1 lut_init[41] lut_init\[41\]:2 27.693900
+2 lut_init[41] g_slice_2__u_slice___10_:A1 0.000000
+*END
+
+*D_NET lut_init\[42\] 0.828309
+*CONN
+*P lut_init\[42\] B
+*I g_slice_2__u_slice___10_:A2 B
+*CAP
+1 lut_init\[42\]:2 0.820437
+2 lut_init\[42\]:2 lut_init\[44\]:2 0.002624
+3 lut_init\[42\]:2 lut_init\[45\]:2 0.002624
+4 lut_init\[42\]:2 lut_init\[46\]:2 0.002624
+*RES
+1 lut_init[42] lut_init\[42\]:2 49.158000
+2 lut_init[42] g_slice_2__u_slice___10_:A2 0.000000
+*END
+
+*D_NET lut_init\[43\] 1.032389
+*CONN
+*P lut_init\[43\] B
+*I g_slice_2__u_slice___10_:A3 B
+*CAP
+1 lut_init\[43\]:2 1.021529
+2 lut_init\[43\]:2 lut_init\[44\]:2 0.003620
+3 lut_init\[43\]:2 lut_init\[45\]:2 0.003620
+4 lut_init\[43\]:2 lut_init\[46\]:2 0.003620
+*RES
+1 lut_init[43] lut_init\[43\]:2 44.446200
+2 lut_init[43] g_slice_2__u_slice___10_:A3 0.000000
+*END
+
+*D_NET lut_init\[44\] 1.701556
+*CONN
+*P lut_init\[44\] B
+*I g_slice_2__u_slice___12_:A0 B
+*CAP
+1 lut_init\[44\]:2 1.692537
+2 lut_init\[44\]:2 lut_init\[45\]:2 0.002624
+3 lut_init\[44\]:2 lut_init\[46\]:2 0.006395
+*RES
+1 lut_init[44] lut_init\[44\]:2 63.573700
+2 lut_init[44] g_slice_2__u_slice___12_:A0 0.000000
+*END
+
+*D_NET lut_init\[45\] 1.630143
+*CONN
+*P lut_init\[45\] B
+*I g_slice_2__u_slice___12_:A1 B
+*CAP
+1 lut_init\[45\]:2 1.617719
+2 lut_init\[45\]:2 lut_init\[46\]:2 0.006523
+3 lut_init\[45\]:2 lut_init\[47\]:2 0.005901
+*RES
+1 lut_init[45] lut_init\[45\]:2 34.302500
+2 lut_init[45] g_slice_2__u_slice___12_:A1 0.000000
+*END
+
+*D_NET lut_init\[46\] 1.354424
+*CONN
+*P lut_init\[46\] B
+*I g_slice_2__u_slice___12_:A2 B
+*CAP
+1 lut_init\[46\]:2 1.354424
+*RES
+1 lut_init[46] lut_init\[46\]:2 54.659500
+2 lut_init[46] g_slice_2__u_slice___12_:A2 0.000000
+*END
+
+*D_NET lut_init\[47\] 3.011940
+*CONN
+*P lut_init\[47\] B
+*I g_slice_2__u_slice___12_:A3 B
+*CAP
+1 lut_init\[47\]:2 3.011940
+*RES
+1 lut_init[47] lut_init\[47\]:2 73.700800
+2 lut_init[47] g_slice_2__u_slice___12_:A3 0.000000
+*END
+
+*D_NET lut_init\[48\] 1.362779
+*CONN
+*P lut_init\[48\] B
+*I g_slice_3__u_slice___09_:A0 B
+*CAP
+1 lut_init\[48\]:2 1.330869
+2 lut_init\[48\]:2 lut_init\[49\]:2 0.004310
+3 lut_init\[48\]:2 lut_init\[4\]:2 0.002624
+4 lut_init\[48\]:2 lut_init\[51\]:2 0.002624
+5 lut_init\[48\]:2 lut_init\[54\]:2 0.003620
+6 lut_init\[48\]:2 lut_init\[59\]:2 0.002624
+7 lut_init\[48\]:2 lut_init\[60\]:2 0.003620
+8 lut_init\[48\]:2 lut_init\[61\]:2 0.003620
+9 lut_init\[48\]:2 lut_init\[62\]:2 0.003620
+10 lut_init\[48\]:2 lut_init\[7\]:2 0.002624
+11 lut_init\[48\]:2 lut_init\[9\]:2 0.002624
+*RES
+1 lut_init[48] lut_init\[48\]:2 62.610800
+2 lut_init[48] g_slice_3__u_slice___09_:A0 0.000000
+*END
+
+*D_NET lut_init\[49\] 1.474053
+*CONN
+*P lut_init\[49\] B
+*I g_slice_3__u_slice___09_:A1 B
+*CAP
+1 lut_init\[49\]:2 1.437143
+2 lut_init\[49\]:2 lut_init\[4\]:2 0.004310
+3 lut_init\[49\]:2 lut_init\[51\]:2 0.002624
+4 lut_init\[49\]:2 lut_init\[54\]:2 0.003620
+5 lut_init\[49\]:2 lut_init\[56\]:2 0.004310
+6 lut_init\[49\]:2 lut_init\[59\]:2 0.002624
+7 lut_init\[49\]:2 lut_init\[60\]:2 0.003620
+8 lut_init\[49\]:2 lut_init\[61\]:2 0.002624
+9 lut_init\[49\]:2 lut_init\[62\]:2 0.003620
+10 lut_init\[49\]:2 lut_init\[63\]:2 0.004310
+11 lut_init\[49\]:2 lut_init\[7\]:2 0.002624
+12 lut_init\[49\]:2 lut_init\[9\]:2 0.002624
+*RES
+1 lut_init[49] lut_init\[49\]:2 38.277700
+2 lut_init[49] g_slice_3__u_slice___09_:A1 0.000000
+*END
+
+*D_NET lut_init\[4\] 1.034262
+*CONN
+*P lut_init\[4\] B
+*I g_slice_0__u_slice___11_:A0 B
+*CAP
+1 lut_init\[4\]:2 1.012009
+2 lut_init\[4\]:2 lut_init\[51\]:2 0.011244
+3 lut_init\[4\]:2 lut_init\[59\]:2 0.002624
+4 lut_init\[4\]:2 lut_init\[60\]:2 0.003137
+5 lut_init\[4\]:2 lut_init\[7\]:2 0.002624
+6 lut_init\[4\]:2 lut_init\[9\]:2 0.002624
+*RES
+1 lut_init[4] lut_init\[4\]:2 58.880800
+2 lut_init[4] g_slice_0__u_slice___11_:A0 0.000000
+*END
+
+*D_NET lut_init\[50\] 1.739035
+*CONN
+*P lut_init\[50\] B
+*I g_slice_3__u_slice___09_:A2 B
+*CAP
+1 lut_init\[50\]:2 1.710198
+2 lut_init\[50\]:2 lut_init\[52\]:2 0.002624
+3 lut_init\[50\]:2 lut_init\[54\]:2 0.003620
+4 lut_init\[50\]:2 lut_init\[55\]:2 0.002624
+5 lut_init\[50\]:2 lut_init\[58\]:2 0.002624
+6 lut_init\[50\]:2 lut_init\[61\]:2 0.014721
+7 lut_init\[50\]:2 lut_init\[9\]:2 0.002624
+*RES
+1 lut_init[50] lut_init\[50\]:2 61.562600
+2 lut_init[50] g_slice_3__u_slice___09_:A2 0.000000
+*END
+
+*D_NET lut_init\[51\] 1.865833
+*CONN
+*P lut_init\[51\] B
+*I g_slice_3__u_slice___09_:A3 B
+*CAP
+1 lut_init\[51\]:2 1.834919
+2 lut_init\[51\]:2 lut_init\[54\]:2 0.003620
+3 lut_init\[51\]:2 lut_init\[57\]:2 0.002624
+4 lut_init\[51\]:2 lut_init\[59\]:2 0.002624
+5 lut_init\[51\]:2 lut_init\[5\]:2 0.002624
+6 lut_init\[51\]:2 lut_init\[60\]:2 0.003620
+7 lut_init\[51\]:2 lut_init\[61\]:2 0.003620
+8 lut_init\[51\]:2 lut_init\[7\]:2 0.002624
+9 lut_init\[51\]:2 lut_init\[8\]:2 0.002624
+10 lut_init\[51\]:2 lut_init\[9\]:2 0.002624
+11 lut_init\[51\]:2 rst:2 0.004310
+*RES
+1 lut_init[51] lut_init\[51\]:2 58.818600
+2 lut_init[51] g_slice_3__u_slice___09_:A3 0.000000
+*END
+
+*D_NET lut_init\[52\] 1.793776
+*CONN
+*P lut_init\[52\] B
+*I g_slice_3__u_slice___11_:A0 B
+*CAP
+1 lut_init\[52\]:2 1.761250
+2 lut_init\[52\]:2 lut_init\[53\]:2 0.008539
+3 lut_init\[52\]:2 lut_init\[54\]:2 0.003186
+4 lut_init\[52\]:2 lut_init\[55\]:2 0.008619
+5 lut_init\[52\]:2 lut_init\[9\]:2 0.002624
+6 lut_init\[52\]:2 out\[0\]:2 0.002624
+7 lut_init\[52\]:2 reg_sel\[0\]:2 0.002624
+8 lut_init\[52\]:2 rst:2 0.004310
+*RES
+1 lut_init[52] lut_init\[52\]:2 66.894800
+2 lut_init[52] g_slice_3__u_slice___11_:A0 0.000000
+*END
+
+*D_NET lut_init\[53\] 1.357932
+*CONN
+*P lut_init\[53\] B
+*I g_slice_3__u_slice___11_:A1 B
+*CAP
+1 lut_init\[53\]:2 1.331872
+2 lut_init\[53\]:2 lut_init\[54\]:2 0.005068
+3 lut_init\[53\]:2 lut_init\[57\]:2 0.002624
+4 lut_init\[53\]:2 lut_init\[58\]:2 0.002624
+5 lut_init\[53\]:2 lut_init\[5\]:2 0.002624
+6 lut_init\[53\]:2 lut_init\[60\]:2 0.002624
+7 lut_init\[53\]:2 lut_init\[6\]:2 0.002624
+8 lut_init\[53\]:2 lut_init\[9\]:2 0.002624
+9 lut_init\[53\]:2 out\[0\]:2 0.002624
+10 lut_init\[53\]:2 rst:2 0.002624
+*RES
+1 lut_init[53] lut_init\[53\]:2 36.097600
+2 lut_init[53] g_slice_3__u_slice___11_:A1 0.000000
+*END
+
+*D_NET lut_init\[54\] 2.241378
+*CONN
+*P lut_init\[54\] B
+*I g_slice_3__u_slice___11_:A2 B
+*CAP
+1 lut_init\[54\]:2 2.203322
+2 lut_init\[54\]:2 lut_init\[55\]:2 0.003137
+3 lut_init\[54\]:2 lut_init\[56\]:2 0.002624
+4 lut_init\[54\]:2 lut_init\[60\]:2 0.003620
+5 lut_init\[54\]:2 lut_init\[61\]:2 0.003620
+6 lut_init\[54\]:2 lut_init\[62\]:2 0.006757
+7 lut_init\[54\]:2 lut_init\[63\]:2 0.003186
+8 lut_init\[54\]:2 lut_init\[7\]:2 0.002624
+9 lut_init\[54\]:2 lut_init\[8\]:2 0.002624
+10 lut_init\[54\]:2 lut_init\[9\]:2 0.002624
+11 lut_init\[54\]:2 out\[0\]:2 0.003620
+12 lut_init\[54\]:2 rst:2 0.003620
+*RES
+1 lut_init[54] lut_init\[54\]:2 55.412100
+2 lut_init[54] g_slice_3__u_slice___11_:A2 0.000000
+*END
+
+*D_NET lut_init\[55\] 1.619612
+*CONN
+*P lut_init\[55\] B
+*I g_slice_3__u_slice___11_:A3 B
+*CAP
+1 lut_init\[55\]:2 1.607124
+2 lut_init\[55\]:2 lut_init\[58\]:2 0.002624
+3 lut_init\[55\]:2 lut_init\[61\]:2 0.007240
+4 lut_init\[55\]:2 lut_init\[9\]:2 0.002624
+*RES
+1 lut_init[55] lut_init\[55\]:2 56.495500
+2 lut_init[55] g_slice_3__u_slice___11_:A3 0.000000
+*END
+
+*D_NET lut_init\[56\] 1.001917
+*CONN
+*P lut_init\[56\] B
+*I g_slice_3__u_slice___10_:A0 B
+*CAP
+1 lut_init\[56\]:2 0.983841
+2 lut_init\[56\]:2 lut_init\[59\]:2 0.007580
+3 lut_init\[56\]:2 lut_init\[63\]:2 0.002624
+4 lut_init\[56\]:2 lut_init\[7\]:2 0.002624
+5 lut_init\[56\]:2 lut_init\[8\]:2 0.002624
+6 lut_init\[56\]:2 lut_init\[9\]:2 0.002624
+*RES
+1 lut_init[56] lut_init\[56\]:2 58.222200
+2 lut_init[56] g_slice_3__u_slice___10_:A0 0.000000
+*END
+
+*D_NET lut_init\[57\] 0.813450
+*CONN
+*P lut_init\[57\] B
+*I g_slice_3__u_slice___10_:A1 B
+*CAP
+1 lut_init\[57\]:2 0.800331
+2 lut_init\[57\]:2 lut_init\[59\]:2 0.002624
+3 lut_init\[57\]:2 lut_init\[5\]:2 0.005247
+4 lut_init\[57\]:2 lut_init\[7\]:2 0.002624
+5 lut_init\[57\]:2 lut_init\[9\]:2 0.002624
+*RES
+1 lut_init[57] lut_init\[57\]:2 29.874700
+2 lut_init[57] g_slice_3__u_slice___10_:A1 0.000000
+*END
+
+*D_NET lut_init\[58\] 0.972158
+*CONN
+*P lut_init\[58\] B
+*I g_slice_3__u_slice___10_:A2 B
+*CAP
+1 lut_init\[58\]:2 0.962600
+2 lut_init\[58\]:2 lut_init\[6\]:2 0.004310
+3 lut_init\[58\]:2 lut_init\[9\]:2 0.002624
+4 lut_init\[58\]:2 rst:2 0.002624
+*RES
+1 lut_init[58] lut_init\[58\]:2 52.756500
+2 lut_init[58] g_slice_3__u_slice___10_:A2 0.000000
+*END
+
+*D_NET lut_init\[59\] 1.170064
+*CONN
+*P lut_init\[59\] B
+*I g_slice_3__u_slice___10_:A3 B
+*CAP
+1 lut_init\[59\]:2 1.149730
+2 lut_init\[59\]:2 lut_init\[5\]:2 0.002624
+3 lut_init\[59\]:2 lut_init\[7\]:2 0.012462
+4 lut_init\[59\]:2 lut_init\[8\]:2 0.002624
+5 lut_init\[59\]:2 lut_init\[9\]:2 0.002624
+*RES
+1 lut_init[59] lut_init\[59\]:2 51.649800
+2 lut_init[59] g_slice_3__u_slice___10_:A3 0.000000
+*END
+
+*D_NET lut_init\[5\] 1.401081
+*CONN
+*P lut_init\[5\] B
+*I g_slice_0__u_slice___11_:A1 B
+*CAP
+1 lut_init\[5\]:2 1.387961
+2 lut_init\[5\]:2 lut_init\[60\]:2 0.002624
+3 lut_init\[5\]:2 lut_init\[6\]:2 0.002624
+4 lut_init\[5\]:2 lut_init\[7\]:2 0.002624
+5 lut_init\[5\]:2 lut_init\[9\]:2 0.002624
+6 lut_init\[5\]:2 out\[0\]:2 0.002624
+*RES
+1 lut_init[5] lut_init\[5\]:2 36.485400
+2 lut_init[5] g_slice_0__u_slice___11_:A1 0.000000
+*END
+
+*D_NET lut_init\[60\] 1.819554
+*CONN
+*P lut_init\[60\] B
+*I g_slice_3__u_slice___12_:A0 B
+*CAP
+1 lut_init\[60\]:2 1.797621
+2 lut_init\[60\]:2 lut_init\[62\]:2 0.005068
+3 lut_init\[60\]:2 lut_init\[63\]:2 0.004956
+4 lut_init\[60\]:2 lut_init\[9\]:2 0.002624
+5 lut_init\[60\]:2 rst:2 0.009285
+*RES
+1 lut_init[60] lut_init\[60\]:2 59.666000
+2 lut_init[60] g_slice_3__u_slice___12_:A0 0.000000
+*END
+
+*D_NET lut_init\[61\] 2.705399
+*CONN
+*P lut_init\[61\] B
+*I g_slice_3__u_slice___12_:A1 B
+*CAP
+1 lut_init\[61\]:2 2.685486
+2 lut_init\[61\]:2 lut_init\[62\]:2 0.003137
+3 lut_init\[61\]:2 lut_init\[63\]:2 0.005916
+4 lut_init\[61\]:2 out\[0\]:2 0.003620
+5 lut_init\[61\]:2 reg_sel\[0\]:2 0.003620
+6 lut_init\[61\]:2 rst:2 0.003620
+*RES
+1 lut_init[61] lut_init\[61\]:2 40.049100
+2 lut_init[61] g_slice_3__u_slice___12_:A1 0.000000
+*END
+
+*D_NET lut_init\[62\] 1.968756
+*CONN
+*P lut_init\[62\] B
+*I g_slice_3__u_slice___12_:A2 B
+*CAP
+1 lut_init\[62\]:2 1.942152
+2 lut_init\[62\]:2 lut_init\[63\]:2 0.003620
+3 lut_init\[62\]:2 lut_init\[7\]:2 0.002624
+4 lut_init\[62\]:2 lut_init\[8\]:2 0.002624
+5 lut_init\[62\]:2 lut_init\[9\]:2 0.002624
+6 lut_init\[62\]:2 out\[1\]:2 0.006244
+7 lut_init\[62\]:2 out\[3\]:2 0.002624
+8 lut_init\[62\]:2 reg_sel\[1\]:2 0.003620
+9 lut_init\[62\]:2 reg_sel\[3\]:2 0.002624
+*RES
+1 lut_init[62] lut_init\[62\]:2 55.807600
+2 lut_init[62] g_slice_3__u_slice___12_:A2 0.000000
+*END
+
+*D_NET lut_init\[63\] 1.379564
+*CONN
+*P lut_init\[63\] B
+*I g_slice_3__u_slice___12_:A3 B
+*CAP
+1 lut_init\[63\]:2 1.371692
+2 lut_init\[63\]:2 lut_init\[7\]:2 0.002624
+3 lut_init\[63\]:2 lut_init\[8\]:2 0.002624
+4 lut_init\[63\]:2 lut_init\[9\]:2 0.002624
+*RES
+1 lut_init[63] lut_init\[63\]:2 54.428200
+2 lut_init[63] g_slice_3__u_slice___12_:A3 0.000000
+*END
+
+*D_NET lut_init\[6\] 0.814139
+*CONN
+*P lut_init\[6\] B
+*I g_slice_0__u_slice___11_:A2 B
+*CAP
+1 lut_init\[6\]:2 0.805454
+2 lut_init\[6\]:2 lut_init\[9\]:2 0.002624
+3 lut_init\[6\]:2 out\[0\]:2 0.002624
+4 lut_init\[6\]:2 rst:2 0.003437
+*RES
+1 lut_init[6] lut_init\[6\]:2 51.392000
+2 lut_init[6] g_slice_0__u_slice___11_:A2 0.000000
+*END
+
+*D_NET lut_init\[7\] 2.102103
+*CONN
+*P lut_init\[7\] B
+*I g_slice_0__u_slice___11_:A3 B
+*CAP
+1 lut_init\[7\]:2 2.083736
+2 lut_init\[7\]:2 lut_init\[8\]:2 0.002624
+3 lut_init\[7\]:2 lut_init\[9\]:2 0.002624
+4 lut_init\[7\]:2 out\[1\]:2 0.005247
+5 lut_init\[7\]:2 out\[3\]:2 0.002624
+6 lut_init\[7\]:2 reg_sel\[1\]:2 0.002624
+7 lut_init\[7\]:2 reg_sel\[3\]:2 0.002624
+*RES
+1 lut_init[7] lut_init\[7\]:2 60.990600
+2 lut_init[7] g_slice_0__u_slice___11_:A3 0.000000
+*END
+
+*D_NET lut_init\[8\] 2.126203
+*CONN
+*P lut_init\[8\] B
+*I g_slice_0__u_slice___10_:A0 B
+*CAP
+1 lut_init\[8\]:2 2.113084
+2 lut_init\[8\]:2 lut_init\[9\]:2 0.005247
+3 lut_init\[8\]:2 out\[1\]:2 0.002624
+4 lut_init\[8\]:2 out\[2\]:2 0.002624
+5 lut_init\[8\]:2 reg_sel\[1\]:2 0.002624
+*RES
+1 lut_init[8] lut_init\[8\]:2 69.705100
+2 lut_init[8] g_slice_0__u_slice___10_:A0 0.000000
+*END
+
+*D_NET lut_init\[9\] 3.160404
+*CONN
+*P lut_init\[9\] B
+*I g_slice_0__u_slice___10_:A1 B
+*CAP
+1 lut_init\[9\]:2 3.139413
+2 lut_init\[9\]:2 out\[0\]:2 0.002624
+3 lut_init\[9\]:2 out\[1\]:2 0.002624
+4 lut_init\[9\]:2 out\[2\]:2 0.002624
+5 lut_init\[9\]:2 reg_sel\[0\]:2 0.002624
+6 lut_init\[9\]:2 reg_sel\[1\]:2 0.002624
+7 lut_init\[9\]:2 reg_sel\[3\]:2 0.005247
+8 lut_init\[9\]:2 rst:2 0.002624
+*RES
+1 lut_init[9] lut_init\[9\]:2 55.002300
+2 lut_init[9] g_slice_0__u_slice___10_:A1 0.000000
+*END
+
+*D_NET out\[0\] 2.028375
+*CONN
+*P out\[0\] B
+*I g_slice_0__u_slice___14_:X B
+*CAP
+1 out\[0\]:2 2.023127
+2 out\[0\]:2 reg_sel\[0\]:2 0.002624
+3 out\[0\]:2 rst:2 0.002624
+*RES
+1 out[0] out\[0\]:2 153.192300
+2 out[0] g_slice_0__u_slice___14_:X 0.000000
+*END
+
+*D_NET out\[1\] 2.100612
+*CONN
+*P out\[1\] B
+*I g_slice_1__u_slice___14_:X B
+*CAP
+1 out\[1\]:2 2.092740
+2 out\[1\]:2 out\[3\]:2 0.002624
+3 out\[1\]:2 reg_sel\[1\]:2 0.002624
+4 out\[1\]:2 reg_sel\[3\]:2 0.002624
+*RES
+1 out[1] out\[1\]:2 154.026300
+2 out[1] g_slice_1__u_slice___14_:X 0.000000
+*END
+
+*D_NET out\[2\] 3.165989
+*CONN
+*P out\[2\] B
+*I g_slice_2__u_slice___14_:X B
+*CAP
+1 out\[2\]:2 3.147810
+2 out\[2\]:2 out\[3\]:2 0.015555
+3 out\[2\]:2 reg_sel\[3\]:2 0.002624
+*RES
+1 out[2] out\[2\]:2 167.322100
+2 out[2] g_slice_2__u_slice___14_:X 0.000000
+*END
+
+*D_NET out\[3\] 3.606391
+*CONN
+*P out\[3\] B
+*I g_slice_3__u_slice___14_:X B
+*CAP
+1 out\[3\]:2 3.598520
+2 out\[3\]:2 reg_sel\[2\]:2 0.005247
+3 out\[3\]:2 reg_sel\[3\]:2 0.002624
+*RES
+1 out[3] out\[3\]:2 170.786600
+2 out[3] g_slice_3__u_slice___14_:X 0.000000
+*END
+
+*D_NET reg_sel\[0\] 2.149047
+*CONN
+*P reg_sel\[0\] B
+*I g_slice_0__u_slice___14_:S B
+*CAP
+1 reg_sel\[0\]:2 2.149047
+*RES
+1 reg_sel[0] reg_sel\[0\]:2 75.235300
+2 reg_sel[0] g_slice_0__u_slice___14_:S 0.000000
+*END
+
+*D_NET reg_sel\[1\] 2.311574
+*CONN
+*P reg_sel\[1\] B
+*I g_slice_1__u_slice___14_:S B
+*CAP
+1 reg_sel\[1\]:2 2.308950
+2 reg_sel\[1\]:2 reg_sel\[3\]:2 0.002624
+*RES
+1 reg_sel[1] reg_sel\[1\]:2 82.333500
+2 reg_sel[1] g_slice_1__u_slice___14_:S 0.000000
+*END
+
+*D_NET reg_sel\[2\] 3.298936
+*CONN
+*P reg_sel\[2\] B
+*I g_slice_2__u_slice___14_:S B
+*CAP
+1 reg_sel\[2\]:2 3.293689
+2 reg_sel\[2\]:2 reg_sel\[3\]:2 0.005247
+*RES
+1 reg_sel[2] reg_sel\[2\]:2 93.638900
+2 reg_sel[2] g_slice_2__u_slice___14_:S 0.000000
+*END
+
+*D_NET reg_sel\[3\] 3.594032
+*CONN
+*P reg_sel\[3\] B
+*I g_slice_3__u_slice___14_:S B
+*CAP
+1 reg_sel\[3\]:2 3.594032
+*RES
+1 reg_sel[3] reg_sel\[3\]:2 96.559600
+2 reg_sel[3] g_slice_3__u_slice___14_:S 0.000000
+*END
+
+*D_NET rst 6.750518
+*CONN
+*P rst B
+*I g_slice_3__u_slice___17_:A B
+*I g_slice_2__u_slice___17_:A B
+*I g_slice_1__u_slice___17_:A B
+*I g_slice_0__u_slice___17_:A B
+*CAP
+1 rst:2 6.750518
+*RES
+1 rst rst:2 140.284300
+2 rst g_slice_3__u_slice___17_:A 0.000000
+3 rst g_slice_2__u_slice___17_:A 0.000000
+4 rst g_slice_1__u_slice___17_:A 0.000000
+5 rst g_slice_0__u_slice___17_:A 0.000000
+*END
+

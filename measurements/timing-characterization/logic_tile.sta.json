@@ -1,0 +1,602 @@
+{
+  "corners": [
+    {
+      "clock_skew_ns": 0,
+      "corner": "ff_100C_1v65",
+      "deck": {
+        "content_hash": "sha256:913e67fc551be7e4e97fc031f3e72e5ef3251438ceeb44753f73b68df58f5650",
+        "name": "sky130_fd_sc_hd__ff_100C_1v65",
+        "released": false
+      },
+      "estimated_power_mw": 0.0276,
+      "fmax_mhz": 1922.25,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 0.451,
+      "worst_slack_ns": 19.4798
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ff_100C_1v95",
+      "deck": {
+        "content_hash": "sha256:15c9ccefec536ff35d694314af5812e7c03b4e5a356ec8ea28f2e40bbeec04e7",
+        "name": "sky130_fd_sc_hd__ff_100C_1v95",
+        "released": false
+      },
+      "estimated_power_mw": 0.0409,
+      "fmax_mhz": 2443.48,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 0.35605,
+      "worst_slack_ns": 19.5907
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ff_n40C_1v56",
+      "deck": {
+        "content_hash": "sha256:d64f38f3e67f8adab818531901385dbd29c6a4805e6166f7166bcc3e9370ef88",
+        "name": "sky130_fd_sc_hd__ff_n40C_1v56",
+        "released": false
+      },
+      "estimated_power_mw": 0.0222,
+      "fmax_mhz": 1546.35,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 0.5417,
+      "worst_slack_ns": 19.3533
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ff_n40C_1v65",
+      "deck": {
+        "content_hash": "sha256:dd777cb159bf2fc853773d74a3c3e8269b73869d25aae49d0f80f117df9631ee",
+        "name": "sky130_fd_sc_hd__ff_n40C_1v65",
+        "released": false
+      },
+      "estimated_power_mw": 0.025,
+      "fmax_mhz": 1774.14,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 0.47392,
+      "worst_slack_ns": 19.4363
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ff_n40C_1v76",
+      "deck": {
+        "content_hash": "sha256:0f5b7ceef23114c3834870f86c2f90ea24d597622fcd5abd2916b1fb604e8a26",
+        "name": "sky130_fd_sc_hd__ff_n40C_1v76",
+        "released": false
+      },
+      "estimated_power_mw": 0.0287,
+      "fmax_mhz": 2039.35,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 0.41586,
+      "worst_slack_ns": 19.5096
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ff_n40C_1v95",
+      "deck": {
+        "content_hash": "sha256:fb61d91c55a7f85b1989e8149d040b13ba5e7f5478f5bf0c3c16c5da30720139",
+        "name": "sky130_fd_sc_hd__ff_n40C_1v95",
+        "released": false
+      },
+      "estimated_power_mw": 0.036,
+      "fmax_mhz": 2454.84,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 0.34682,
+      "worst_slack_ns": 19.5926
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ff_n40C_1v95_ccsnoise",
+      "deck": {
+        "content_hash": "sha256:425315ca7a49debcb1c715daf6e5e5a27bb78587cac6f3b358b1fe114c787132",
+        "name": "sky130_fd_sc_hd__ff_n40C_1v95_ccsnoise",
+        "released": false
+      },
+      "estimated_power_mw": 0.036,
+      "fmax_mhz": 2454.84,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 0.34682,
+      "worst_slack_ns": 19.5926
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "tt_025C_1v80",
+      "deck": {
+        "content_hash": "sha256:8e78e14442062dba34d414fca6490b2f6b96038d4510d1438ca44fee31487135",
+        "name": "sky130_fd_sc_hd__tt_025C_1v80",
+        "released": false
+      },
+      "estimated_power_mw": 0.031,
+      "fmax_mhz": 1548.86,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 0.57062,
+      "worst_slack_ns": 19.3544
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "tt_100C_1v80",
+      "deck": {
+        "content_hash": "sha256:7c6b9fc62d7e83b8317cdca883d79107d8f2ff1061b04519fda7d3088560015b",
+        "name": "sky130_fd_sc_hd__tt_100C_1v80",
+        "released": false
+      },
+      "estimated_power_mw": 0.0324,
+      "fmax_mhz": 1561.77,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 0.5698,
+      "worst_slack_ns": 19.3597
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ss_100C_1v40",
+      "deck": {
+        "content_hash": "sha256:88c8ce95b6a7f333bd9e618fc765c3005fbeccfca2727226bd821c0d16fcaac8",
+        "name": "sky130_fd_sc_hd__ss_100C_1v40",
+        "released": false
+      },
+      "estimated_power_mw": 0.0188,
+      "fmax_mhz": 515.139,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 1.57966,
+      "worst_slack_ns": 18.0588
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ss_100C_1v60",
+      "deck": {
+        "content_hash": "sha256:9b24f0db3967ac67b4cae1f74bb480fd47922d18d0ed577e3c121739b412c361",
+        "name": "sky130_fd_sc_hd__ss_100C_1v60",
+        "released": false
+      },
+      "estimated_power_mw": 0.0253,
+      "fmax_mhz": 762.361,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 1.11661,
+      "worst_slack_ns": 18.6883
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ss_n40C_1v28",
+      "deck": {
+        "content_hash": "sha256:afd8201328f73996b7c80bf13909674ba7b483ec413dea3fca74831cec712578",
+        "name": "sky130_fd_sc_hd__ss_n40C_1v28",
+        "released": false
+      },
+      "estimated_power_mw": 0.0128,
+      "fmax_mhz": 208.966,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 3.36838,
+      "worst_slack_ns": 15.2145
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ss_n40C_1v35",
+      "deck": {
+        "content_hash": "sha256:8fd5aefd2053feef0a9bd3a5a972680dd77ddb8dda744836611656f37f969855",
+        "name": "sky130_fd_sc_hd__ss_n40C_1v35",
+        "released": false
+      },
+      "estimated_power_mw": 0.015,
+      "fmax_mhz": 298.856,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 2.45784,
+      "worst_slack_ns": 16.6539
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ss_n40C_1v40",
+      "deck": {
+        "content_hash": "sha256:2c6c61b165c313a6eb18d805431f981cebf9cf138cec39a67d01ea99f63a4717",
+        "name": "sky130_fd_sc_hd__ss_n40C_1v40",
+        "released": false
+      },
+      "estimated_power_mw": 0.017,
+      "fmax_mhz": 367.71,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 2.04022,
+      "worst_slack_ns": 17.2805
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ss_n40C_1v44",
+      "deck": {
+        "content_hash": "sha256:88814187f8226bb6e7ad394a1afef161eb1c4006ed1f095cc31ab0da7dae1f0f",
+        "name": "sky130_fd_sc_hd__ss_n40C_1v44",
+        "released": false
+      },
+      "estimated_power_mw": 0.0184,
+      "fmax_mhz": 427.3,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 1.78998,
+      "worst_slack_ns": 17.6597
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ss_n40C_1v60",
+      "deck": {
+        "content_hash": "sha256:23cba893b985a950a7951e3f29ae66ae6a639aaef75c1478e2306fb68d4a7ee5",
+        "name": "sky130_fd_sc_hd__ss_n40C_1v60",
+        "released": false
+      },
+      "estimated_power_mw": 0.0238,
+      "fmax_mhz": 677.301,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 1.18791,
+      "worst_slack_ns": 18.5236
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ss_n40C_1v60_ccsnoise",
+      "deck": {
+        "content_hash": "sha256:699555a07af7b05393dd7cc2b3f5cfdbe4ddebc4efbf2b1a06ac68950c78c90f",
+        "name": "sky130_fd_sc_hd__ss_n40C_1v60_ccsnoise",
+        "released": false
+      },
+      "estimated_power_mw": 0.0238,
+      "fmax_mhz": 677.301,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 1.18791,
+      "worst_slack_ns": 18.5236
+    },
+    {
+      "clock_skew_ns": 0,
+      "corner": "ss_n40C_1v76",
+      "deck": {
+        "content_hash": "sha256:f4f16d4f7040623afb60d0480a035e4128c5c1212361ae3bd13c3a52d9692a84",
+        "name": "sky130_fd_sc_hd__ss_n40C_1v76",
+        "released": false
+      },
+      "estimated_power_mw": 0.029,
+      "fmax_mhz": 938.259,
+      "hold_violation_count": 0,
+      "setup_violation_count": 0,
+      "spef_annotation": {
+        "annotation_complete": true,
+        "annotation_warning": null,
+        "delay_changed": true,
+        "design_nets_annotated": 139,
+        "design_nets_missing_sample": [],
+        "design_nets_total": 139,
+        "nets_annotated": 139,
+        "nets_total": 139,
+        "partially_unannotated_driver_count": 0,
+        "reader_warning_count": 0,
+        "reader_warning_sample": [],
+        "unannotated_driver_count": 0
+      },
+      "timing_status": "constrained",
+      "total_negative_hold_slack_ns": 0,
+      "total_negative_slack_ns": 0,
+      "worst_hold_slack_ns": 0.89582,
+      "worst_slack_ns": 18.9342
+    }
+  ],
+  "engine": "openroad",
+  "geometry_source": "routed",
+  "hdl_toplevel": "logic_tile",
+  "layout_def_sha256": "sha256:2979e7fb3e292e20e31c85e642687b4cacdc7ff9f7d72c7bc2b526bb793badaf",
+  "layout_gds_sha256": "sha256:38498092805ec6a6f23cf9e13f57a055f765412595b422b66cf3a24ae6722a7f",
+  "provenance": {
+    "deck": null,
+    "input": {
+      "content_hash": "sha256:6e1bb79d924d42cd4debc48df534e7dabe20b0c0b46efbc7944c96d5b4f33be5",
+      "role": "layout"
+    },
+    "pdk": {
+      "name": "sky130A",
+      "version": "open_pdks c6d73a35f524070e85faff4a6a9eef49553ebc2b"
+    }
+  },
+  "schema_version": 1,
+  "spef_sha256": "sha256:5101e83190a9cc58e0f7ca96462e22f314e8f1baa5ce7c8fb1343204007e4cf3",
+  "status": "ok",
+  "verilog_path": null,
+  "wire_load_mode": null,
+  "wire_load_model": null
+}

@@ -9,6 +9,20 @@
 # and the trimmed per-corner reports checked against the committed copies
 # under measurements/timing-characterization/corners/.
 #
+# Since issue #68 it also makes ONE multi-corner `klt sta` request
+# (`pdk.corners`, all 18 corners in one request/response round trip) over
+# the same name-sanitized DEF + SPEF, and commits its trimmed response as
+# measurements/timing-characterization/logic_tile.sta.json -- the gradeable
+# envelope signoff/block-manifest.json cites for T1 checklist item 5. That
+# response is gated by flow/sta_envelope_check.py (exact ratified corner
+# set, every corner `timing_status: "constrained"` with non-negative
+# setup/hold slack, complete SPEF annotation, fmax consistent with the
+# 20 ns reference clock) and cross-checked field-for-field against the
+# per-corner single-corner SPEF runs, which keep carrying the name-rewrite
+# neutrality control. The sanitized SPEF both annotate is committed beside
+# it (measurements/timing-characterization/logic_tile.spef) so the
+# parasitics the citation rests on are pinned by committed bytes.
+#
 # This is the reproducibility harness for spec/framework-gaps.md item G4
 # ("Timing characterization -- no inherited numbers"), per issue #20:
 # FABulous marks BEL timing as placeholder-constant, so every delay,
@@ -46,14 +60,17 @@
 #
 # Usage:
 #   ./flow/sta-sweep.sh            # extract parasitics, sweep every corner,
-#                                   # and diff the trimmed per-corner reports
-#                                   # against the committed copies under
+#                                   # and diff the trimmed per-corner reports,
+#                                   # the multi-corner envelope and the
+#                                   # sanitized SPEF against the committed
+#                                   # copies under
 #                                   # measurements/timing-characterization/.
 #                                   # Exit 0 iff every corner ran, every SPEF
 #                                   # run annotated completely, and nothing
 #                                   # drifted.
 #   ./flow/sta-sweep.sh --update   # same, but overwrite the committed
-#                                   # per-corner reports. Run this (and
+#                                   # per-corner reports, envelope and SPEF.
+#                                   # Run this (and
 #                                   # commit the result, plus a new record
 #                                   # under
 #                                   # measurements/timing-characterization/records/)
@@ -93,7 +110,12 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 LAYOUT_DIR="$REPO_ROOT/layout"
 BUILD_DIR="$SCRIPT_DIR/build"
 STA_BUILD_DIR="$BUILD_DIR/sta"
-CORNERS_DIR="$REPO_ROOT/measurements/timing-characterization/corners"
+TIMING_DIR="$REPO_ROOT/measurements/timing-characterization"
+CORNERS_DIR="$TIMING_DIR/corners"
+# The multi-corner envelope cited for T1 item 5 and the sanitized SPEF it
+# (and every per-corner SPEF run) annotates -- issue #68.
+COMMITTED_ENVELOPE="$TIMING_DIR/logic_tile.sta.json"
+COMMITTED_SPEF="$TIMING_DIR/logic_tile.spef"
 TOP_MODULE="logic_tile"
 STD_CELL_LIBRARY="sky130_fd_sc_hd"
 PDK_VARIANT="sky130A"
@@ -147,7 +169,10 @@ done
 
 # shellcheck source=./tool_versions.sh
 source "$SCRIPT_DIR/tool_versions.sh"
-print_tool_version_banner
+# The committed timing evidence has its own recorded toolchain (issue #68),
+# distinct from the layout/ lineage's RECORDED_KLT_VERSION -- see
+# flow/tool_versions.sh.
+print_tool_version_banner sky130A "$RECORDED_STA_KLT_VERSION" "$RECORDED_STA_OPENROAD_VERSION"
 
 # Same rationale as flow/lvs.sh's own copy of this block -- see
 # flow/pdk_root.sh's own header comment for the full writeup.
@@ -188,10 +213,16 @@ echo "=== corner set: ${#ALL_CORNERS[@]} ${STD_CELL_LIBRARY} liberty corners, ma
 
 # --- 1. Derive the DEF rewrites (klayout-tools escaped-identifier gaps) ---
 
-UNESCAPED_DEF="$STA_BUILD_DIR/${TOP_MODULE}.unescaped.def"
+# CONNECTIONS_DEF is what `klt extract --def-net-connections` reads: the
+# DEF unescaped, with its NETS record names spelled the way `klt extract`
+# itself spells extracted nets since klayout-tools#2145 (`.` -> `_`). Without
+# that, every hierarchical net loses its SPEF `*CONN` block again and the
+# SPEF runs below fail the annotation guard (klayout-tools#2903, issue #68 -- see
+# sta_sanitize_names.py's `def_connections`).
+CONNECTIONS_DEF="$STA_BUILD_DIR/${TOP_MODULE}.connections.def"
 SANITIZED_DEF="$STA_BUILD_DIR/${TOP_MODULE}.sanitized.def"
 echo "=== rewriting escaped identifiers (see flow/sta_sanitize_names.py) ==="
-python3 "$SCRIPT_DIR/sta_sanitize_names.py" def-unescape "$COMMITTED_DEF" "$UNESCAPED_DEF"
+python3 "$SCRIPT_DIR/sta_sanitize_names.py" def-connections "$COMMITTED_DEF" "$CONNECTIONS_DEF"
 python3 "$SCRIPT_DIR/sta_sanitize_names.py" def-sanitize "$COMMITTED_DEF" "$SANITIZED_DEF"
 
 # --- 2. Extract parasitics once from the committed GDS ---
@@ -216,7 +247,7 @@ EXTRACT_RESPONSE="$STA_BUILD_DIR/extract_response.json"
 echo "=== klt extract ${TOP_MODULE}.gds --parasitics --spef ==="
 if ! klt extract "$COMMITTED_GDS" --deck sky130 \
     --parasitics --spef "$SPEF_RAW" \
-    --def-net-names --def-net-connections "$UNESCAPED_DEF" \
+    --def-net-names --def-net-connections "$CONNECTIONS_DEF" \
     --def-pins "$COMMITTED_DEF" \
     --abstract-cells "${STD_CELL_LIBRARY}__*" \
     -o "$EXTRACT_SPICE" --format json | tee "$EXTRACT_RESPONSE"; then
@@ -288,6 +319,9 @@ import sys
 FIELDS = (
     "worst_slack_ns",
     "total_negative_slack_ns",
+    "worst_hold_slack_ns",
+    "total_negative_hold_slack_ns",
+    "timing_status",
     "fmax_mhz",
     "setup_violation_count",
     "hold_violation_count",
@@ -328,8 +362,10 @@ print(json.dumps(d.get('spef_annotation'), indent=2))
     committed_corner_dir="$CORNERS_DIR/$corner"
     generated_lef_only="$corner_build/lef-only.sta.json"
     generated_spef="$corner_build/spef.sta.json"
-    python3 "$SCRIPT_DIR/sta_report_trim.py" "$lef_only_response" "$DEF_SHA256" "-" "$generated_lef_only"
-    python3 "$SCRIPT_DIR/sta_report_trim.py" "$spef_response" "$DEF_SHA256" "$SPEF_SHA256" "$generated_spef"
+    mkdir -p "$STA_BUILD_DIR/corners-trimmed/$corner"
+    python3 "$SCRIPT_DIR/sta_report_trim.py" "$lef_only_response" "$DEF_SHA256" "-" "-" "$generated_lef_only"
+    python3 "$SCRIPT_DIR/sta_report_trim.py" "$spef_response" "$DEF_SHA256" "$GDS_SHA256" "$SPEF_SHA256" "$generated_spef"
+    cp "$generated_spef" "$STA_BUILD_DIR/corners-trimmed/$corner/spef.sta.json"
 
     if [[ "$MODE" == "update" ]]; then
         mkdir -p "$committed_corner_dir"
@@ -353,11 +389,71 @@ print(json.dumps(d.get('spef_annotation'), indent=2))
     done
 done
 
+# --- 4. One multi-corner request: the gradeable item-5 envelope (issue #68) ---
+#
+# The same sanitized DEF and SPEF the per-corner SPEF runs above used,
+# characterized at all 18 corners by ONE `klt sta` request through its
+# native `pdk.corners` list (klayout-tools#1871) -- the response shape
+# `klt signoff` grades for T1 item 5. `klt sta` itself re-hashes the DEF
+# after the corner loop and refuses to report if it changed, so every entry
+# provably describes the same geometry. The gate below then requires the
+# exact ratified corner set, constrained non-negative setup/hold at every
+# corner, complete SPEF annotation and a 20 ns-consistent fmax, and
+# cross-checks every corner entry against the per-corner SPEF report just
+# generated (which carries the name-rewrite neutrality control).
+
+echo "=== multi-corner klt sta (pdk.corners, ${#ALL_CORNERS[@]} corners, SPEF-annotated) ==="
+multi_build="$STA_BUILD_DIR/multi"
+mkdir -p "$multi_build"
+corners_json="$(printf '"%s",' "${ALL_CORNERS[@]}")"
+corners_json="[${corners_json%,}]"
+cat > "$multi_build/request.json" <<EOF
+{
+  "schema": "klt.sta.request/1",
+  "def": "${SANITIZED_DEF}",
+  "hdl_toplevel": "${TOP_MODULE}",
+  "pdk": { "cell_library": "${STD_CELL_LIBRARY}", "corners": ${corners_json} },
+  "spef": "${SPEF}",
+  "constraints": { "clock_port": "${CLOCK_PORT}", "clock_period_ns": ${CLOCK_PERIOD_NS} }
+}
+EOF
+multi_response="$multi_build/response.json"
+if ! klt sta "$multi_build/request.json" --pdk "$PDK_VARIANT" --format json > "$multi_response" 2>"$multi_build/stderr.log"; then
+    echo "error: multi-corner klt sta failed (see $multi_response / $multi_build/stderr.log)" >&2
+    cat "$multi_response" >&2 || true
+    exit 1
+fi
+generated_envelope="$multi_build/${TOP_MODULE}.sta.json"
+python3 "$SCRIPT_DIR/sta_report_trim.py" "$multi_response" "$DEF_SHA256" "$GDS_SHA256" "$SPEF_SHA256" "$generated_envelope"
+expect_corners="$(IFS=,; echo "${ALL_CORNERS[*]}")"
+if ! python3 "$SCRIPT_DIR/sta_envelope_check.py" "$generated_envelope" \
+        --cross-check "$STA_BUILD_DIR/corners-trimmed" --expect-corners "$expect_corners"; then
+    echo "error: the multi-corner envelope fails the item-5 gate -- refusing to record it" >&2
+    exit 1
+fi
+
 if [[ "$MODE" == "update" ]]; then
+    cp "$generated_envelope" "$COMMITTED_ENVELOPE"
+    cp "$SPEF" "$COMMITTED_SPEF"
     echo "=== per-corner reports written under ${CORNERS_DIR} ==="
-    echo "    now add a record under measurements/timing-characterization/records/ (append-only) and commit both"
+    echo "=== multi-corner envelope written to ${COMMITTED_ENVELOPE}, SPEF to ${COMMITTED_SPEF} ==="
+    echo "    now add a record under measurements/timing-characterization/records/ (append-only),"
+    echo "    refresh signoff/block-manifest.json's item-5 pin (signoff/verify-pins.sh names it) and commit"
     exit 0
 fi
+
+for pair in "$COMMITTED_ENVELOPE:$generated_envelope" "$COMMITTED_SPEF:$SPEF"; do
+    committed_artifact="${pair%%:*}"
+    generated_artifact="${pair#*:}"
+    if [[ ! -f "$committed_artifact" ]]; then
+        echo "error: no committed $committed_artifact -- run '$0 --update' to create it" >&2
+        status=1
+    elif ! diff -q "$committed_artifact" "$generated_artifact" >/dev/null; then
+        diff -u "$committed_artifact" "$generated_artifact" | head -80 || true
+        echo "error: regenerated $(basename "$generated_artifact") differs from the committed copy at $committed_artifact" >&2
+        status=1
+    fi
+done
 
 # Guard against a committed corner directory the sweep no longer produces.
 UNEXPECTED="$(cd "$CORNERS_DIR" 2>/dev/null && ls -1d */ 2>/dev/null | sed 's#/$##' | sort | comm -13 <(printf '%s\n' "${ALL_CORNERS[@]}" | sort) - || true)"
@@ -373,4 +469,4 @@ if [[ "$status" -ne 0 ]]; then
     exit 1
 fi
 
-echo "=== committed per-corner timing reports match regenerated output (reproducible, ${#ALL_CORNERS[@]} corners x {LEF-only, SPEF}) ==="
+echo "=== committed timing evidence matches regenerated output (reproducible: ${#ALL_CORNERS[@]} corners x {LEF-only, SPEF}, the multi-corner item-5 envelope, and the SPEF) ==="

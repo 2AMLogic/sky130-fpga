@@ -7,6 +7,7 @@
   "hdl_toplevel": "logic_tile",
   "hold_violation_count": 0,
   "layout_def_sha256": "sha256:2979e7fb3e292e20e31c85e642687b4cacdc7ff9f7d72c7bc2b526bb793badaf",
+  "layout_gds_sha256": null,
   "provenance": {
     "deck": {
       "content_hash": "sha256:425315ca7a49debcb1c715daf6e5e5a27bb78587cac6f3b358b1fe114c787132",
@@ -14,7 +15,8 @@
       "released": false
     },
     "input": {
-      "content_hash": "sha256:2979e7fb3e292e20e31c85e642687b4cacdc7ff9f7d72c7bc2b526bb793badaf"
+      "content_hash": "sha256:2979e7fb3e292e20e31c85e642687b4cacdc7ff9f7d72c7bc2b526bb793badaf",
+      "role": "layout"
     },
     "pdk": {
       "name": "sky130A",
@@ -26,6 +28,7 @@
   "spef_annotation": null,
   "spef_sha256": null,
   "status": "ok",
+  "timing_status": "constrained",
   "total_negative_hold_slack_ns": 0,
   "total_negative_slack_ns": 0,
   "verilog_path": null,

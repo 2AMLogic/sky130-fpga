@@ -5,7 +5,7 @@
   "tier": null,
   "t1_item_count": 11,
   "build_t1_item_count": 11,
-  "t1_met_count": 7,
+  "t1_met_count": 8,
   "source_doc": "docs/design-evidence-tiers.md",
   "source_doc_content_hash": "sha256:4c67ffc59128482d00f7d87cf446b6a96b9ab0c41ae5234098244e3052033335",
   "build": {
@@ -181,10 +181,18 @@
       "notes": [
         "Both require the spec table itself to be ratified \u2014 verdicts against a draft spec are provisional by construction."
       ],
-      "status": "unmet",
-      "reason": "no_evidence",
+      "status": "met",
+      "reason": null,
       "graded_by_build": true,
-      "citation": null
+      "citation": {
+        "file": "measurements/timing-characterization/logic_tile.sta.json",
+        "command": null,
+        "kind": "sta",
+        "check_status": "ok",
+        "content_hash": "sha256:6e1bb79d924d42cd4debc48df534e7dabe20b0c0b46efbc7944c96d5b4f33be5",
+        "input_verified": null,
+        "exit_status": 0
+      }
     },
     {
       "tier": "T1",
@@ -227,7 +235,7 @@
         "command": null,
         "kind": "generic",
         "check_status": "pass",
-        "content_hash": "sha256:58ba464be9b0cbcb3429a926a49be95cac30be8700f60c6f5aa12060604cc5ec",
+        "content_hash": "sha256:538b22ab8b17d512ff6cddaad697bf0f3b16bb0f13a3646d729ae7ff0872f0e4",
         "input_verified": null,
         "exit_status": 0
       }
@@ -247,15 +255,15 @@
         "command": null,
         "kind": "generic",
         "check_status": "pass",
-        "content_hash": "sha256:1cf49aba580cf3f8b4d05aa39dc55b99cf9219caad350e77df71a9d3f4b5f48d",
+        "content_hash": "sha256:8f157831f02ea6aaf87b0fa86e03c20e5177fbb93110746476e50fdad13e3f29",
         "input_verified": true,
         "exit_status": 0,
         "artifact_binding": {
           "t1_item": 9,
           "path": "../measurements/claim-traceability.md",
-          "content_hash": "sha256:1cf49aba580cf3f8b4d05aa39dc55b99cf9219caad350e77df71a9d3f4b5f48d",
+          "content_hash": "sha256:8f157831f02ea6aaf87b0fa86e03c20e5177fbb93110746476e50fdad13e3f29",
           "input_verified": true,
-          "summary": "T1 item 9 testbenches shipped: measurements/claim-traceability.md (issue #34 walk, re-audited post-PDN) maps every published claim to a committed testbench or flow script and a pinned PDK; ./flow/audit-evidence.sh re-derives its machine half and passes clean. Cold-start: ./flow/audit-evidence.sh.",
+          "summary": "T1 item 9 testbenches shipped: measurements/claim-traceability.md (issue #34 walk, re-audited post-PDN and for the issue #68 timing_status re-sweep) maps every published claim to a committed testbench or flow script and a pinned PDK; ./flow/audit-evidence.sh re-derives its machine half and passes clean. Cold-start: ./flow/audit-evidence.sh.",
           "source": "measurements/claim-traceability.md"
         }
       }

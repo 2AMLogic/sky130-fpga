@@ -24,6 +24,29 @@
 #                                         lvs report's own input pin plus
 #                                         its layout_gds_sha256 cross-tie
 #                                         below)
+#   item 5  measurements/timing-
+#           characterization/
+#           logic_tile.sta.json           the DEF `klt sta` actually analysed:
+#                                         the name-sanitized derivative of
+#                                         layout/logic_tile.def that
+#                                         flow/sta-sweep.sh writes to scratch
+#                                         (flow/build/, not committed). This
+#                                         script regenerates it from the
+#                                         committed DEF with the same
+#                                         flow/sta_sanitize_names.py and
+#                                         requires its hash to equal both the
+#                                         envelope's provenance.input pin and
+#                                         the manifest pin; it also ties the
+#                                         envelope's layout_def_sha256 /
+#                                         layout_gds_sha256 / spef_sha256 to
+#                                         the committed DEF, GDS and SPEF
+#                                         (measurements/timing-characterization/
+#                                         logic_tile.spef), and re-runs
+#                                         flow/sta_envelope_check.py (exact
+#                                         ratified 18-corner set, constrained,
+#                                         non-negative setup/hold, complete
+#                                         annotation, agreement with the
+#                                         committed per-corner SPEF reports)
 #   item 8  signoff/characterization-
 #           evidence.json                 generated characterization record
 #                                         (measurements/characterization-
@@ -110,6 +133,55 @@ if "4" in ev:
 check("  lvs layout_gds_sha256 == committed GDS",
       lvs.get("layout_gds_sha256"), gds_live,
       "LVS report is against a different layout -- re-run ./flow/lvs.sh --update")
+
+print("item 5 (multi-corner STA): analysed DEF, committed layout/parasitics, timing gate")
+import subprocess
+import tempfile
+sta_rel = "measurements/timing-characterization/logic_tile.sta.json"
+sta_env = json.load(open(f"{repo}/{sta_rel}"))
+sta_input_pin = (sta_env.get("provenance") or {}).get("input", {}).get("content_hash")
+with tempfile.TemporaryDirectory() as scratch:
+    regenerated = f"{scratch}/logic_tile.sanitized.def"
+    rc = subprocess.run(
+        [sys.executable, f"{repo}/flow/sta_sanitize_names.py", "def-sanitize",
+         f"{repo}/layout/logic_tile.def", regenerated]).returncode
+    if rc == 0:
+        with open(regenerated, "rb") as f:
+            sanitized_live = "sha256:" + hashlib.sha256(f.read()).hexdigest()
+    else:
+        sanitized_live = f"<flow/sta_sanitize_names.py def-sanitize exited {rc}>"
+check("  sta envelope input pin == sanitized DEF regenerated from committed DEF",
+      sta_input_pin, sanitized_live,
+      "the committed DEF (or flow/sta_sanitize_names.py) changed without a re-sweep -- "
+      "re-run ./flow/sta-sweep.sh --update and update the manifest's item-5 pin")
+check("  sta envelope layout_def_sha256 == committed DEF",
+      sta_env.get("layout_def_sha256"), sha256_of("layout/logic_tile.def"),
+      "re-run ./flow/sta-sweep.sh --update (layout DEF changed without a re-sweep)")
+check("  sta envelope layout_gds_sha256 == committed GDS",
+      sta_env.get("layout_gds_sha256"), gds_live,
+      "re-run ./flow/sta-sweep.sh --update (layout GDS changed without a re-extraction)")
+check("  sta envelope spef_sha256 == committed SPEF",
+      sta_env.get("spef_sha256"),
+      sha256_of("measurements/timing-characterization/logic_tile.spef"),
+      "re-run ./flow/sta-sweep.sh --update (it rewrites the envelope and the SPEF together)")
+if "5" in ev:
+    check("  manifest item-5 cites the multi-corner envelope",
+          sta_rel, ev["5"].get("file"),
+          f"point signoff/block-manifest.json item 5 at {sta_rel}")
+    check("  manifest item-5 pin == sta envelope input pin",
+          ev["5"].get("content_hash"), sta_input_pin,
+          "update signoff/block-manifest.json item 5's content_hash after ./flow/sta-sweep.sh --update")
+else:
+    check("  manifest cites item 5", "cited", "missing",
+          "add item 5 to signoff/block-manifest.json")
+gate = subprocess.run(
+    [sys.executable, f"{repo}/flow/sta_envelope_check.py", f"{repo}/{sta_rel}",
+     "--cross-check", f"{repo}/measurements/timing-characterization/corners"],
+    capture_output=True, text=True)
+check("  sta envelope passes flow/sta_envelope_check.py (18 ratified corners, "
+      "constrained, setup/hold >= 0, annotation complete, matches per-corner reports)",
+      0, gate.returncode,
+      "the envelope fails the item-5 gate: " + (gate.stderr.strip().replace("\n", " | ") or gate.stdout.strip()))
 
 print("item 8 (characterization): pinned generated summary")
 charsum_live = sha256_of("measurements/characterization-summary.md")

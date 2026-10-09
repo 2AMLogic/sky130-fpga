@@ -18,11 +18,14 @@ cross-checked against each one):
 - layout/logic_tile.lvs.json           (LVS -- signal connectivity only)
 - layout/logic_tile.erc.json           (ERC -- supply connectivity + antenna,
   the power half the LVS compare structurally cannot supply; see issue #41)
-- measurements/timing-characterization/records/20260921-062500-e8a37ad.md
-  (the current 18-corner STA sweep record, post-PDN successor of the
-  20260909-225431-86f71d2 record ADR-0002 originally cited) and the
-  per-corner corners/<corner>/{lef-only,spef}.sta.json machine reports
-  it is derived from
+- measurements/timing-characterization/records/20261008-234741-dc615b4.md
+  (the current 18-corner STA sweep record, issue #68's timing_status
+  re-sweep; successor of 20260921-062500-e8a37ad, itself the post-PDN
+  successor of the 20260909-225431-86f71d2 record ADR-0002 originally
+  cited), the per-corner corners/<corner>/{lef-only,spef}.sta.json machine
+  reports it is derived from, and the multi-corner `klt sta` envelope
+  measurements/timing-characterization/logic_tile.sta.json (the T1 item-5
+  citation), cross-checked corner-for-corner against those reports
 - spec/tile-spec.md and
   spec/decisions/0002-tile-timing-spec-ratification.md (ratified spec row)
 - measurements/timing-characterization/records/20261008-233733-23e6b5e.md
@@ -69,7 +72,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_PATH = REPO_ROOT / "measurements" / "characterization-summary.md"
 
-STA_RECORD_ID = "20260921-062500-e8a37ad"
+STA_RECORD_ID = "20261008-234741-dc615b4"
 SDF_RECORD_ID = "20261008-233733-23e6b5e"
 # The record id ADR-0002 cites as its evidentiary source. A ratified
 # decision record is never edited, so this historical id stays fixed even
@@ -80,6 +83,7 @@ RECORDS_DIR = REPO_ROOT / "measurements/timing-characterization/records"
 STA_RECORD_PATH = RECORDS_DIR / f"{STA_RECORD_ID}.md"
 SDF_RECORD_PATH = RECORDS_DIR / f"{SDF_RECORD_ID}.md"
 CORNERS_DIR = REPO_ROOT / "measurements/timing-characterization/corners"
+STA_ENVELOPE_PATH = REPO_ROOT / "measurements/timing-characterization/logic_tile.sta.json"
 
 
 def load_json(path: Path):
@@ -214,6 +218,10 @@ def collect_sta_sweep():
                 data["total_negative_slack_ns"] == 0,
                 f"{corner}/{variant}: total_negative_slack_ns != 0",
             )
+            require(
+                data.get("timing_status") == "constrained",
+                f"{corner}/{variant}: timing_status is not 'constrained'",
+            )
             if variant == "spef":
                 require(
                     data["spef_annotation"]["annotation_complete"] is True,
@@ -235,6 +243,44 @@ def collect_sta_sweep():
     binding = per_corner[binding_corner]
     fastest = per_corner[fastest_corner]
 
+    # The multi-corner envelope cited for T1 item 5 (issue #68): exactly the
+    # committed corner set, every entry constrained with non-negative
+    # setup/hold, and every entry identical to its per-corner SPEF report on
+    # the published numbers -- so the citation and the sweep this summary
+    # aggregates cannot disagree. (flow/sta_envelope_check.py is the full
+    # gate; this is the subset the summary itself depends on.)
+    envelope = load_json(STA_ENVELOPE_PATH)
+    require(
+        meta.get("multi_corner_envelope") == rel(STA_ENVELOPE_PATH),
+        "STA record does not name the multi-corner envelope it produced",
+    )
+    entries = envelope.get("corners") or []
+    names = [e.get("corner") for e in entries]
+    require(
+        sorted(names) == corner_dirs and len(names) == len(set(names)),
+        "multi-corner envelope's corner set differs from the per-corner reports",
+    )
+    for entry in entries:
+        corner = entry["corner"]
+        require(
+            entry.get("timing_status") == "constrained",
+            f"envelope {corner}: timing_status is not 'constrained'",
+        )
+        require(
+            entry["worst_slack_ns"] >= 0 and entry["worst_hold_slack_ns"] >= 0,
+            f"envelope {corner}: negative setup or hold slack",
+        )
+        for key in ("worst_slack_ns", "worst_hold_slack_ns", "fmax_mhz", "timing_status"):
+            require(
+                entry.get(key) == per_corner[corner]["spef"].get(key),
+                f"envelope {corner}: {key} differs from corners/{corner}/spef.sta.json",
+            )
+    require(
+        envelope["provenance"]["input"]["content_hash"]
+        == binding["spef"]["provenance"]["input"]["content_hash"],
+        "envelope analysed a different DEF than the per-corner SPEF runs",
+    )
+
     return {
         "path": STA_RECORD_PATH,
         "record_id": meta["record_id"],
@@ -250,6 +296,10 @@ def collect_sta_sweep():
         "fastest_corner": fastest_corner,
         "fastest_wns_spef": fastest["spef"]["worst_slack_ns"],
         "fastest_fmax_spef": fastest["spef"]["fmax_mhz"],
+        "envelope_path": STA_ENVELOPE_PATH,
+        "envelope_corner_count": len(entries),
+        "envelope_input_hash": envelope["provenance"]["input"]["content_hash"],
+        "klt_version": meta["provenance"]["klt_version"],
     }
 
 
@@ -303,10 +353,14 @@ def collect_ratified_spec_row():
         )
         lineage_id = supersedes
 
+    fig = re.search(r"SPEF WNS (\d+\.\d+) ns", timing_target)
+    require(fig is not None, "spec/tile-spec.md Timing row no longer states a SPEF WNS figure of record")
+
     return {
         "tile_spec_path": tile_spec_path,
         "adr_path": adr_path,
         "timing_target": timing_target,
+        "wns_figure_of_record": fig.group(1),
     }
 
 
@@ -409,6 +463,13 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"| record `{sta['record_id']}`, git revision `{sta['git_revision'][:7]}` |"
     )
     lines.append(
+        f"| Multi-corner `klt sta` envelope (T1 item 5 citation) | **"
+        f"{sta['envelope_corner_count']} corners, every one `timing_status: "
+        f"constrained`, setup/hold slack >= 0** "
+        f"| [`{rel(sta['envelope_path'])}`]({rel(sta['envelope_path'])}) "
+        f"| analysed-DEF hash `{hash_prefix(sta['envelope_input_hash'])}` |"
+    )
+    lines.append(
         f"| Ratified timing spec row | **RATIFIED** (ADR-0002) "
         f"| [`{rel(spec_row['tile_spec_path'])}`]({rel(spec_row['tile_spec_path'])}), "
         f"[`{rel(spec_row['adr_path'])}`]({rel(spec_row['adr_path'])}) "
@@ -495,12 +556,22 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"- **Coverage**: all {sta['corner_count']} `sky130_fd_sc_hd` liberty corners "
         f"the sky130A PDK ships, {sta['runs_per_corner']} runs per corner "
         "(LEF-only on the committed DEF, LEF-only on a name-rewritten control DEF, "
-        "SPEF-annotated on the name-rewritten DEF). Cross-checked directly against "
-        f"the {len(sta['corner_dirs'])} per-corner "
-        "`corners/<corner>/{lef-only,spef}.sta.json` reports: setup-violation count, "
+        "SPEF-annotated on the name-rewritten DEF, and that corner's entry in one "
+        "multi-corner `pdk.corners` request over the same DEF and SPEF). Cross-checked "
+        f"directly against the {len(sta['corner_dirs'])} per-corner "
+        "`corners/<corner>/{lef-only,spef}.sta.json` reports: every run is "
+        "`timing_status: constrained`, setup-violation count, "
         "hold-violation count and total negative slack are 0 at every corner in both "
         "the LEF-only and SPEF-annotated run, and every SPEF run reports "
         "`spef_annotation.annotation_complete: true`."
+    )
+    lines.append(
+        f"- **Multi-corner envelope** (the T1 item-5 citation, "
+        f"[`{rel(sta['envelope_path'])}`]({rel(sta['envelope_path'])})): one `klt sta` "
+        f"response covering exactly these {sta['envelope_corner_count']} corners, each "
+        "`timing_status: constrained` with non-negative setup and hold slack, and "
+        "identical corner-for-corner to the per-corner SPEF reports on WNS, hold WS, "
+        "`fmax_mhz` and `timing_status`."
     )
     lines.append(
         f"- **Binding setup corner** (minimum SPEF-annotated `worst_slack_ns` across "
@@ -508,6 +579,14 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"WNS {sta['binding_wns_lef']} ns (LEF-only) / "
         f"{sta['binding_wns_spef']} ns (SPEF-annotated), extrapolated "
         f"`fmax_mhz` {sta['binding_fmax_spef']} (SPEF-annotated)."
+    )
+    lines.append(
+        f"- **Against the ratified figure of record**: the spec row's binding-corner "
+        f"SPEF WNS is {spec_row['wns_figure_of_record']} ns (ADR-0003); this sweep, "
+        f"under klt `{sta['klt_version']}`, measures {sta['binding_wns_spef']} ns "
+        f"({(sta['binding_wns_spef'] - float(spec_row['wns_figure_of_record'])) * 1000:+.1f} ps). "
+        "The ratified criteria (setup/hold-clean at all corners, same binding corner) "
+        "hold; the row itself is unchanged (a figure-of-record move is an ADR decision)."
     )
     lines.append(
         f"- **Fastest corner**: `{sta['fastest_corner']}` -- WNS "

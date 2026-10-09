@@ -21,6 +21,11 @@ block's row is identified by the manifest's `block` field.
   record (`measurements/characterization-summary.md`, itself generated from
   the committed reports/records) is current, with its content hash pinned in
   `provenance.input` and in the manifest's item-8 citation.
+- **`../measurements/timing-characterization/logic_tile.sta.json`** — not
+  in this directory, but cited from here for T1 item 5: the trimmed
+  multi-corner `klt sta` response (`pdk.corners`, all 18 ratified corners in
+  one request) that `flow/sta-sweep.sh` writes and gates (issue #68; see the
+  item-5 row below).
 - **`item-1-design-sources.json`, `item-2-layout.json`,
   `item-9-testbenches.json`, `item-10-repo-hygiene.json`** — the
   artifact-anchored generic envelopes for T1 items 1, 2, 9 and 10 (see the
@@ -59,13 +64,19 @@ regenerate `tier-report.json` last.
 grader **cannot** check — the claim-side disclosures
 `docs/design-evidence-tiers.md` makes this repo's responsibility.
 
-**7 of 11 T1 items are `met`: items 1, 2, 3, 4, 8, 9, 10. Item 11 is `unmet`
-(`lvs_supply_unproven`); items 5, 6, 7 render `unmet`/`no_evidence` and are
+**8 of 11 T1 items are `met`: items 1, 2, 3, 4, 5, 8, 9, 10. Item 11 is `unmet`
+(`lvs_supply_unproven`); items 6 and 7 render `unmet`/`no_evidence` and are
 deliberately uncited.** The grader is pinned at klayout-tools
 `3a75c3ae705b7ad3803625255de93bcd982e70c6`. Moving to it changed no row for
 items 3, 4, 8 or 11 (item 11 keeps reason `lvs_supply_unproven`); the only
 other differences in `tier-report.json` are the grader's own metadata
 (a `build` block, `build_t1_item_count`, and the checklist document hash).
+Item 5's citation (issue #68) did not need a grader bump. The pinned
+grader already recognizes the multi-corner `klt sta` shape (#1959) and its
+`timing_status` pass rule. The design-flow klt that produced the envelope
+(`0.7.0+g6fd0278268cc`) is a separate pin, `RECORDED_STA_KLT_VERSION` in
+`flow/tool_versions.sh`. It descends from the grader commit and carries
+byte-identical signoff code.
 
 - **Item 3 (DRC) — met.** `layout/logic_tile.drc.json`, `status: clean`,
   pinned to the committed GDS. The coverage disclosure the item requires,
@@ -146,15 +157,70 @@ other differences in `tier-report.json` are the grader's own metadata
   item-10 envelope hash and the manifest pin (`verify-pins.sh` fails until
   you do), then regenerating `tier-report.json` last. Native DRC or LVS
   envelopes are deliberately not cited for these rows.
-- **Item 5 — uncited.** The 18-corner sweep is characterized and append-only
-  recorded (`measurements/timing-characterization/`, per-corner reports
-  setup/hold-clean, SPEF WNS 15.2146 ns at the binding corner), and the spec
-  row it verifies is ratified (ADR-0002, re-ratified post-PDN by ADR-0003) —
-  but the committed per-corner reports predate `klt sta`'s
-  `timing_status` field, so `klt signoff` cannot derive a verdict from
-  them (they render `unrecognized_envelope`). The row turns `met` only when
-  a corner run lands in the gradeable envelope shape; a re-sweep under a
-  `klt sta` build that emits `timing_status` is the follow-on.
+- **Item 5 (corner verification against a ratified spec) — met, STA half
+  only** (issue #68). Cited envelope:
+  `measurements/timing-characterization/logic_tile.sta.json`, the trimmed
+  response of **one** `klt sta` request with `pdk.corners` listing all 18
+  `sky130_fd_sc_hd` corners ADR-0002 ratified and ADR-0003 re-ratified,
+  against the committed routed geometry with the extracted SPEF annotated
+  and the 20 ns `clk` reference period. The grader passes it because every
+  corner it declares is `timing_status: "constrained"` with non-negative
+  setup and hold slack (`citation.kind: "sta"`). The grader only grades the
+  corner set the run declared, so `flow/sta_envelope_check.py` adds the
+  claim-side checks it cannot make:
+  - exactly the 18 ratified corners, none missing, duplicated or extra;
+  - zero violations and zero setup and hold TNS at every corner;
+  - complete SPEF annotation at every corner;
+  - an `fmax_mhz` consistent with a 20 ns period;
+  - field-for-field agreement with the per-corner single-corner SPEF
+    reports, which carry the name-rewrite neutrality control.
+
+  `flow/sta-sweep.sh` refuses to record an envelope that fails this gate,
+  and `verify-pins.sh` re-runs it. Binding setup corner `ss_n40C_1v28`,
+  SPEF WNS 15.2145 ns under klt `0.7.0+g6fd0278268cc`. That is -0.1 ps
+  against ADR-0003's figure of record of 15.2146 ns. The spec row is
+  unchanged; see record `20261008-234741-dc615b4` for every corner's delta.
+
+  **What the pin binds.** The manifest's item-5 `content_hash` is the
+  envelope's `provenance.input.content_hash`: the hash of the DEF OpenSTA
+  actually analysed. That is the name-sanitized derivative of
+  `layout/logic_tile.def`, which `flow/sta-sweep.sh` writes to `flow/build/`
+  and does not commit. It is not the hash of the report file, and not the
+  hash of the committed DEF. The trimmer drops the envelope's absolute
+  scratch `def_path`, so the grader has no file to re-hash and reports
+  `input_verified: null`. `verify-pins.sh` closes that gap instead:
+  - it regenerates the sanitized DEF from the committed DEF with the same
+    `flow/sta_sanitize_names.py def-sanitize`;
+  - it requires that hash to equal both the envelope's input pin and the
+    manifest pin;
+  - it ties the envelope's `layout_def_sha256`, `layout_gds_sha256` and
+    `spef_sha256` to the committed DEF, GDS and SPEF
+    (`measurements/timing-characterization/logic_tile.spef`, committed
+    from this re-sweep on).
+
+  Changing the committed DEF, GDS or SPEF, or the pin, without re-running
+  `./flow/sta-sweep.sh --update` fails `verify-pins.sh` with the
+  regeneration command.
+
+  **What this citation does not cover.** Item 5's digital text asks for
+  multi-corner STA **plus** a bit-exact functional test suite. This
+  citation covers the STA half only. The bit-exact functional half is
+  currently the zero-delay testbench evidence: `sim/run.sh`'s RTL
+  testbenches (`tb_lut4_slice`, `tb_logic_tile`), plus the zero-delay
+  gate-level `tb_logic_tile` PASS against the as-built `sky130_fd_sc_hd`
+  netlist (record `20260921-062530-e8a37ad`). None of it is a `klt
+  functional-verification` envelope, and none of it is cited. The
+  timing-correct functional leg, the SDF-annotated gate-level
+  re-simulation, is still blocked. That is item 7: klayout-tools#1890
+  closed only as a fail-loud guard; re-tried 2026-10-08 under #72, the
+  gap is now klayout-tools#2897 (record `20261008-233733-23e6b5e`). The
+  grader marks item 5 `met` on the STA envelope alone, so this paragraph
+  is the disclosure. Also not covered:
+  - propagated-clock timing (the clock is an ideal SDC clock);
+  - any Fmax figure (`fmax_mhz` is a `1/(T-WNS)` extrapolation, and none
+    is ratified);
+  - the switch matrix and inter-tile routing, which have no
+    implementation yet.
 - **Item 6 — uncited.** The tile's spec rows are functional and timing —
   none is statistical (accuracy/offset/matching), so the Monte-Carlo item
   has nothing to attach to. The tiers doc requires that absence be stated

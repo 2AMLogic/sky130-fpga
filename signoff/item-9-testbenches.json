@@ -3,11 +3,11 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 9,
-  "summary": "T1 item 9 testbenches shipped: measurements/claim-traceability.md (issue #34 walk, re-audited post-PDN) maps every published claim to a committed testbench or flow script and a pinned PDK; ./flow/audit-evidence.sh re-derives its machine half and passes clean. Cold-start: ./flow/audit-evidence.sh.",
+  "summary": "T1 item 9 testbenches shipped: measurements/claim-traceability.md (issue #34 walk, re-audited post-PDN and for the issue #68 timing_status re-sweep) maps every published claim to a committed testbench or flow script and a pinned PDK; ./flow/audit-evidence.sh re-derives its machine half and passes clean. Cold-start: ./flow/audit-evidence.sh.",
   "source": "measurements/claim-traceability.md",
   "provenance": {
     "input": {
-      "content_hash": "sha256:1cf49aba580cf3f8b4d05aa39dc55b99cf9219caad350e77df71a9d3f4b5f48d",
+      "content_hash": "sha256:8f157831f02ea6aaf87b0fa86e03c20e5177fbb93110746476e50fdad13e3f29",
       "path": "../measurements/claim-traceability.md",
       "role": "audited-artifact"
     }
