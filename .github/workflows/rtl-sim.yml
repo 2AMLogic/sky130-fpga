@@ -35,6 +35,9 @@ jobs:
       - name: Run RTL testbench suite
         run: ./sim/run.sh
 
+      - name: RTL mutation check (testbenches must fail on mutated RTL)
+        run: ./sim/run.sh --mutation
+
       - name: Upload compile and simulation logs
         if: always()
         uses: actions/upload-artifact@v4

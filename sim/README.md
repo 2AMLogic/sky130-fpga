@@ -338,3 +338,29 @@ routing population, G5 in full) and inter-tile routing across the 2x2-4x4 demo
 grid remain follow-on work, tracked separately (`spec/framework-gaps.md`
 G5/G6); fabric growth goes through a decision record. The harness test below
 covers one LOGIC4 tile of the G1 harness fabric only.
+
+## RTL mutation check (issue #124)
+
+`./sim/run.sh --mutation [--record]` proves the testbenches above can *fail*.
+`sim/mutation.py` applies a fixed list of 49 single-point mutations (LUT address
+bit swaps, inverted/stuck `lut_init` bits, FF reset polarity/value/async/CE
+variants, `reg_sel` mux forced or inverted, slice-index swaps in `logic_tile.v`
+and `logic_tile_routed.v`, `cfg` index shifts/swaps/tie-offs, and switch-matrix
+select/source mutations) to a **copy** of `design/rtl/` in the gitignored
+`sim/build/mutation/`, rebuilds every testbench with iverilog for each mutant,
+and requires at least one to report non-PASS. A baseline run of the unmutated
+copy must pass first. Mutants run strictly serially (about a minute; iverilog
+and python3 only). It is not part of the default `./sim/run.sh` path.
+
+- Exit status is non-zero if any non-allowlisted mutant survives (the failure
+  names it), if an allowlisted mutant is actually killed (stale entry), or if a
+  mutation no longer applies to the RTL.
+- Equivalent mutants go in `sim/mutation_allowlist.txt` as
+  `ID | one-line justification`; they are never silently dropped.
+- `--record` appends a dated entry to `sim/rtl_mutation_results.txt`
+  (append-only evidence; killed/total/allowlisted plus per-mutant killer).
+- The first run found three real coverage holes in `tb_logic_tile` /
+  `tb_logic_tile_routed`; `sim/tb_logic_tile_gapfill.v` (now in the default
+  run) closes them. The existing benches and their results files are unchanged.
+- CI: `.github/workflows/rtl-sim.yml` runs `./sim/run.sh --mutation` after the
+  regression suite.
