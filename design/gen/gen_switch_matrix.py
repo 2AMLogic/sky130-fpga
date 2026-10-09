@@ -11,11 +11,20 @@ Usage (from repo root):
 The third output is a testbench include (instance port hookup to packed
 src/snk vectors plus a sink/select/source table) derived from the same list.
 
-Each "sink,source" line adds one source to the sink's mux, in file order
-(source index == select value).  A sink with N sources gets ceil(log2 N)
-config bits (0 for N == 1).  Config bits are packed into one flat `cfg`
-vector in sink first-appearance order, LSB first.  Select values >= N
-drive 0.  Jump wires J_*_BEGn feed J_*_ENDn inside the tile (X/Y offset 0).
+Each "sink,source" line adds one source to the sink's mux.  FABulous 2.2.0
+does NOT use file order: it orders sinks by the switch-matrix module's output
+port declaration order and each sink's sources by its input port declaration
+order (verified by design/fabulous/tb_switch_matrix_equiv.v, issue #96), so
+this generator applies the same canonical order (see sink_rank/src_rank):
+  sinks  : N1BEG0..3, E1BEG0..3, S1BEG0..3, W1BEG0..3, then per BEL A..D
+           (I0..I3, SR, EN), then J_SR_BEG0, J_EN_BEG0..3
+  sources: N1END0..3, E1END0..3, S1END0..3, W1END0..3, LA_O..LD_O,
+           J_SR_END0, J_EN_END0..3
+Source index (in that order, within the sink's own source set) == select
+value.  A sink with N sources gets ceil(log2 N) config bits (0 for N == 1).
+Config bits are packed into one flat `cfg` vector in sink order, LSB first
+(cfg[k] == FABulous tile ConfigBits[68+k]).  Select values >= N drive 0
+(FABulous leaves them undefined/X).  Jump wires J_*_BEGn feed J_*_ENDn inside the tile (X/Y offset 0).
 """
 import re
 import sys
@@ -31,14 +40,36 @@ def parse(path):
         sinks.setdefault(dst, []).append(src)
     return sinks
 
+def _rank(name, groups):
+    m = re.match(r"^([A-Z])(\d)(BEG|END)(\d+)$", name)
+    if m:  # track wires: direction-major, then index
+        return (0, "NESW".index(m.group(1)), int(m.group(4)))
+    m = re.match(r"^L([A-D])_(I(\d)|SR|EN|O)$", name)
+    if m:  # BEL pins: BEL-major; pin order I0..I3, SR, EN; O after tracks
+        pin = m.group(2)
+        order = {"SR": 4, "EN": 5, "O": 0}.get(pin, int(pin[1:]) if pin[0] == "I" else 0)
+        return (1, "ABCD".index(m.group(1)), order)
+    m = re.match(r"^J_(SR|EN)_(BEG|END)(\d+)$", name)
+    if m:  # jump wires: SR before EN
+        return (2, 0 if m.group(1) == "SR" else 1, int(m.group(3)))
+    raise SystemExit("unknown port name in switch-matrix list: " + name)
+
+def sink_rank(n):   # FABulous output-port declaration order
+    return _rank(n, None)
+
+def src_rank(n):    # FABulous input-port declaration order
+    return _rank(n, None)
+
 def main(lst, out, tbinc):
     sinks = parse(lst)
+    sinks = OrderedDict((d, sorted(sl, key=src_rank))
+                        for d, sl in sorted(sinks.items(), key=lambda kv: sink_rank(kv[0])))
     srcs = OrderedDict()
     for dl in sinks.values():
         for s in dl:
             srcs.setdefault(s, None)
     jump = re.compile(r"^J_(EN|SR)_(BEG|END)\d+$")
-    ports_in = [s for s in srcs if not jump.match(s)]
+    ports_in = sorted((s for s in srcs if not jump.match(s)), key=src_rank)
     ports_out = [d for d in sinks if not jump.match(d)]
     jumps = sorted({s for s in srcs if s.startswith("J_")} |
                    {d for d in sinks if d.startswith("J_")})
