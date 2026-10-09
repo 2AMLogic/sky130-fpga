@@ -181,7 +181,8 @@ the `flow/sdf-resim.sh` leg was not re-examined.
 
 `.github/workflows/flow-evidence.yml` (issue #109) runs
 `flow/audit-evidence.sh` on pull requests touching `flow/`,
-`design/rtl/logic_tile.v`, `layout/` or `measurements/`. It needs no
+`design/rtl/logic_tile.v`, `layout/` or `measurements/` (and, in the same job,
+`flow/check_status_claims.py`, below). It needs no
 toolchain, so it is exactly reproducible on a stock runner and fails on a
 drifted claim or pinned script hash (the #53 failure mode). Other workflows:
 `signoff.yml` (manifest re-grade), `rtl-sim.yml` (Icarus testbenches),
@@ -951,3 +952,22 @@ only the committed experimental DEF/GDS and does not re-run synthesis or
 place-and-route (`flow/layout_routed.sh` owns those; its artifacts already
 include the DEF and GDS the SPEF is extracted from, so no SPEF step was needed
 there).
+
+### `flow/check_status_claims.py` — README/framework-gaps status drift check (issue #125)
+
+Status facts quoted in `README.md` and `spec/framework-gaps.md` (ADR-0004/0005
+status, DRC/LVS verdicts, corner count, binding corner, T1 met/item counts)
+carry an explicit marker, e.g. `<!-- status-claim: adr-0004=Proposed -->`.
+The checker compares each marker with its committed source (the ADR `Status`
+line, `layout/logic_tile.{drc,lvs}.json`, `measurements/characterization-summary.md`,
+`signoff/tier-report.json`). It does not parse free prose. `README.md` must
+carry every key, so deleting a marker also fails; an unknown key fails.
+
+```
+python3 flow/check_status_claims.py          # exit 0 iff every marker holds
+python3 flow/test_check_status_claims.py     # unit tests, incl. deliberately wrong fixtures
+```
+
+When evidence changes (e.g. an ADR is ratified), update the marker value and
+its surrounding prose together; the check fails until you do. Needs no
+toolchain; run in CI by `.github/workflows/flow-evidence.yml`.
