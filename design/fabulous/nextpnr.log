@@ -214,6 +214,165 @@ X1Y1.D.INIT[15:0] = 'b0110100110010110
 
 X1Y1.A.INIT[15:0] = 'b1000000010000000
 
+# --- issue #74 registered design: top_reg.v (EN/SR routed, clk implicit) ---
+$ yosys -p 'synth_fabulous -top top -ff $_SDFFE_PP0P_ x -extra-plib prims.v -extra-plib io_prims.v -extra-map io_map.v -extra-map ff_map.v -cells-map cells_map.v -json top_reg.json' top_reg.v
+Warning: Feature 'write_xaiger2' is experimental.
+stripped the unconnected top-level port clk (implicit UserCLK)
+$ FAB_ROOT=<run>/io-model nextpnr-generic --uarch fabulous --json top_reg.json -o pcf=top_reg.pcf -o fasm=top_reg.fasm
+Info: Reading BELs file: /.FABulous/bel.v3.txt
+Info: Reading PIPs file: /.FABulous/pips.txt
+
+Info: constrained 'a' to bel 'X1Y0/A'
+Info: constrained 'b' to bel 'X1Y0/B'
+Info: constrained 'c' to bel 'X1Y0/C'
+Info: constrained 'en' to bel 'X1Y2/A'
+Info: constrained 'rst' to bel 'X1Y2/B'
+Info: constrained 'q' to bel 'X1Y2/C'
+Info: Finished applying constraints from '<nextpnr-src>/top_reg.pcf'
+
+Info: Device utilisation:
+Info: 	IO_1_bidirectional_frame_config_pass:       6/      8    75%
+Info: 	        Global_Clock:       0/      1     0%
+Info: 	         lut4_ff_bel:       2/      4    50%
+
+Info: Placed 6 cells based on constraints.
+Info: Creating initial analytic placement for 2 cells, random placement wirelen = 6.
+Info:     at initial placer iter 0, wirelen = 4
+Info:     at initial placer iter 1, wirelen = 4
+Info:     at initial placer iter 2, wirelen = 4
+Info:     at initial placer iter 3, wirelen = 4
+Info: Running main analytical placer, max placement attempts per cell = 10000.
+Info:   of which solving equations: 0.00s
+Info:   of which spreading cells: 0.00s
+Info:   of which strict legalisation: 0.00s
+
+Info: Running simulated annealing placer for refinement.
+
+Info: No Fmax available; no interior timing paths found in design.
+
+Info: Routing..
+Info: Setting up routing queue.
+Info: Routing 7 arcs.
+Info:    IterCnt |  w/ripup   wo/ripup |  w/r  wo/r |      arcs| batch(sec) total(sec)|
+Info:          9 |        2          7 |    2     7 |         0|       0.00       0.00|
+Info: Routing complete.
+
+Info: No Fmax available; no interior timing paths found in design.
+
+Info: Program finished normally.
+# --- top_reg.fasm ---
+# routing for net '$PACKER_GND'
+
+
+# routing for net '$PACKER_VCC'
+
+
+# routing for net 'rst'
+
+
+# routing for net 'q'
+
+
+# routing for net 'en'
+
+
+# routing for net 'c'
+
+
+# routing for net 'b'
+
+
+# routing for net 'a'
+
+
+# routing for net '$abc$257$aiger$o1'
+
+X1Y1.N1END3.E1BEG3
+X1Y1.J_SR_END0.LA_SR
+X1Y1.W1END0.J_SR_BEG0
+X1Y1.E1BEG3.E1END3
+X1Y1.J_SR_BEG0.J_SR_END0
+X2Y1.E1END3.W1BEG0
+X2Y1.W1BEG0.W1END0
+X1Y2.IOB_O.N1BEG3
+X1Y2.N1BEG3.N1END3
+
+# routing for net 'r'
+
+X1Y1.LA_O.S1BEG1
+X1Y1.S1BEG1.S1END1
+X1Y2.S1END1.IOC_I
+
+# routing for net '$abc$257$aiger$o0'
+
+X1Y1.J_EN_END0.LA_EN
+X1Y1.N1END0.J_EN_BEG0
+X1Y1.J_EN_BEG0.J_EN_END0
+X1Y2.IOA_O.N1BEG0
+X1Y2.N1BEG0.N1END0
+
+# routing for net '$abc$257$aiger$o2'
+
+X0Y1.W1END3.E1BEG0
+X0Y1.E1BEG0.E1END0
+X1Y1.LC_O.W1BEG3
+X1Y1.E1END0.LA_I0
+X1Y1.W1BEG3.W1END3
+
+# routing for net '$abc$257$lut$aiger$o2.I[3]'
+
+
+# routing for net '$abc$257$iopadmap$c'
+
+X1Y0.IOC_O.S1BEG2
+X1Y0.S1BEG2.S1END2
+X1Y1.S1END2.LC_I2
+
+# routing for net '$abc$257$iopadmap$b'
+
+X1Y0.IOB_O.S1BEG1
+X1Y0.S1BEG1.S1END1
+X1Y1.S1END1.LC_I1
+
+# routing for net '$abc$257$iopadmap$a'
+
+X1Y0.IOA_O.S1BEG0
+X1Y0.S1BEG0.S1END0
+X1Y1.S1END0.LC_I0
+
+# config for cell '$PACKER_GND_DRV'
+
+
+# config for cell '$PACKER_VCC_DRV'
+
+
+# config for cell '$iopadmap$top.rst._io'
+
+
+# config for cell '$iopadmap$top.q._io'
+
+
+# config for cell '$iopadmap$top.en._io'
+
+
+# config for cell '$iopadmap$top.c._io'
+
+
+# config for cell '$iopadmap$top.b._io'
+
+
+# config for cell '$iopadmap$top.a._io'
+
+
+# config for cell '$auto$ff.cc:337:slice$85._ff'
+
+X1Y1.A.INIT[15:0] = 'b1010101010101010
+X1Y1.A.FF
+
+# config for cell '$abc$257$lut$aiger$o2._lut'
+
+X1Y1.C.INIT[15:0] = 'b1001011010010110
+
 # --- probe (expected FAIL): top_ports.v, 4-input function on top-level ports ---
 Warning: Feature 'write_xaiger2' is experimental.
 ERROR: Top-level port 'y' connected to illegal port $auto$abc_ops_reintegrate.cc:696:reintegrate$241._lut.O (must be PAD)

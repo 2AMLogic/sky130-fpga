@@ -7,7 +7,8 @@ PDK — designed by AI agents driving
 open-source yosys + nextpnr flow.
 
 **Status: tile design and physical implementation landed; bitstream-level
-fabric verification not yet started.** The logic tile's RTL is implemented
+verification of the ratified fabric not yet done (only an experimental
+single-tile harness test exists).** The logic tile's RTL is implemented
 and BEL-level tested, its routed layout is DRC/LVS-clean, and its timing has
 been characterized across all 18 `sky130_fd_sc_hd` PVT corners with a
 ratified spec row ([ADR-0002](spec/decisions/0002-tile-timing-spec-ratification.md)).
@@ -19,7 +20,8 @@ See [`measurements/characterization-summary.md`](measurements/characterization-s
 for the current aggregated snapshot of this evidence, and "Current position"
 below for the full maturity-ladder detail. This is still a tile-scoped
 canary, not a fabric: bitstream-level verification of the demonstration
-fabric has not started.
+fabric has not been done (an experimental single-tile harness test exists,
+see "Current position").
 
 **Built agent-native.** Every specification, decision record, testbench, and
 line of documentation here is produced by AI agents working from a ratified
@@ -105,11 +107,21 @@ Proposed, pending operator ratification:
 tile-description discrepancies) and
 [ADR-0005](spec/decisions/0005-nextpnr-io-and-constant-handling.md) (IO and
 constant handling for the nextpnr flow). The
-**bitstream-level-tests rung has not been started**: it is gated on
-[G5](spec/framework-gaps.md#g5--bitstream-level-functional-verification-rtltile-description-correctness)
-(bitstream-level functional verification) and
+**bitstream-level-tests rung is only started, as an experiment** (issue #74):
+a bitstream produced by the pinned yosys/nextpnr/FABulous flow for a
+combinational and a registered example (EN/SR routed) is loaded through a
+model of the FABulous frame interface into the composed single-LOGIC4 tile
+RTL, and the mapped functions are checked in `./sim/run.sh`
+(`tb_logic_tile_bitstream`, see `sim/README.md`). This is a **harness
+observation** on the G1 harness fabric as implemented (same-index matrix,
+CAP loop-backs, scratch pad overlay), not conformance to the ratified
+Wilton-class routing population (ADR-0004/0005 remain Proposed), and it is not
+a timing claim. [G5](spec/framework-gaps.md#g5--bitstream-level-functional-verification-rtltile-description-correctness)
+(bitstream-level functional verification of the ratified fabric, inter-tile
+routing) and
 [G6](spec/framework-gaps.md#g6--bitstream-format-documentation)
-(bitstream format documentation), neither of which is closed yet.
+(bitstream format documentation; the harness's serialized format is described
+in `sim/README.md`) are **not closed**.
 
 ## Repo layout
 

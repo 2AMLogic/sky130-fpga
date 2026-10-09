@@ -189,6 +189,20 @@ inputs through nextpnr is decided in
 harness-only pad model plus constants folded into LUT truth tables. The
 FASM-to-bitstream step and `EN`/`SR` for registered BELs remain open here.
 
+**Status note (issue #74, experimental harness coverage -- G5 stays OPEN)**:
+`flow/fasm_to_bitstream.py` turns nextpnr FASM into a FABulous frame stream
+(cross-checked byte-for-byte against FABulous's `bit_gen`), and
+`sim/tb_logic_tile_bitstream.v` loads such streams into the composed
+single-LOGIC4 tile (`design/rtl/logic_tile_routed.v`, all 158 `cfg` bits)
+and checks a combinational example (exhaustive vectors) and a registered one
+(capture, hold, reset independent of enable, reset-over-enable; EN/SR are
+routed nets), with perturbation and malformed-stream rejection tests. This is
+an observation on the G1 harness fabric exactly as implemented (same-index
+matrix, CAP loop-backs, scratch pad overlay); ADR-0004/0005 are Proposed, so
+it is not conformance to the ratified Wilton-class population and does not
+satisfy the "inter-tile routing across the demo grid" part of the work item.
+Details: `sim/README.md` ("Bitstream-driven harness test").
+
 **Verification**: this item *is* verification infrastructure — its own
 acceptance bar is "tests exist under `sim/` and pass," with results recorded
 as `sim/`'s append-only evidence trail.
@@ -209,6 +223,15 @@ per-tile/per-BEL configuration field meaning) once the tile description
 bitstream for a known test design (ties into G5's testbenches — a bitstream
 that G5 already exercises is also the reference the documentation is
 checked against).
+
+**Status note (issue #74, experimental -- G6 stays OPEN)**: the serialized
+frame-stream format, the frame-position -> 158-bit tile-vector mapping,
+padding/default values, the pad-pip exclusions and the clock/EN/SR runtime
+semantics of the *harness* are written down in `sim/README.md` and are
+cross-checked by the simulation loader against the committed streams
+(`sim/bitstream/*.bin`). A format document for the ratified fabric, and
+per-field documentation beyond the `design/README.md` layout table, are still
+to be written once ADR-0004/0005 are ruled on.
 
 ## Summary: suggested follow-on issue split
 

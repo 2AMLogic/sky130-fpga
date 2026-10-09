@@ -102,11 +102,13 @@ table (replicated INIT, unused pins and SR/EN left unconnected; no
 harness-only pad model (`flow/nextpnr_io_overlay.py`, a scratch copy of the
 nextpnr model; no tile type, BEL or config bit added). `nextpnr/top_io.v`
 (six ports, a 4-input parity LUT and a constant-folded AND3) packs, places and
-routes under that scheme (`nextpnr.log`). FASM pad pips have no config bits;
-FASM-to-bitstream is not built (#74/G5). **Not verified:** nextpnr's FASM was not turned into a bitstream or
-simulated.
-No bitstream was
-assembled or simulated (G5), and no timing claim is made: the
+routes under that scheme (`nextpnr.log`). FASM pad pips have no config bits.
+Issue #74 adds a registered example (`nextpnr/top_reg.v`, with `ff_map.v`;
+EN/SR routed) and an **experimental** FASM-to-bitstream assembler plus a
+bitstream-driven simulation of the composed tile (`flow/fasm_to_bitstream.py`,
+`flow/bitstream.sh`, `sim/tb_logic_tile_bitstream.v`, `sim/README.md`): a
+harness observation on this fabric as implemented, not G5/G6 completion. No
+timing claim is made: the
 `GenerateDelayInSwitchMatrix,80` value is FABulous's placeholder constant.
 
 ### Discrepancies and deferrals (for a decision record - spec NOT edited)

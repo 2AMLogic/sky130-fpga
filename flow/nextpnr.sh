@@ -24,8 +24,12 @@
 #   * writes design/fabulous/nextpnr.log (committed evidence), and
 #   * checks the FASM carries the expected LUT truth table.
 #
-# What this does NOT claim: no bitstream is assembled or simulated (G5), no
-# timing (placeholder delays). See design/README.md for the IO/const findings.
+#   6. Issue #74: top_reg.v (a registered LUT: sync reset over clock enable, EN
+#      and SR routed as real nets) on the same pad model; its FASM is the
+#      input of flow/fasm_to_bitstream.py (see flow/bitstream.sh).
+#
+# What this does NOT claim: bitstream assembly/simulation is experimental
+# harness coverage only (flow/bitstream.sh, sim/), no timing (placeholder delays). See design/README.md for the IO/const findings.
 #
 # Usage: flow/nextpnr.sh [--update-log]
 set -euo pipefail
@@ -87,6 +91,27 @@ FAB_ROOT="$W/io-model" nextpnr-generic --uarch fabulous --json "$W/top_io.json" 
     -o pcf="$SRC/top_io.pcf" -o fasm="$W/top_io.fasm" --write "$W/top_io.post.json"
 echo "# --- top_io.fasm ---"
 cat "$W/top_io.fasm"
+# Issue #74: registered example on the same pad model. The flop maps onto a
+# second BEL (FF=1) so EN/SR are routed nets. `clk` is the BEL's implicit
+# UserCLK (no fabric pin, no pad): strip the unconnected top port from the JSON.
+echo "# --- issue #74 registered design: top_reg.v (EN/SR routed, clk implicit) ---"
+echo "\$ yosys -p 'synth_fabulous -top top -ff \$_SDFFE_PP0P_ x -extra-plib prims.v -extra-plib io_prims.v -extra-map io_map.v -extra-map ff_map.v -cells-map cells_map.v -json top_reg.json' top_reg.v"
+yosys -q -p "synth_fabulous -top top -ff \$_SDFFE_PP0P_ x -extra-plib $SRC/prims.v -extra-plib $SRC/io_prims.v -extra-map $SRC/io_map.v -extra-map $SRC/ff_map.v -cells-map $SRC/cells_map.v -json $W/top_reg.raw.json" "$SRC/top_reg.v"
+python3 - "$W/top_reg.raw.json" "$W/top_reg.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))
+m = d["modules"]["top"]
+bits = set(m["ports"]["clk"]["bits"])
+assert not any(bits & set(b) for c in m["cells"].values() for b in c["connections"].values()), "clk is connected to a cell"
+del m["ports"]["clk"]
+json.dump(d, open(sys.argv[2], "w"))
+print("stripped the unconnected top-level port clk (implicit UserCLK)")
+PY
+echo "\$ FAB_ROOT=<run>/io-model nextpnr-generic --uarch fabulous --json top_reg.json -o pcf=top_reg.pcf -o fasm=top_reg.fasm"
+FAB_ROOT="$W/io-model" nextpnr-generic --uarch fabulous --json "$W/top_reg.json" \
+    -o pcf="$SRC/top_reg.pcf" -o fasm="$W/top_reg.fasm" --write "$W/top_reg.post.json"
+echo "# --- top_reg.fasm ---"
+cat "$W/top_reg.fasm"
 } >"$RAW" 2>&1 || { echo "yosys/nextpnr FAILED; see $RAW" >&2; tail -20 "$RAW" >&2; exit 1; }
 
 # Expected-FAIL probes. Each must fail in nextpnr with the recorded message;
@@ -129,6 +154,22 @@ users = [(c, p) for c, v in d["cells"].items() if not c.endswith("_DRV")
 if users:
     sys.exit("constant driver needed by: %s" % users)
 print("no cell pin uses $PACKER_GND/$PACKER_VCC")
+PY
+# Same check for the registered design: the FF BEL's EN/SR are routed nets.
+python3 - "$W/top_reg.post.json" <<'PY'
+import json, sys
+d = json.load(open(sys.argv[1]))["modules"]["top"]
+bits = {b for n in ("$PACKER_GND", "$PACKER_VCC") for b in d["netnames"][n]["bits"]}
+users = [(c, p) for c, v in d["cells"].items() if not c.endswith("_DRV")
+         for p, bs in v["connections"].items() if bits & set(bs)]
+if users:
+    sys.exit("constant driver needed by: %s" % users)
+ffs = {c: v for c, v in d["cells"].items() if v["parameters"].get("FF") == "1"}
+assert len(ffs) == 1, ffs
+for c, v in ffs.items():
+    for p in ("EN", "SR", "I0"):
+        assert v["connections"].get(p) and "x" not in map(str, v["connections"][p]), (c, p)
+print("registered design: no constant sinks; FF BEL has routed EN, SR, I0")
 PY
 grep -q "Program finished normally" "$RAW"
 # parity LUT: INIT = 16'h6996

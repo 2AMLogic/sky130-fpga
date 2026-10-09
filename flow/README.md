@@ -188,6 +188,18 @@ Runs `flow/fabulous.sh`, then pinned yosys + `nextpnr-generic --uarch fabulous`
 committed `design/fabulous/nextpnr.log` (`--update-log` rewrites it). Needs
 network on first run (~750 MB download); nothing is installed host-wide.
 
+### `flow/bitstream.sh` - FASM to bitstream fixtures (G5/G6 harness, issue #74)
+
+Runs `flow/nextpnr.sh` (which now also maps the registered example
+`design/fabulous/nextpnr/top_reg.v`), freezes the generated bitStreamSpec /
+ConfigMem / pip model, assembles each design's FASM with
+`flow/fasm_to_bitstream.py`, requires FABulous's own `bit_gen genBitstream` to
+produce a byte-identical stream, and diffs the result against the committed
+`sim/bitstream/` fixtures (`--update` rewrites them). `./sim/run.sh` uses the
+committed fixtures only (no mapping tool). Experimental single-LOGIC4 harness
+coverage; see `sim/README.md`. `python3 flow/test_fasm_to_bitstream.py` runs the
+assembler/decoder unit tests (stdlib only).
+
 ### `flow/synth.sh` — generic-cell netlist (T1 item 1 follow-up)
 
 `flow/synth.sh` derives a **generic-cell** (technology-independent) netlist

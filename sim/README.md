@@ -10,7 +10,9 @@ tile's LUT4 + output-FF slice (`design/rtl/lut4_slice.v`,
 and "FF arrangement" sections. This is BEL-level verification only — no
 switch matrix, no FABulous-style tile/fabric description, no bitstream-level
 fabric test yet (that is `spec/framework-gaps.md` item G5, a separate,
-larger follow-on).
+larger follow-on). *(Update, issue #74: an experimental single-tile
+bitstream-driven harness test now exists -- see "Bitstream-driven harness
+test" below. It does not close G5.)*
 
 | Testbench | Exercises | RTL under test |
 |---|---|---|
@@ -60,9 +62,11 @@ artifact even on failure; they are build artifacts and do not replace any
 committed evidence.
 
 **Coverage is RTL-only.** This check is the behavioral regression of
-`lut4_slice` and `logic_tile`. It does not cover bitstream-level fabric
-verification (pending, G5) or gate-level/SDF-annotated verification
-(blocked, see below); it makes no timing claim.
+`lut4_slice`, `logic_tile`, the switch matrix and the composed tile, plus the
+experimental bitstream-driven harness test below. It does not cover the
+ratified fabric or inter-tile verification (G5 stays open) or
+gate-level/SDF-annotated verification (blocked, see below); it makes no
+timing claim.
 
 **No PDK is read by this run, and none needs pinning.** `sim/run.sh`
 compiles behavioral RTL only — no `sky130_fd_sc_hd` cell model, no liberty,
@@ -79,6 +83,175 @@ testbenches because they are pure behavioral/event-driven checks (delays,
 test harness. `verilator --lint-only` is also clean against the RTL (no
 warnings) and is a reasonable choice for future, larger fabric-level
 testbenches that want a compiled/cycle-accurate model.
+
+## Bitstream-driven harness test (issue #74, EXPERIMENTAL)
+
+**Label: experimental single-LOGIC4 harness observation.** It exercises the G1
+harness fabric exactly as implemented -- one LOGIC4 tile, the four `CAP_*`
+boundary cells (wire loop-backs), the same-index switch matrix, and the scratch
+pad overlay (`flow/nextpnr_io_overlay.py`). ADR-0004 and ADR-0005 are still
+**Proposed**; nothing here claims conformance to the ratified Wilton-class
+population, completes G5/G6, is a timing claim, or covers inter-tile routing.
+No production RTL, spec or signoff artifact was changed.
+
+### What runs
+
+`sim/tb_logic_tile_bitstream.v` instantiates `design/rtl/logic_tile_routed.v`
+(flat 158-bit `cfg`, including all 90 matrix-select bits) and programs it only
+from a serialized bitstream:
+
+1. `sim/bitstream/<design>.bin` (FABulous frame stream, below) is read by a
+   sim-only model of the FABulous frame interface, using
+   `sim/bitstream/logic4_configmem.map` (generated, below) to turn frame bits
+   into `cfg`. No hand-written LUT or matrix constant is used.
+2. Placement and I/O wiring come from `sim/bitstream/<design>.wiring`
+   (derived from the FASM): which BEL is used, which logic-tile track each pad
+   drives or observes, and which CAP loop-backs are in use. The bench does not
+   assume BEL A, and it does not bypass the programmed matrix.
+3. Oracles are written independently in the bench from the mapped designs'
+   functional specs: `top_io.v` (`y = a^b^c^d`, `w = a&b&c`, all 16 input
+   combinations) and `top_reg.v` (`q <= rst ? 0 : en ? a^b^c : q`; both
+   starting states x all 32 `(rst,en,c,b,a)` vectors, a directed
+   capture / hold / reset-with-`en=0` / capture / reset-beats-enable sequence,
+   and 300 random cycles against a reference register; `q` is also checked to
+   hold until the clock edge).
+4. Every case is repeated with the input tracks that nothing is routed to
+   driven to 0, all-1, 0xAAAA, 0x5555 and random values, so the result cannot
+   depend on how the unused default selects (and constant-folded LUT inputs)
+   happen to be driven.
+5. `+mutate`: every routing-select bit the FASM uses, and LUT bits 0 and 1 and
+   `reg_sel` of every used BEL, are flipped one at a time in the loaded
+   `cfg`; each flip must make the checks fail (a surviving flip fails the run).
+6. Malformed streams (13 variants from `sim/bitstream_corrupt.py`: truncation at
+   several points, bad sync, duplicate/extra strobe, bad column, set bits at
+   unmapped positions or in CAP columns, missing frame, trailing data) must be
+   rejected by the loader; `flow/test_fasm_to_bitstream.py` requires the same of
+   the python decoder and also covers assembler errors (unknown/out-of-range
+   features, conflicting assignments, duplicates, malformed FASM, pad-whitelist
+   violations, FASM/routed-netlist disagreements) and the documented layout of
+   every spec feature (all 196 matrix features and every BEL field).
+7. `sim/run.sh` also checks that the simulation loader, the python decoder and
+   the assembler's recorded `.cfg` give the same 158-bit vector.
+
+`./sim/run.sh` prints explicit counts, e.g. `PASS: tb_logic_tile_bitstream[reg]
+(139651 checks, 0 failures; 27/27 perturbations detected)`.
+
+### Reproduction
+
+```
+./sim/run.sh               # committed fixtures; needs only iverilog/vvp + python3
+./flow/bitstream.sh        # regenerate from the pinned mapper and diff the fixtures
+./flow/bitstream.sh --update   # rewrite sim/bitstream/ after a deliberate change
+python3 flow/test_fasm_to_bitstream.py
+```
+
+`flow/bitstream.sh` needs the prerequisites of `flow/nextpnr.sh` (Linux x64,
+python3 with venv+tkinter, uv, curl, tar, sha256sum, network for the pinned
+FABulous 2.2.0 wheel and the sha256-verified OSS CAD Suite; everything lands in
+the untracked `flow/build/`, nothing is installed host-wide). It runs
+`flow/nextpnr.sh` (yosys + `nextpnr-generic --uarch fabulous`, which maps
+`design/fabulous/nextpnr/top_io.v` and the new `top_reg.v`), then
+`flow/fasm_to_bitstream.py`, then FABulous's own `bit_gen genBitstream` on the
+same FASM and requires a byte-identical stream, then compares every file below
+with the committed copy. A worker without these tools can still run
+`./sim/run.sh`, but that is *not* a regeneration check.
+
+Provenance chain (all committed in `sim/bitstream/`):
+
+| File | Origin |
+|---|---|
+| `design/fabulous/nextpnr/top_io.v`, `top_reg.v` (+ `ff_map.v`, `cells_map.v`, `top_*.pcf`) | sources |
+| `<design>.fasm` | nextpnr FASM, verbatim |
+| `<design>.mapped.json` | path-free summary of nextpnr's post-route JSON (BEL placement/INIT/FF, ports, per-net pips) |
+| `fabric_spec.json` | frozen generator outputs: `bitStreamSpec.bin` (tile specs), `LOGIC4_ConfigMem.v` (cfg bit -> frame position, latch and `Emulate_Bitstream` views cross-checked), the pad-extended nextpnr pip model |
+| `logic4_configmem.map` | `cfg_index frame_position` for the 158 bits, from `fabric_spec.json` |
+| `<design>.bin` | serialized configuration (below), identical to `bit_gen genBitstream` |
+| `<design>.wiring` | placement / pad / loop-back manifest read by the bench |
+| `<design>.cfg` | decoded 158-bit tile vector (hex) |
+
+### Serialized format (3x3 harness grid; big-endian 32-bit words)
+
+```
+20 bytes   sync header 00AAFF01 00000001 00000000 00000000 FAB0FAB1
+repeat for column x = 0,1,2 and frame f = 0..19 (60 times):
+  4 bytes  frame-select word: [31:27] column x, [26:21] 0, [20] 0 (desync flag),
+           [19:0] one-hot frame strobe (bit f)
+  4 bytes  frame data for the one emitted row: only the interior row Y=1 is
+           emitted (border rows are not); bit b of the word = frame position
+           32*f + b of that tile. Only column 1 (the LOGIC4 tile X1Y1) can be
+           non-zero; the CAP columns are all-zero.
+4 bytes    desync word 0x00100000
+```
+Total 20 + 60*8 + 4 = 504 bytes. The loader rejects: wrong sync, truncation
+anywhere, a select word that is not exactly column + one strobe + zero
+reserved bits, an out-of-range or repeated (column, frame), non-zero data for a
+tile without config bits, set bits at frame positions that ConfigMem does not
+map, trailing bytes, and a stream that does not contain all 60 frames.
+
+### Frame position -> 158-bit tile vector (from the generated ConfigMem)
+
+`position = 32*frame + bit`; `cfg[i]` is the frame bit of `logic4_configmem.map`
+line `i` (the generated `LOGIC4_ConfigMem.v`: `ConfigBits[i]`):
+
+| Frame | bits | `cfg` bits |
+|---|---|---|
+| 0 | 31..0 | `cfg[157:126]` (`cfg[126+bit]`) |
+| 1 | 31..0 | `cfg[125:94]` (`cfg[94+bit]`) |
+| 2 | 31..0 | `cfg[93:62]` (`cfg[62+bit]`) |
+| 3 | 31..0 | `cfg[61:30]` (`cfg[30+bit]`) |
+| 4 | 31..2 | `cfg[29:0]` (`cfg[bit-2]`); bits 1:0 unused |
+| 5..19 | - | unused |
+
+Unused bits are written 0 and must read 0. The field meaning of `cfg` is the
+"LOGIC4 config-bit layout" table in `design/README.md` (BEL `i`:
+`cfg[17i+15:17i]` = INIT, `cfg[17i+16]` = FF/`reg_sel`; `cfg[157:68]` = matrix
+selects). Example: BEL A `INIT[0]` is `cfg[0]` = frame 4 bit 2 = position 130.
+
+### Defaults, padding and exclusions
+
+* A bit no FASM feature sets is 0: unused BELs have INIT = 0 and FF = 0; every
+  matrix field not named in the FASM selects source 0 of its sink (first source
+  in the documented order). `.cfg`/`.bin` therefore contain the zero-coded
+  selects of used fields explicitly as 0 bits; nothing else is written.
+* FASM vector features `X.A.INIT[15:0] = 'b...` set only their 1 bits;
+  `A.INIT[0]` is FABulous's `A.INIT` key.
+* The only FASM lines not turned into bits are the scratch pad overlay's pad
+  pips (`X1Y0.IO{A-D}_O.S1BEG{0-3}`, `X1Y0.N1END{0-3}.IO{A-D}_I`,
+  `X1Y2.IO{A-D}_O.N1BEG{0-3}`, `X1Y2.S1END{0-3}.IO{A-D}_I`): the pad model has
+  no configuration bits and is not in `bitStreamSpec`. They are accepted only
+  on those two tiles, for those names, with no bit index, are counted (6 per
+  fixture), and every FASM pip (pads included) must equal the pips nextpnr
+  routed (`<design>.mapped.json`), with port directions and BEL INIT/FF
+  matching the placed cells. Wire hops and CAP loop-back pips are in the
+  generated spec with zero bits and must lie on a traced pad-to-logic or
+  loop-back path.
+
+### Runtime semantics modelled around `cfg`
+
+* **Clock** is an explicit harness input (`clk`) to `logic_tile_routed`. In the
+  fabric model it is the BEL's implicit `UserCLK` (no fabric pin and no pad):
+  `flow/nextpnr.sh` therefore removes the unconnected top-level `clk` port from
+  the yosys JSON for `top_reg.v` (asserting nothing uses it).
+* **EN / SR are real routed nets.** `ff_map.v` maps the yosys
+  `$_SDFFE_PP0P_` flop to a LOGIC4 BEL with FF=1 and a pass-through LUT
+  (`INIT = 16'hAAAA`), so `en` and `rst` reach `LA_EN`/`LA_SR` through
+  `J_EN_BEG0` / `J_SR_BEG0` and the matrix, not through simulator constants.
+  In the committed fixture `rst` also takes a CAP_E loop-back to reach a
+  track index the shared-reset jump accepts. Reset is synchronous, resets to 0,
+  and is independent of / has priority over enable.
+* **CAP loop-backs and pads.** Per `<design>.wiring`: `IN` = a pad drives a
+  logic input track (`dir` 0..3 = N,E,S,W, `idx` = track), `OUT` = a pad
+  observes an output track, `LOOP` = a CAP loop-back from an output track to
+  an input track; every other input track is a harness don't-care.
+* Combinational (`FF = 0`) BELs with unconnected inputs rely on the
+  constant-folded, replicated INIT of ADR-0005 (Proposed); the unused-track
+  randomisation above is what exercises it.
+
+### Results (experimental harness observations)
+
+Recorded, append-only, in `sim/logic_tile_bitstream_results.txt`. Mapped
+designs: `top_io.v` (BELs A and D) and `top_reg.v` (BELs A and C; flop BEL A,
+data LUT BEL C); both route through the generated switch matrix.
 
 ## Gate-level / SDF-annotated coverage (T1 item 7, issue #29)
 
@@ -117,7 +290,8 @@ Regenerating the gate-level netlist and SDF also requires `klt`, `openroad`,
 
 ## Out of scope here
 
-Bitstream-level fabric verification (a simulated fabric model driven by a
-real generated bitstream, per `CLAUDE.md`'s "no claim without a testbench"
-rule and `spec/framework-gaps.md` item G5) and inter-tile routing tests are
-follow-on work, tracked separately — not part of this BEL-level increment.
+Bitstream-level verification of the *ratified* fabric (the Wilton-class
+routing population, G5 in full) and inter-tile routing across the 2x2-4x4 demo
+grid remain follow-on work, tracked separately (`spec/framework-gaps.md`
+G5/G6); fabric growth goes through a decision record. The harness test below
+covers one LOGIC4 tile of the G1 harness fabric only.
