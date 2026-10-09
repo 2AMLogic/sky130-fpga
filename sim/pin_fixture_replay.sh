@@ -33,6 +33,9 @@ BS_DIR="$SCRIPT_DIR/bitstream"
 BS_TOOL="$REPO_ROOT/flow/fasm_to_bitstream.py"
 LOG_DIR="${PIN_REPLAY_LOG_DIR:-$SCRIPT_DIR/build}/pin_experiment"
 TB_NAME="tb_logic_tile_bitstream"
+# shared rc-aware verdict classifier (issue #141)
+# shellcheck source=../flow/gate_sim_verdict.sh
+source "$REPO_ROOT/flow/gate_sim_verdict.sh"
 EXPECTED=3
 mkdir -p "$LOG_DIR"
 status=0
@@ -55,15 +58,19 @@ while read -r stem oracle; do
     [[ -z "$stem" ]] && continue
     n=$((n + 1))
     log="$LOG_DIR/${stem}.log"
-    if ! vvp "$VVP_BIN" +bin="$FIX_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
-            +wiring="$FIX_DIR/$stem.wiring" +design="$oracle" +mutate >"$log" 2>&1; then
-        echo "pin-experiment [$oracle] $stem [$LABEL]: FAIL (simulation error, see $log)" >&2
-        tail -n 8 "$log" >&2; status=1; continue
-    fi
-    if ! grep -q "^PASS: ${TB_NAME}\[${oracle}\]" "$log" || grep -q "^FAIL" "$log"; then
-        echo "pin-experiment [$oracle] $stem [$LABEL]: FAIL (no terminal PASS verdict, see $log)" >&2
-        tail -n 8 "$log" >&2; status=1; continue
-    fi
+    rc=0
+    vvp "$VVP_BIN" +bin="$FIX_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
+        +wiring="$FIX_DIR/$stem.wiring" +design="$oracle" +mutate >"$log" 2>&1 || rc=$?
+    verdict="$(gs_classify "$rc" "$log" "$TB_NAME" "$oracle")"
+    case "$verdict" in
+        PASS) ;;
+        FUNC_FAIL)
+            echo "pin-experiment [$oracle] $stem [$LABEL]: FAIL (completed functional rejection, see $log)" >&2
+            tail -n 8 "$log" >&2; status=1; continue ;;
+        *)
+            echo "pin-experiment [$oracle] $stem [$LABEL]: FAIL (infrastructure failure: rc=$rc, no recognised verdict, see $log)" >&2
+            tail -n 8 "$log" >&2; status=1; continue ;;
+    esac
     sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$log" | cut -d= -f2)"
     py_cfg="$(python3 -I "$BS_TOOL" decode "$FIX_DIR/$stem.bin" --snapshot "$BS_DIR/fabric_spec.json")"
     rec_cfg="$(tr -d '\n' < "$FIX_DIR/$stem.cfg")"

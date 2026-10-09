@@ -44,8 +44,8 @@ if python3 -I "$REPO_ROOT/flow/pin_fixtures.py" corrupt "$GOOD" "$WORK/corrupt" 
     expect_fail "N-c corrupted LUT INIT (full replay)" "$WORK/corrupt"
     expect_fail "N-c corrupted LUT INIT (simulation oracle only)" "$WORK/corrupt" --sim-only
     # the oracle must have flagged all three streams, not merely failed elsewhere
-    nfail="$(PIN_FIXTURE_DIR="$WORK/corrupt" "$SCRIPT_DIR/pin_fixture_replay.sh" "$VVP_BIN" "$LABEL" --sim-only 2>&1 | grep -c 'no terminal PASS verdict')"
-    if [[ "$nfail" -eq 3 ]]; then echo "pin-experiment negative N-c [$LABEL]: simulation oracle rejected 3/3 corrupted streams"
+    nfail="$(PIN_FIXTURE_DIR="$WORK/corrupt" "$SCRIPT_DIR/pin_fixture_replay.sh" "$VVP_BIN" "$LABEL" --sim-only 2>&1 | grep -c 'completed functional rejection')"
+    if [[ "$nfail" -eq 3 ]]; then echo "pin-experiment negative N-c [$LABEL]: simulation oracle rejected 3/3 corrupted streams (completed functional rejections, not infrastructure failures)"
     else echo "error: oracle rejected only $nfail/3 corrupted streams" >&2; status=1; fi
 else
     echo "error: could not create corrupted scratch copy" >&2; status=1
