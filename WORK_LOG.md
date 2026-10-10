@@ -4,6 +4,10 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-10-10
 
+- **PR #198**: Verification: require completed functional summaries for ConfigMem mutation kills
+- **PR #199**: G5: verify ConfigMem latch transparency while FrameStrobe is asserted
+- **Issue #196** (closed): Verification: require completed functional summaries for ConfigMem mutation kills
+- **Issue #195** (closed): G5: verify ConfigMem latch transparency while FrameStrobe remains asserted
 - **PR #194**: docs(flow): document gate-sim scripts and add script-to-evidence index
 - **PR #191**: G5: verify generated tile clock and frame forwarding ports (#188)
 - **PR #192**: Gate verification: replay route diagnostics on the synthesized tile (#189)

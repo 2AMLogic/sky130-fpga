@@ -25,13 +25,13 @@ _None._
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#200**: Verification: validate ConfigMem transaction and map inputs before functional verdicts
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#201**: verification: validate ConfigMem map and transaction input before functional verdicts (#200)
 
 ## Approved (Awaiting Merge)
 
@@ -43,11 +43,12 @@ PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
 Issues carrying `loom:curated`.
 
-_None._
+- **#129**: CI: reproduce the routability-corpus fixtures with flow/corpus.sh on pull requests *(curated)*
+- **#200**: Verification: validate ConfigMem transaction and map inputs before functional verdicts *(curated)*
 
 ## Proposed (Architect / Hermit)
 
-_None._
+- **#200**: Verification: validate ConfigMem transaction and map inputs before functional verdicts *(architect)*
 
 ## Epics
 
@@ -60,10 +61,10 @@ _None._
 | Operator merge-risk holds | 1 |
 | Operator priority | 0 |
 | Ready (`loom:issue`) | 0 |
-| In Progress (`loom:building`) | 0 |
-| PRs awaiting review | 0 |
+| In Progress (`loom:building`) | 1 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 1 |
-| Curated | 0 |
-| Architect / Hermit proposals | 0 |
+| Curated | 2 |
+| Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
