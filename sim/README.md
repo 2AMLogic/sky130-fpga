@@ -497,6 +497,35 @@ instances wired together by the generator (unmodified, in gitignored
   least one oracle; each EN/SR swap must also FAIL on its matching `regbel_<x>_s1`
   fixture. The readback `ConfigBits` still equal the recorded `.cfg`,
   so storage-level checks cannot see these defects.
+- **LUT basis diagnostic (issue #172, EXPERIMENTAL)**: after the fixture
+  replay, `flow/lut_basis.py` assembles 73 deterministic diagnostic streams
+  through the existing assembler (`flow/fasm_to_bitstream.py` assemble/pack,
+  decoded back): `blank`, then for each BEL A..D all-ones, a one-hot INIT for
+  each of the 16 addresses, and all-zero. All streams share one route set
+  taken from the existing description and checked against the frozen pip
+  model: pad *i* on CAP_N drives `S1END<i>`, which feeds LUT input `I<i>` of
+  all four BELs (the matrix offers each `I<i>` exactly the four same-index
+  tracks), and BEL A/B/C/D drive `S1BEG0..3` to four CAP_S pads, so all four
+  outputs are observed at once. FF selection stays combinational.
+  `sim/tb_lut_basis.v` loads the streams in sequence into one live tile with
+  no reset in between (generated LOGIC4 only through FrameData/FrameStrobe,
+  20 frames per stream, and the repository composition). For each case it
+  sweeps all 16 input vectors under six values of the unrouted input tracks.
+  The oracle comes only from the case identifier: the selected BEL outputs
+  `vector == address` (one-hot) or 1 (all-ones), and every other BEL outputs 0.
+  It never reads cfg, the map or ConfigBits. The all-ones/one-hot/zero order
+  makes a stale bit from the previous case visible. The script requires PASS
+  on both compositions, the coverage line `4 BELs x 16 addresses = 64/64
+  one-hot cases`, and per-case readback equal to the Python decoder. Three
+  scratch mutants must each compile and give a completed functional FAIL on
+  exactly the predicted cases: a LUT-input permutation (BEL C `I0`<->`I1` in
+  `LOGIC4.v`; C addresses with bit0 != bit1), a generated-BEL INIT-bit swap
+  (`lut4_ff_bel.v` entries 5<->6; `a05`/`a06` on every BEL) and the BEL A/B
+  `ConfigBits` slice swap (every A and B one-hot/all-ones case). These are
+  diagnostic assembler-generated streams. They are not evidence that
+  yosys/nextpnr map every truth table correctly. The bench has no
+  perturbation phase; its FAIL summary uses the shared verdict format with
+  `0 perturbations survived`.
 - **Simulation conventions** (not timing): the generated sources carry no
   `timescale`, and the matrix has FABulous's placeholder `assign #80` mux
   delays. They are compiled under `timescale 1ps/1ps`, so each mux takes 80 ps,

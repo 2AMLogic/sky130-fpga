@@ -143,8 +143,11 @@ done
 # generator), loads every committed baseline/corpus/pin-experiment stream through
 # its real FrameData/FrameStrobe ports and checks it with the independent design
 # oracles of sim/tb_logic_tile_bitstream.v, side by side with the repository
-# composition. Three scratch composition mutations (BEL config slice swap, EN/SR
-# swaps) must each produce a functional FAIL. EXPERIMENTAL; see sim/README.md.
+# composition. Scratch composition mutations (BEL config slice swap, EN/SR
+# swaps) must each produce a functional FAIL. It then runs the LUT basis
+# diagnostic (issue #172: every truth-table address of every BEL, assembler-
+# generated streams, sim/tb_lut_basis.v) with its own scratch mutants.
+# EXPERIMENTAL; see sim/README.md.
 echo "=== generated-tile integrated replay (iverilog) ==="
 if [[ "${FABULOUS_SKIP_TILE_REPLAY:-0}" == 1 ]]; then
     echo "SKIPPED: generated-tile replay (FABULOUS_SKIP_TILE_REPLAY=1, set by flow/nextpnr.sh; run flow/fabulous.sh directly for it)"

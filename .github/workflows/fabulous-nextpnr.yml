@@ -34,6 +34,8 @@ on:
       - 'flow/check_regbel_fixtures.py'
       - 'flow/pin_experiment.py'
       - 'sim/tb_logic_tile_bitstream.v'
+      - 'sim/tb_lut_basis.v'
+      - 'flow/lut_basis.py'
       - 'flow/nextpnr.sh'
       - 'flow/nextpnr_io_overlay.py'
       - 'flow/bitstream.sh'
