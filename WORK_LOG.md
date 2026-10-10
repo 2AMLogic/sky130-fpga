@@ -4,6 +4,21 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-10-10
 
+- **PR #194**: docs(flow): document gate-sim scripts and add script-to-evidence index
+- **PR #191**: G5: verify generated tile clock and frame forwarding ports (#188)
+- **PR #192**: Gate verification: replay route diagnostics on the synthesized tile (#189)
+- **PR #190**: feat(flow): enforce append-only on sim/ evidence ledgers at PR time (#183)
+- **PR #187**: feat(sim): boundary output-track source diagnostic through frame programming (#180)
+- **PR #186**: feat(flow): strict ConfigMem frame adapter validation (#169)
+- **PR #185**: feat(sim): control-jump directional route diagnostic through frame programming (#181)
+- **Issue #193** (closed): flow/README: document gate-sim scripts and add a script-to-evidence index
+- **Issue #188** (closed): G5: verify generated tile clock and frame forwarding ports
+- **Issue #189** (closed): Gate verification: replay directional and control route diagnostics on the synthesized tile
+- **Issue #183** (closed): Evidence: enforce append-only on sim/*results.txt ledgers at PR time
+- **Issue #180** (closed): G5: verify every boundary output-track source through generated-tile frame programming
+- **Issue #169** (closed): Verification: reject malformed streams in the ConfigMem frame adapter
+- **Issue #181** (closed): G5: verify every directional reset and enable source through generated-tile frame programming
+- **Issue #168** (closed): Guard telemetry: retain worktree-write-confinement check
 - **PR #182**: Pin-index experiment: registered regcasc case with one-register transition equivalence (#160)
 - **PR #179**: feat(sim): LUT-input directional route diagnostic through frame programming (#176)
 - **PR #178**: Gate verification: replay the LUT-address basis against the synthesized composed tile
