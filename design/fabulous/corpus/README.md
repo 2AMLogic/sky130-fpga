@@ -37,6 +37,7 @@ links here only as supporting evidence.
 | `fan4` | `fan4.v` | input `a` shared by 4 LUTs (pad-net fanout 4), 4 BELs | exhaustive |
 | `casc_fan` | `casc_fan.v` | shared parity LUT feeding 3 second-stage LUTs: 4 LUTs, one internal net with fanout 3 | exhaustive |
 | `regcasc` | `regcasc.v` | 2 LUTs + FF BEL, EN/SR from pads, 2 internal nets | exhaustive state x vector + 300 random cycles vs. a reference register |
+| `regbel_a`..`regbel_d` (issue #156, seed 1 only) | `regbel_{a,b,c,d}.v` | one registered LUT4 BEL (FF=1, real EN/SR) instantiated directly and pinned to BEL A/B/C/D with `NEXTPNR_BEL`; `corpus.json` `placement` makes any other BEL a failed run | `regbel`: capture, hold, sync reset with en low, reset priority with en high (exhaustive + random) |
 
 The topology check (`corpus.json` `topology`, computed by
 `flow/corpus_run.py` from the yosys JSON before nextpnr runs) fixes LUT/FF
@@ -64,7 +65,7 @@ Every `success` has: a real FASM from nextpnr, a bitstream assembled by
 loader model into `logic_tile_routed` against the case's oracle, with
 configuration-perturbation checks (all perturbations detected in every run;
 see `results.txt` for counts) and a loader/decoder/record `cfg` cross-check.
-Committed fixtures: `sim/bitstream/corpus/` (11 streams, re-simulated by
+Committed fixtures: `sim/bitstream/corpus/` (15 streams, re-simulated by
 `./sim/run.sh`). `route_nonconvergent` rows have **no bitstream and no
 functional claim**.
 

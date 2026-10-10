@@ -76,3 +76,13 @@
   Covered population: three seeds of one design (fan4, one pad assignment, distinct-pin policy) on the
     experimental same-index single-LOGIC4 harness. Not covered: general routability, ratified Wilton-class
     fabric (ADR-0004/0005 remain Proposed), inter-tile routing, timing.
+
+2026-10-10  ./sim/run.sh @ issue #156 (EXPERIMENTAL, zero delay, single tile)
+  New oracle `regbel` (sim/tb_logic_tile_bitstream.v): q <= rst ? 0 : (en ? (a&b)^(c|d) : q), exhaustive
+    over both start states x 64 vectors, the four directed control behaviours (capture, hold, reset with
+    en low, reset beats en high) and 300 random cycles; plus env variants and +mutate.
+  New fixtures regbel_{a,b,c,d}_s1 (one registered LUT4 BEL pinned to X1Y1/A..D): all PASS on
+    design/rtl/logic_tile_routed.v (A: 131671 checks, 20/20 perturbations detected; B/C/D: 113851 checks,
+    17/17 each); loader/decoder/record cfg cross-check agrees. Existing fixtures regenerate byte-identically.
+  Unit tests: flow/test_check_regbel_fixtures.py 6 tests OK (moved placement, combinational cell, wrong
+    wiring BEL, missing index entry, unpinned source all caught). ./sim/run.sh: all PASS.

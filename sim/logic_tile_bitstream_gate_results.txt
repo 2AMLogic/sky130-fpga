@@ -90,3 +90,12 @@
     function-changing LUT INIT corruption (rejected by assembler reproduction; with that skipped, the
     gate-level oracle rejects 3/3 streams) all FAIL; existing N1/N2/N3 unchanged and FAIL as before.
   Not covered: timing/SDF, ratified fabric, inter-tile routing, the real frame loader/pad hardware.
+
+2026-10-10  ./flow/gate-sim-bitstream.sh --negative @ issue #156 (EXPERIMENTAL, zero delay, functional observation only)
+  Same synthesized netlist and sky130_fd_sc_hd behavioral models. Added the four registered-BEL
+    fixtures (oracle regbel; each of BEL A, B, C, D registered, placement pinned):
+      regbel_a_s1  PASS (131671 checks, 0 failures; 20/20 perturbations detected; cfg == recorded)
+      regbel_b_s1, regbel_c_s1, regbel_d_s1  PASS (113851 checks, 0 failures; 17/17 detected; cfg == recorded)
+      corpus fixtures replayed at gate level: 15/15 PASS ; pin-experiment 3/3 PASS ; negatives N1-N3 and pin N-a..N-c unchanged
+  flow/check_regbel_fixtures.py now runs first (fixture-metadata gate). Not covered: timing/SDF,
+    ratified fabric, inter-tile routing.

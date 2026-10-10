@@ -39,7 +39,7 @@ TB_NAME="tb_logic_tile_bitstream"
 NETLIST="$REPO_ROOT/layout/experimental/logic_tile_routed.synth.v"
 BS_DIR="$REPO_ROOT/sim/bitstream"
 CORPUS_DIR="${GATE_SIM_CORPUS_DIR:-$BS_DIR/corpus}"
-RECOGNISED_ORACLES=" comb reg quad4 casc2 fan4 casc_fan regcasc "
+RECOGNISED_ORACLES=" comb reg quad4 casc2 fan4 casc_fan regcasc regbel "
 NEGATIVE=0
 [[ "${1:-}" == "--negative" ]] && NEGATIVE=1
 
@@ -91,6 +91,9 @@ run_one() {
 }
 
 build "$NETLIST" "$BUILD_DIR/$TB_NAME.vvp" || exit 1
+
+# Registered-BEL fixture metadata (issue #156): each of BEL A, B, C, D registered, placement pinned.
+python3 -I "$SCRIPT_DIR/check_regbel_fixtures.py" "$REPO_ROOT" || exit 1
 
 status=0
 for entry in "comb:top_io" "reg:top_reg"; do

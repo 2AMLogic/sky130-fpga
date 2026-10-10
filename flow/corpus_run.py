@@ -317,6 +317,12 @@ def main():
             if r.outcome != "success":
                 continue
             r.bels = occupancy(sd / f"{stem}.post.json")
+            want_pl = case.get("placement")
+            if want_pl is not None and dict(r.bels) != want_pl:
+                # a case that pins BEL placement must land exactly there (issue #156)
+                r.outcome = "tool_error"
+                r.detail = f"placement {dict(r.bels)} != required {want_pl}"
+                continue
             ok, why = assemble(case, stem, sd, snap_dir / "fabric_spec.json", fab_run)
             if not ok:
                 r.outcome, r.detail = "tool_error", "assembly: " + why
