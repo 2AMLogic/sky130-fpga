@@ -85,6 +85,17 @@ cexpect "forced kill (137) after FAIL"   INFRA     137 "$CF"$'\n'
 cexpect "nonzero exit after PASS"        INFRA     1 "$CP"$'\n'
 cexpect "TIMEOUT marker with FAIL"       INFRA     0 "$CF"$'\nTIMEOUT: x\n'
 if [[ "$(gs_classify_configmem 0 "$T/nonexistent")" == INFRA ]]; then echo "ok   cm missing log -> INFRA"; else echo "FAIL cm missing log"; rc_all=1; fi
+# issue #195 summary suffixes (transparent-open phase report)
+CP2="PASS: configmem_fabulous_equiv -- 7712 checks, 17 baseline streams, 0 failures; transparent-open: 5 frames, 158/158 mapped bits changed under asserted strobe, 385 settled changes, 430 checks, 0 failures"
+CF2="FAIL: configmem_fabulous_equiv -- 458 failures / 7712 checks (428 transparent-open failures / 430 checks)"
+CCOV="FAIL transparent-open-coverage: 0/158 mapped bits, 5 frames"
+cexpect "#195 pass summary"              PASS      0 "$CP2"$'\n'
+cexpect "#195 FAIL summary"              FUNC_FAIL 0 "$CM1"$'\n'"$CF2"$'\n'
+cexpect "#195 coverage shortfall + FAIL" FUNC_FAIL 0 "$CM1"$'\n'"$CCOV"$'\n'"$CF2"$'\n'
+cexpect "#195 coverage line with PASS"   INFRA     0 "$CCOV"$'\n'"$CP2"$'\n'
+cexpect "#195 malformed suffix"          INFRA     0 "${CF2% checks)} cheks)"$'\n'
+cexpect "#195 PASS with nonzero tfails"  INFRA     0 "${CP2%0 failures}3 failures"$'\n'
+cexpect "pre-#196 colon coverage form"   INFRA     0 "FAIL: transparent-open coverage 0/158 mapped bits, 5 frames"$'\n'"$CF2"$'\n'
 # setup errors from the bench's input checks (PR #198 review): missing / empty /
 # truncated vector file is INFRA even when mismatch lines were printed first
 CE0="ERROR: configmem_fabulous_equiv setup: only 0 baseline streams in vector file /x"
