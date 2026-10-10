@@ -180,9 +180,10 @@ the `flow/sdf-resim.sh` leg was not re-examined.
 ## Continuous integration
 
 `.github/workflows/flow-evidence.yml` (issue #109) runs
-`flow/audit-evidence.sh` on pull requests touching `flow/`,
+`flow/audit-evidence.sh` on pull requests touching `flow/`, `sim/`,
 `design/rtl/logic_tile.v`, `layout/` or `measurements/` (and, in the same job,
-`flow/check_status_claims.py`, below). It needs no
+`flow/check_status_claims.py` and the `sim/` ledger append-only guard
+`flow/audit_sim_ledgers.py`, both below). It needs no
 toolchain, so it is exactly reproducible on a stock runner and fails on a
 drifted claim or pinned script hash (the #53 failure mode). Other workflows:
 `signoff.yml` (manifest re-grade), `rtl-sim.yml` (Icarus testbenches),
@@ -969,6 +970,73 @@ mode: `measurements/*/records/` is append-only, so a failure is fixed by
 correcting the tree, by adding a new record, or — for a deliberate,
 method-neutral change — by adding a cited allowance, never by rewriting a
 published record.
+
+### `flow/audit_sim_ledgers.py` — `sim/` ledgers are append-only (issue #183)
+
+`sim/` results are append-only evidence (CLAUDE.md). This guard enforces it
+at PR time for the ledger files under `sim/`: for every protected ledger, the
+bytes at the PR's baseline must be a byte-for-byte **prefix** of the bytes at
+the PR head. Appending passes; editing, reordering, truncating, deleting or
+renaming away an existing ledger fails, naming the file and the first
+differing line.
+
+```
+python3 -I flow/audit_sim_ledgers.py --base origin/main --head HEAD   # local
+python3 -I flow/test_audit_sim_ledgers.py                             # unit tests
+```
+
+Exit 0 = clean, 1 = ledger violation, 2 = the check could not run (missing
+ref, shallow or unrelated history, unreadable git object, unparseable table).
+It reads git trees only, never the working tree, so commit before running it
+locally.
+
+**Baseline.** The baseline is `git merge-base <base> <head>`, compared with
+`<head>` itself. In CI, `flow-evidence.yml` passes
+`github.event.pull_request.base.sha` and `.head.sha` through environment
+variables (quoted, never interpolated into the script), checks out with
+`fetch-depth: 0`, and fetches either SHA if it is still missing. The actual PR
+head is compared, not the synthetic merge commit `actions/checkout` leaves at
+`HEAD`. There is no default `--head`. Missing history is an error (exit 2),
+never an empty file and never a skip.
+
+**Protection table.** `LEDGERS` in `flow/audit_sim_ledgers.py` is the single
+list; today it holds the seven ledgers that declare the "Append-only evidence
+record" header: `sim/configmem_fabulous_equiv.txt`,
+`sim/generated_tile_replay.txt`, `sim/logic_tile_bitstream_gate_results.txt`,
+`sim/logic_tile_bitstream_results.txt`,
+`sim/logic_tile_routed_gate_results.txt`, `sim/rtl_mutation_results.txt`,
+`sim/switch_matrix_fabulous_equiv.txt`. Candidates are discovered in both the
+baseline and the head: every `sim/*results.txt`, plus every `sim/**/*.txt`
+whose first 10 lines contain "append-only evidence record". Other `.txt`
+assets (`sim/mutation_allowlist.txt`, `sim/bitstream/corpus/index.txt`) are
+not ledgers. To maintain the table:
+
+- a new ledger is added to `LEDGERS` in the PR that creates it. An unlisted
+  candidate in the head fails with its path, and so does a listed path the
+  head does not contain;
+- entries are never removed. Protection is the union of the baseline's table,
+  the head's table and the baseline's discovered candidates, so dropping an
+  entry, stripping the header, or deleting the guard does not unprotect a
+  ledger the baseline already had. A baseline that predates the guard (its
+  first introduction) is detected as a proven absence of the file and is
+  protected through discovery alone.
+
+**Corrections (supersession).** A wrong entry is never edited. Append a new
+dated entry that names the earlier one (its date and run line), says what
+was wrong, and gives the corrected result, for example:
+
+```
+2026-10-12  SUPERSEDES 2026-10-09 "sim/tb_logic_tile_routed.v (gate-level, zero delay)":
+  the check count quoted there was 40/41, not 41/41 (miscounted); corrected
+  observation follows.
+  PASS 40/41 ...
+```
+
+The original stays in place, byte for byte. A prefix edit fails even when a
+supersession entry is appended in the same PR. Like `audit_evidence.py`'s
+`supersedes` graph for `measurements/`, the earlier evidence is kept and a
+newer entry is layered on top. That graph does not exempt anything from this
+byte-prefix rule.
 
 ### `flow/routed_checks.sh` — EXPERIMENTAL DRC/LVS/ERC observations + routing-pitch measurement (G3, issue #108)
 
