@@ -2,6 +2,8 @@
 # design/fabulous/nextpnr.log) from a fresh run of flow/fabulous.sh and
 # flow/nextpnr.sh in their default (verify, non --update-log) mode; either
 # script exits non-zero if its normalized log differs from the committed copy.
+# It also reproduces the bitstream fixtures (flow/bitstream.sh) and the
+# routability-corpus fixtures (flow/corpus.sh, issue #129).
 #
 # The pull_request paths list is the explicit dependency list of flow/fabulous.sh
 # and flow/generated_tile_replay.sh (RTL compiled, helpers run or sourced,
@@ -50,6 +52,8 @@ on:
       - 'flow/nextpnr_io_overlay.py'
       - 'flow/bitstream.sh'
       - 'flow/fasm_to_bitstream.py'
+      - 'flow/corpus.sh'
+      - 'flow/corpus_run.py'
       - 'sim/bitstream/**'
       - 'flow/tool_versions.sh'
       - '.github/workflows/fabulous-nextpnr.yml'
@@ -60,7 +64,7 @@ permissions:
 jobs:
   reproduce-g1-logs:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
 
@@ -131,6 +135,14 @@ jobs:
       # bit_gen against the assembler).
       - name: Reproduce bitstream fixtures (flow/bitstream.sh)
         run: ./flow/bitstream.sh
+
+      # Issue #129: the routability corpus is the decision evidence for
+      # ADR-0004 item 3. Default (verify) mode regenerates every corpus stream
+      # from the pinned yosys/nextpnr, checks it against FABulous bit_gen and
+      # the oracle, and fails on any DRIFT from the committed sim/bitstream/corpus/
+      # files or any outcome that differs from design/fabulous/corpus/corpus.json.
+      - name: Reproduce routability-corpus fixtures (flow/corpus.sh)
+        run: ./flow/corpus.sh
 
       - name: Confirm committed logs and fixtures are untouched
         run: git diff --exit-code -- design/fabulous sim/bitstream
