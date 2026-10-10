@@ -22,10 +22,15 @@
 #      back must equal the recorded .cfg. Each run must be a recognised terminal
 #      PASS (flow/gate_sim_verdict.sh), and both compositions must report the
 #      same check and perturbation counts.
+#   3c. (issue #156) flow/check_regbel_fixtures.py proves from the fixture
+#      metadata that each of BEL A, B, C, D is exercised in registered mode with
+#      an explicit placement (regbel_{a,b,c,d}_s1, oracle `regbel`: capture,
+#      hold, sync reset with enable low, reset priority with enable high).
 #   4. Composition mutations of a scratch copy of LOGIC4.v (BEL A/B ConfigBits
-#      slices swapped; EN/SR swapped on BEL A; EN/SR swapped on BEL B) must each
-#      compile and then produce a completed functional FAIL from at least one
-#      oracle, with no infrastructure failure on any fixture.
+#      slices swapped; EN/SR swapped on BEL A, B, C and D) must each compile and
+#      then produce a completed functional FAIL from at least one oracle, with no
+#      infrastructure failure on any fixture. Each EN/SR swap on BEL X must in
+#      addition FAIL functionally on its matching fixture regbel_x_s1.
 #
 # Missing fixture/index, compile error, simulator error, a missing or
 # conflicting terminal verdict, or an undetected mutation fails the script.
@@ -143,6 +148,9 @@ run_one() {
 }
 summary() { grep -m1 -o '([0-9]* checks, [0-9]* failures[^)]*)' "$1"; }
 
+# ---- 3a. registered-BEL fixture metadata (issue #156) ------------------------
+python3 -I "$REPO/flow/check_regbel_fixtures.py" "$REPO" || die "registered-BEL fixture metadata check failed"
+
 # ---- 3b. replay on both compositions ----------------------------------------
 echo "=== generated-tile replay (generated LOGIC4 vs repository composition, same oracles, +mutate) ==="
 pass=0
@@ -189,6 +197,8 @@ muts = {
     "belcfg": src.replace(a, "@@A@@").replace(b, a).replace("@@A@@", b),
     "ensr_A": sub1(r"\.SR\(LA_SR\),(\s*)\.EN\(LA_EN\)", r".SR(LA_EN),\1.EN(LA_SR)", src),
     "ensr_B": sub1(r"\.SR\(LB_SR\),(\s*)\.EN\(LB_EN\)", r".SR(LB_EN),\1.EN(LB_SR)", src),
+    "ensr_C": sub1(r"\.SR\(LC_SR\),(\s*)\.EN\(LC_EN\)", r".SR(LC_EN),\1.EN(LC_SR)", src),
+    "ensr_D": sub1(r"\.SR\(LD_SR\),(\s*)\.EN\(LD_EN\)", r".SR(LD_EN),\1.EN(LD_SR)", src),
 }
 for k, v in muts.items():
     open(f"{out}/LOGIC4_mut_{k}.v", "w").write(v)
@@ -197,20 +207,24 @@ declare -A MDESC=(
     [belcfg]="BEL A <-> BEL B ConfigBits slices swapped"
     [ensr_A]="BEL A EN/SR pins swapped"
     [ensr_B]="BEL B EN/SR pins swapped"
+    [ensr_C]="BEL C EN/SR pins swapped"
+    [ensr_D]="BEL D EN/SR pins swapped"
 )
-for m in belcfg ensr_A ensr_B; do
+for m in belcfg ensr_A ensr_B ensr_C ensr_D; do
     mvvp="$OUT/mut_${m}.vvp"
     if ! gen_compile "$OUT/LOGIC4_mut_${m}.v" "$mvvp"; then
         cat "$mvvp.compile.log" >&2
         echo "mutation '$m': FAIL (did not compile; a mutation must compile and fail functionally)" >&2
         status=1; continue
     fi
-    det=(); npass=0; infra=0
+    det=(); npass=0; infra=0; match=""; match_stem=""
+    [[ "$m" == ensr_? ]] && match_stem="regbel_$(echo "${m#ensr_}" | tr A-D a-d)_s1"
     while read -r dir stem oracle; do
         log="$OUT/mut_${m}_${stem}.log"
         v="$(run_one "$mvvp" "$dir" "$stem" "$oracle" "$log")"
         case "$v" in
-            FUNC_FAIL) det+=("${stem}[${oracle}] $(summary "$log")") ;;
+            FUNC_FAIL) det+=("${stem}[${oracle}] $(summary "$log")")
+                       [[ "$stem" == "$match_stem" ]] && match=caught ;;
             PASS) npass=$((npass + 1)) ;;
             *) infra=$((infra + 1)); echo "  mutation '$m' $stem: infrastructure failure (see $log)" >&2 ;;
         esac
@@ -222,12 +236,16 @@ for m in belcfg ensr_A ensr_B; do
         echo "mutation '$m' (${MDESC[$m]}): NOT caught (${#det[@]} functional FAILs, $infra infrastructure failures)" >&2
         status=1; continue
     fi
+    if [[ -n "$match_stem" && "$match" != caught ]]; then
+        echo "mutation '$m' (${MDESC[$m]}): NOT caught on its matching fixture $match_stem" >&2
+        status=1; continue
+    fi
     echo "mutation '$m' (${MDESC[$m]}) caught: compiled; functional FAIL on ${#det[@]}/$n_fix fixtures ($npass unaffected), ConfigBits == recorded on all"
     for d in "${det[@]}"; do echo "    FAIL: $d"; done
 done
 
 if [[ "$status" -eq 0 ]]; then
-    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 3/3 composition mutations caught)"
+    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught)"
 else
     echo "generated-tile replay: FAIL" >&2
 fi

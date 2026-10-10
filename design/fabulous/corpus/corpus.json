@@ -48,6 +48,38 @@
       "src": "design/fabulous/corpus/regcasc.v", "pcf": "design/fabulous/corpus/regcasc.pcf",
       "topology": {"luts": 2, "ffs": 1, "internal_nets": 2, "max_internal_fanout": 1, "max_input_fanout": 1},
       "expect": {"1": "success", "2": "route_nonconvergent", "3": "success"}
+    },
+    {
+      "name": "regbel_a", "mode": "comb", "oracle": "regbel",
+      "src": "design/fabulous/corpus/regbel_a.v", "pcf": "design/fabulous/corpus/regbel_a.pcf",
+      "seeds": [1],
+      "topology": {"luts": 0, "ffs": 1, "internal_nets": 0, "max_internal_fanout": 0, "max_input_fanout": 1},
+      "placement": {"X1Y1/A": "FF"},
+      "expect": {"1": "success"}
+    },
+    {
+      "name": "regbel_b", "mode": "comb", "oracle": "regbel",
+      "src": "design/fabulous/corpus/regbel_b.v", "pcf": "design/fabulous/corpus/regbel_b.pcf",
+      "seeds": [1],
+      "topology": {"luts": 0, "ffs": 1, "internal_nets": 0, "max_internal_fanout": 0, "max_input_fanout": 1},
+      "placement": {"X1Y1/B": "FF"},
+      "expect": {"1": "success"}
+    },
+    {
+      "name": "regbel_c", "mode": "comb", "oracle": "regbel",
+      "src": "design/fabulous/corpus/regbel_c.v", "pcf": "design/fabulous/corpus/regbel_c.pcf",
+      "seeds": [1],
+      "topology": {"luts": 0, "ffs": 1, "internal_nets": 0, "max_internal_fanout": 0, "max_input_fanout": 1},
+      "placement": {"X1Y1/C": "FF"},
+      "expect": {"1": "success"}
+    },
+    {
+      "name": "regbel_d", "mode": "comb", "oracle": "regbel",
+      "src": "design/fabulous/corpus/regbel_d.v", "pcf": "design/fabulous/corpus/regbel_d.pcf",
+      "seeds": [1],
+      "topology": {"luts": 0, "ffs": 1, "internal_nets": 0, "max_internal_fanout": 0, "max_input_fanout": 1},
+      "placement": {"X1Y1/D": "FF"},
+      "expect": {"1": "success"}
     }
   ]
 }

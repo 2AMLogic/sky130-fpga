@@ -9,3 +9,7 @@ casc_fan_s2 casc_fan
 casc_fan_s3 casc_fan
 regcasc_s1 regcasc
 regcasc_s3 regcasc
+regbel_a_s1 regbel
+regbel_b_s1 regbel
+regbel_c_s1 regbel
+regbel_d_s1 regbel

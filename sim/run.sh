@@ -217,6 +217,16 @@ if ! python3 "$BS_TOOL" check "$CORPUS_DIR" --snapshot-dir "$BS_DIR"; then
     echo "error: committed sim/bitstream/corpus fixtures drifted from the assembler output" >&2
     overall_status=1
 fi
+echo "=== registered-BEL fixture metadata (issue #156: BEL A/B/C/D each registered, placement pinned) ==="
+if python3 -I "$REPO_ROOT/flow/test_check_regbel_fixtures.py" >"$BUILD_DIR/test_check_regbel_fixtures.log" 2>&1 \
+   && grep -q '^OK' "$BUILD_DIR/test_check_regbel_fixtures.log"; then
+    echo "PASS: test_check_regbel_fixtures ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_check_regbel_fixtures.log"), 0 failures)"
+else
+    cat "$BUILD_DIR/test_check_regbel_fixtures.log" >&2
+    echo "error: regbel fixture-metadata unit tests failed" >&2
+    overall_status=1
+fi
+python3 -I "$REPO_ROOT/flow/check_regbel_fixtures.py" "$REPO_ROOT" || overall_status=1
 if [[ -f "$out_bin" ]]; then
     n_corpus=0
     while read -r stem oracle; do

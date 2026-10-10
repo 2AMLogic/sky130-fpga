@@ -1,0 +1,9 @@
+# Harness pin-to-pad constraints for regbel_a.v (issue #156; pads from flow/nextpnr_io_overlay.py).
+# The BEL position is pinned in the source with NEXTPNR_BEL, not here.
+set_io a X1Y0/A
+set_io b X1Y0/B
+set_io c X1Y0/C
+set_io d X1Y0/D
+set_io en X1Y2/A
+set_io rst X1Y2/B
+set_io q X1Y2/C

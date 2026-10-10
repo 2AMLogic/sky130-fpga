@@ -14,7 +14,7 @@
 //   +bin=<frame stream>   FABulous bit_gen output
 //   +map=<file>           "cfg_index frame_position" per line (from ConfigMem.v)
 //   +wiring=<file>        pad/loopback/placement manifest derived from the FASM
-//   +design=comb|reg|quad4|casc2|fan4|casc_fan|regcasc
+//   +design=comb|reg|quad4|casc2|fan4|casc_fan|regcasc|regbel
 //                         which mapped design's functional spec is the oracle
 //                         (comb/reg: issue #74; the rest: issue #115 corpus,
 //                         design/fabulous/corpus/*.v)
@@ -521,11 +521,71 @@ module tb_logic_tile_bitstream;
         end
     endtask
 
+
+    // issue #156: one registered LUT4 BEL (any of A..D) with real EN/SR nets:
+    //   @(posedge clk)  q <= rst ? 0 : (en ? ((a & b) ^ (c | d)) : q)
+    // Written from design/fabulous/corpus/regbel_*.v. Exhaustive over both
+    // starting states x all (rst,en,d,c,b,a) vectors, plus the four directed
+    // control behaviours (capture, hold, reset with en=0, reset beats en=1) and a
+    // random sequence against a reference register.
+    task run_regbel;
+        integer s, v, i;
+        reg a, b, c, d, en, rst, expect_q, refq;
+        begin
+            for (s = 0; s < 2; s = s + 1)
+                for (v = 0; v < 64; v = v + 1) begin
+                    if (s == 0) begin
+                        pad_in[0] = 1; pad_in[1] = 1; pad_in[2] = 0; pad_in[3] = 0; pad_in[4] = 0; pad_in[5] = 1;
+                    end else begin
+                        pad_in[0] = 1; pad_in[1] = 1; pad_in[2] = 0; pad_in[3] = 0; pad_in[4] = 1; pad_in[5] = 0;
+                    end
+                    #1; pulse;
+                    chk(pad_out(2) === s[0], "established state");
+                    {rst, en, d, c, b, a} = v[5:0];
+                    pad_in[0] = a; pad_in[1] = b; pad_in[2] = c; pad_in[3] = d;
+                    pad_in[4] = en; pad_in[5] = rst;
+                    #1;
+                    chk(pad_out(2) === s[0], "q holds until the clock edge");
+                    pulse;
+                    expect_q = rst ? 1'b0 : en ? ((a & b) ^ (c | d)) : s[0];
+                    chk(pad_out(2) === expect_q, "q after edge");
+                end
+            // directed: reset, capture 1, hold 1 (en=0, data 0), reset with en=0,
+            // capture after reset, reset beats enable and data
+            pad_in[5] = 1; pad_in[4] = 0; #1; pulse;
+            chk(pad_out(2) === 1'b0, "seq: reset");
+            pad_in[5] = 0; pad_in[4] = 1; pad_in[0] = 1; pad_in[1] = 1; pad_in[2] = 0; pad_in[3] = 0; #1; pulse;
+            chk(pad_out(2) === 1'b1, "seq: capture 1");
+            pad_in[4] = 0; pad_in[0] = 0; pad_in[1] = 0; #1; pulse; pulse;
+            chk(pad_out(2) === 1'b1, "seq: hold 1 with en=0, data 0");
+            pad_in[5] = 1; #1; pulse;
+            chk(pad_out(2) === 1'b0, "seq: reset with en=0");
+            pad_in[5] = 0; pad_in[4] = 1; pad_in[2] = 1; #1; pulse;
+            chk(pad_out(2) === 1'b1, "seq: capture after reset");
+            pad_in[4] = 1; pad_in[5] = 1; pad_in[0] = 1; pad_in[1] = 1; pad_in[2] = 0; pad_in[3] = 0; #1; pulse;
+            chk(pad_out(2) === 1'b0, "seq: reset beats enable and data");
+            refq = 1'b0;
+            pad_in[5] = 1; pad_in[4] = 0; #1; pulse;
+            for (i = 0; i < 300; i = i + 1) begin
+                {rst, en, d, c, b, a} = $random;
+                rst = (($random & 7) == 0);
+                pad_in[0] = a; pad_in[1] = b; pad_in[2] = c; pad_in[3] = d;
+                pad_in[4] = en; pad_in[5] = rst;
+                #1;
+                chk(pad_out(2) === refq, "random: q before edge");
+                pulse;
+                if (rst) refq = 1'b0; else if (en) refq = (a & b) ^ (c | d);
+                chk(pad_out(2) === refq, "random: q after edge");
+            end
+        end
+    endtask
+
     task run_design;
         begin
             if (is_comb) run_comb;
             else if (design_name == "reg") run_reg;
             else if (design_name == "regcasc") run_regcasc;
+            else if (design_name == "regbel") run_regbel;
             else run_corpus_comb;
         end
     endtask
@@ -575,6 +635,7 @@ module tb_logic_tile_bitstream;
                                   slot_wired_out[1] && slot_wired_out[4];
             "regcasc":  need_ok = &slot_wired_in[3:0] && slot_wired_in[4] && slot_wired_in[5] &&
                                   slot_wired_in[6] && slot_wired_out[2];
+            "regbel":   need_ok = &slot_wired_in[5:0] && slot_wired_out[2];
             default:    need_ok = 1'b0;
         endcase
         if (!need_ok) begin $display("FAIL: tb_logic_tile_bitstream[%0s]: manifest lacks required ports", design_name); $finish; end

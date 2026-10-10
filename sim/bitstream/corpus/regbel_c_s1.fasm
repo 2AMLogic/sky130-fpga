@@ -1,0 +1,105 @@
+# routing for net '$PACKER_GND'
+
+
+# routing for net '$PACKER_VCC'
+
+
+# routing for net 'rst'
+
+
+# routing for net '$abc$215$aiger$o1'
+
+X1Y1.J_SR_END0.LC_SR
+X1Y1.N1END0.J_SR_BEG0
+X1Y1.J_SR_BEG0.J_SR_END0
+X1Y2.IOB_O.N1BEG0
+X1Y2.N1BEG0.N1END0
+
+# routing for net 'q'
+
+
+# routing for net '$abc$215$aiger$o6'
+
+X1Y1.LC_O.S1BEG2
+X1Y1.S1BEG2.S1END2
+X1Y2.S1END2.IOC_I
+
+# routing for net 'en'
+
+
+# routing for net '$abc$215$aiger$o0'
+
+X1Y1.J_EN_END2.LC_EN
+X1Y1.N1END2.J_EN_BEG2
+X1Y1.J_EN_BEG2.J_EN_END2
+X1Y2.IOA_O.N1BEG2
+X1Y2.N1BEG2.N1END2
+
+# routing for net 'd'
+
+
+# routing for net '$abc$215$aiger$o2'
+
+X1Y0.IOD_O.S1BEG3
+X1Y0.S1BEG3.S1END3
+X1Y1.S1END3.LC_I3
+
+# routing for net 'c'
+
+
+# routing for net '$abc$215$aiger$o3'
+
+X1Y0.IOC_O.S1BEG2
+X1Y0.S1BEG2.S1END2
+X1Y1.S1END2.LC_I2
+
+# routing for net 'b'
+
+
+# routing for net '$abc$215$aiger$o4'
+
+X1Y0.IOB_O.S1BEG1
+X1Y0.S1BEG1.S1END1
+X1Y1.S1END1.LC_I1
+
+# routing for net 'a'
+
+
+# routing for net '$abc$215$aiger$o5'
+
+X1Y0.IOA_O.S1BEG0
+X1Y0.S1BEG0.S1END0
+X1Y1.S1END0.LC_I0
+
+# config for cell '$PACKER_VCC_DRV'
+
+
+# config for cell '$PACKER_GND_DRV'
+
+
+# config for cell 'u_c'
+
+X1Y1.C.INIT[15:0] = 'b0111011101111000
+X1Y1.C.FF
+
+# config for cell '$iopadmap$top.rst._io'
+
+
+# config for cell '$iopadmap$top.q._io'
+
+
+# config for cell '$iopadmap$top.en._io'
+
+
+# config for cell '$iopadmap$top.d._io'
+
+
+# config for cell '$iopadmap$top.c._io'
+
+
+# config for cell '$iopadmap$top.b._io'
+
+
+# config for cell '$iopadmap$top.a._io'
+
+
