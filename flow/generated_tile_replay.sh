@@ -34,6 +34,9 @@
 #
 # Missing fixture/index, compile error, simulator error, a missing or
 # conflicting terminal verdict, or an undetected mutation fails the script.
+# Every vvp run is bounded by the SIM_TIMEOUT_SECONDS wall-clock budget
+# (flow/gate_sim_verdict.sh, issue #157); a timeout is an infrastructure failure
+# and never counts as a caught mutation.
 # Scope: single generated tile with the harness's same-index matrix, CAP
 # loopbacks and pad overlay. No serial configuration loader, no timing claim,
 # no ratified-fabric claim (ADR-0004/0005 remain Proposed).
@@ -53,6 +56,8 @@ source "$REPO/flow/gate_sim_verdict.sh"
 rm -rf "$OUT"; mkdir -p "$OUT"
 status=0
 die() { echo "error: $*" >&2; echo "generated-tile replay: FAIL" >&2; exit 1; }
+gs_budget_check || die "invalid simulation wall-clock budget settings"
+echo "simulation wall-clock budget: $(gs_budget)s per run (SIM_TIMEOUT_SECONDS), kill grace $(gs_kill_after)s (SIM_KILL_AFTER_SECONDS)"
 
 T="$RUN/Tile/LOGIC4"
 GEN_TILE_V="$T/LOGIC4.v"
@@ -142,8 +147,10 @@ echo "fixtures: 2 baseline + $n_corpus corpus (index.txt) + $n_pin pin-experimen
 # run_one <vvp> <dir> <stem> <oracle> <log> [extra plusargs...]; prints verdict
 run_one() {
     local vvp="$1" dir="$2" stem="$3" oracle="$4" log="$5" rc=0; shift 5
-    vvp "$vvp" +bin="$dir/$stem.bin" +map="$MAP" +wiring="$dir/$stem.wiring" \
-        +design="$oracle" "$@" >"$log" 2>&1 || rc=$?
+    # bounded (issue #157): a timeout returns 124/137 -> INFRA, never FUNC_FAIL
+    gs_run_bounded "$(basename "$vvp" .vvp):${stem}[${oracle}]" "$log" \
+        vvp "$vvp" +bin="$dir/$stem.bin" +map="$MAP" +wiring="$dir/$stem.wiring" \
+        +design="$oracle" "$@" || rc=$?
     gs_classify "$rc" "$log" "$TB_NAME" "$oracle"
 }
 summary() { grep -m1 -o '([0-9]* checks, [0-9]* failures[^)]*)' "$1"; }

@@ -11,6 +11,9 @@
 #        the static assembler check skipped (--sim-only) the SIMULATION ORACLE
 #        itself must reject every corrupted stream
 #
+# A replay that fails through an infrastructure failure (simulator crash, missing
+# verdict, wall-clock timeout -- issues #141/#157) does NOT count as a rejection.
+#
 #   sim/pin_fixture_negative.sh <compiled.vvp> <label>
 set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,6 +31,10 @@ expect_fail() {  # expect_fail <name> <fixture-dir> [replay flags...]
     local out
     if out="$(PIN_FIXTURE_DIR="$dir" "$SCRIPT_DIR/pin_fixture_replay.sh" "$VVP_BIN" "$LABEL" "$@" 2>&1)"; then
         echo "error: pin-experiment negative $name [$LABEL] was ACCEPTED" >&2; status=1
+    elif grep -q 'infrastructure failure' <<<"$out"; then
+        # a crash/timeout is not a rejection by the replay's checks (issues #141, #157)
+        echo "error: pin-experiment negative $name [$LABEL] failed only through an infrastructure failure, not a recognised rejection:" >&2
+        grep -E 'infrastructure failure|TIMEOUT' <<<"$out" >&2; status=1
     else
         echo "pin-experiment negative $name [$LABEL] OK: rejected -> $(grep -m1 -E 'error:|: FAIL' <<<"$out")"
         echo "$out" | grep -E "replayed" | sed 's/^/    /'

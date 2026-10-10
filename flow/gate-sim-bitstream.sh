@@ -19,6 +19,9 @@
 #   ./flow/gate-sim-bitstream.sh              # baseline + corpus fixtures, must PASS
 #   GATE_SIM_CORPUS_DIR=<dir> overrides the corpus dir (scratch failure-mode tests)
 #   ./flow/gate-sim-bitstream.sh --negative   # also prove wrong results FAIL
+#   SIM_TIMEOUT_SECONDS=<n> / SIM_KILL_AFTER_SECONDS=<n> override the per-run
+#   wall-clock budget (flow/gate_sim_verdict.sh, issue #157); a run that
+#   exceeds it is an infrastructure failure, never a negative-control rejection
 # Exit: nonzero on missing iverilog/vvp, missing PDK models, compile error,
 # simulation error, missing PASS line, or (with --negative) a negative case
 # that is wrongly accepted OR whose run did not complete with the terminal
@@ -43,6 +46,7 @@ NEGATIVE=0
 for tool in iverilog vvp; do
     command -v "$tool" >/dev/null 2>&1 || { echo "error: $tool not found on PATH" >&2; exit 1; }
 done
+gs_budget_check || exit 1
 [[ -s "$NETLIST" ]] || { echo "error: missing $NETLIST" >&2; exit 1; }
 
 LIBS_REF=""
@@ -61,6 +65,7 @@ mkdir -p "$BUILD_DIR"
 echo "=== $(iverilog -V 2>&1 | head -1) ==="
 echo "=== netlist: layout/experimental/logic_tile_routed.synth.v sha256 $(sha256sum "$NETLIST" | cut -d' ' -f1) ==="
 echo "=== models: $CELL_DIR sha256(sky130_fd_sc_hd.v) $(sha256sum "$CELL_DIR/sky130_fd_sc_hd.v" | cut -d' ' -f1) ==="
+echo "=== simulation wall-clock budget: $(gs_budget)s per run (SIM_TIMEOUT_SECONDS), kill grace $(gs_kill_after)s ==="
 
 build() {  # build <netlist> <out.vvp>
     iverilog -g2012 -s "$TB_NAME" -I "$REPO_ROOT/sim" -o "$2" \
@@ -73,8 +78,10 @@ build() {  # build <netlist> <out.vvp>
 # PASS | FUNC_FAIL | INFRA (classification lives in gate_sim_verdict.sh)
 run_vvp() {
     local vvp_bin="$1" bin="$2" wiring="$3" dname="$4" log="$5" rc=0
-    ${GATE_SIM_VVP:-vvp} "$vvp_bin" +bin="$bin" +map="$BS_DIR/logic4_configmem.map" +wiring="$wiring" \
-        +design="$dname" +mutate >"$log" 2>&1 || rc=$?
+    # bounded by SIM_TIMEOUT_SECONDS (issue #157): a timeout is rc 124/137 -> INFRA
+    gs_run_bounded "$(basename "$bin")[$dname]" "$log" \
+        ${GATE_SIM_VVP:-vvp} "$vvp_bin" +bin="$bin" +map="$BS_DIR/logic4_configmem.map" +wiring="$wiring" \
+        +design="$dname" +mutate || rc=$?
     gs_classify "$rc" "$log" "$TB_NAME" "$dname"
 }
 
