@@ -534,13 +534,20 @@ variants, `reg_sel` mux forced or inverted, slice-index swaps in `logic_tile.v`
 and `logic_tile_routed.v`, `cfg` index shifts/swaps/tie-offs, and switch-matrix
 select/source mutations) to a **copy** of `design/rtl/` in the gitignored
 `sim/build/mutation/`, rebuilds every testbench with iverilog for each mutant,
-and requires at least one to report non-PASS. A baseline run of the unmutated
+and requires at least one to complete with a functional FAIL. A baseline run of the unmutated
 copy must pass first. Mutants run strictly serially (about a minute; iverilog
 and python3 only). It is not part of the default `./sim/run.sh` path.
 
 - Exit status is non-zero if any non-allowlisted mutant survives (the failure
   names it), if an allowlisted mutant is actually killed (stale entry), or if a
   mutation no longer applies to the RTL.
+- A kill is only a *completed* functional FAIL (issue #164): vvp exit 0 and
+  exactly one terminal FAIL summary for that bench. A crash, empty output,
+  loader/setup FAIL, missing/duplicate/conflicting PASS+FAIL verdict or timeout
+  is reported as `ERROR` (never a kill) and fails the invocation, including
+  when the baseline passed. `classify()` in `sim/mutation.py` mirrors
+  `gs_classify` in `flow/gate_sim_verdict.sh`; `sim/test_mutation_verdict.py`
+  (stub simulators, run in `rtl-sim.yml`) covers each case.
 - Equivalent mutants go in `sim/mutation_allowlist.txt` as
   `ID | one-line justification`; they are never silently dropped.
 - `--record` appends a dated entry to `sim/rtl_mutation_results.txt`
