@@ -24,3 +24,24 @@
             -> FAIL: configmem_fabulous_equiv -- 2525 failures / 7274 checks
     map   : ConfigBits[100] <-> ConfigBits[101] output swap
             -> FAIL: configmem_fabulous_equiv -- 2680 failures / 7274 checks
+
+2026-10-10  design/fabulous/tb_configmem_equiv.v  (issue #195: transparent-open phase)
+  SCOPE : frame STORAGE only; same DUT, REF and sha256 values as the entry above (unchanged).
+          No timing claim. Generated config_latch confirmed level-sensitive
+          (always @(*) with if (E == 1'b1), no posedge/negedge) by flow/fabulous.sh before the run.
+  Method: previous checks retained. New phase, per populated frame (5 frames): strobe rises
+          with data present, then FrameData changes (ones, zeros, aaaa, 5555, ones, walking
+          one and walking zero on all 32 bits, 8 random) with the one-hot strobe held high;
+          ConfigBits and ConfigBits_N compared after each settled change (other frames must
+          retain); strobe released, then FrameData changed 6 times with retention checked.
+          Coverage requires every one of the 158 mapped bits to change value while its strobe
+          stayed asserted.
+  Result: PASS: configmem_fabulous_equiv -- 7708 checks, 17 baseline streams, 0 failures; transparent-open: 5 frames, 158/158 mapped bits changed under asserted strobe, 385 settled changes, 430 checks, 0 failures
+  Scratch mutations (flow/fabulous.sh fails if any passes, if a run does not complete, or if
+  an edge-storage mutant is not caught by transparent-open failures):
+    select: -> FAIL: configmem_fabulous_equiv -- 3019 failures / 7708 checks (174 transparent-open failures / 430 checks)
+    map   : -> FAIL: configmem_fabulous_equiv -- 2877 failures / 7708 checks (98 transparent-open failures / 430 checks)
+    rise  : config_latch -> always @(posedge E) storage (scratch models_pack.v copy)
+            -> FAIL: configmem_fabulous_equiv -- 458 failures / 7708 checks (428 transparent-open failures / 430 checks)
+    fall  : config_latch -> always @(negedge E) storage (scratch models_pack.v copy)
+            -> FAIL: configmem_fabulous_equiv -- 383 failures / 7708 checks (383 transparent-open failures / 430 checks)

@@ -205,7 +205,11 @@ the generated `LOGIC4_ConfigMem.v` (latches, scratch only) through its real
 unused positions), then replays the frame payloads of every committed baseline
 stream (unpacked by the simulation-only `flow/configmem_frames.py`) against the
 recorded `.cfg` vectors. `flow/fabulous.sh` also mutates a scratch copy (frame
-select, output mapping) and requires the bench to fail. This verifies frame
+select, output mapping) and requires the bench to fail. Issue #195 adds a
+transparent-open phase (one-hot strobe held high while `FrameData` changes, every
+mapped bit checked to follow, other frames and complements checked, then release
+and retention) and scratch rising-edge / falling-edge `config_latch` models that
+must fail in that phase; the generated latch is confirmed level-sensitive first. This verifies frame
 storage only, not a hardware serial receiver. Record:
 `sim/configmem_fabulous_equiv.txt`.
 

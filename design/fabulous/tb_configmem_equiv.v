@@ -6,6 +6,9 @@
 // not verify any hardware serial receiver / stream controller (none exists).
 // The generated config_latch (Fabric/models_pack.v) is the unmodified model.
 //
+// Issue #195: a transparent-open phase holds one-hot FrameStrobe high while FrameData
+// changes, so edge-triggered storage cannot pass.
+//
 // Plusargs: +map=<file> +vec=<baseline vector file from flow/configmem_frames.py>
 `timescale 1ns/1ps
 module tb;
@@ -19,6 +22,11 @@ module tb;
     integer pos2cb [0:NF*FB-1];
     reg [NB-1:0] exp;
     integer checks = 0, fails = 0;
+    // transparent-open phase (issue #195): failures counted separately so the runner
+    // can require edge-storage mutants to be caught by this phase specifically
+    integer tphase = 0, tfails = 0, tchecks = 0, tframes = 0, tbits = 0, topen = 0;
+    reg [NB-1:0] tprev;      // previous settled value, to detect a real change
+    reg [NB-1:0] tmoved;     // bit changed value while its strobe stayed asserted
     integer fh, r, a, b, i, f, k, n;
     reg [1023:0] mapf, vecf;
     reg [FB-1:0] d, dv;
@@ -29,8 +37,10 @@ module tb;
     task check(input [127:0] what);
         begin
             checks = checks + 1;
+            if (tphase) tchecks = tchecks + 1;
             if (CB !== exp || CBN !== ~exp) begin
                 fails = fails + 1;
+                if (tphase) tfails = tfails + 1;
                 if (fails < 10)
                     $display("FAIL %0s: ConfigBits %h expected %h (N ok=%b)", what, CB, exp, (CBN === ~exp));
             end
@@ -48,6 +58,54 @@ module tb;
             for (q = 0; q < FB; q = q + 1)
                 if (pos2cb[fr*FB+q] >= 0) exp[pos2cb[fr*FB+q]] = data[q];
             FrameData = ~data ^ 32'h5a5a_a5a5; #1;
+        end
+    endtask
+
+    // Transparent-open step: with the strobe of frame fr already high, drive new
+    // FrameData, let it settle, and require ConfigBits/ConfigBits_N to follow it at
+    // once (level-sensitive latch) while every other frame keeps its state.
+    task topen_step(input integer fr, input [FB-1:0] data, input [127:0] what);
+        integer q;
+        begin
+            FrameData = data; #1;
+            for (q = 0; q < FB; q = q + 1)
+                if (pos2cb[fr*FB+q] >= 0) exp[pos2cb[fr*FB+q]] = data[q];
+            topen = topen + 1;
+            check(what);
+            for (q = 0; q < FB; q = q + 1)
+                if (pos2cb[fr*FB+q] >= 0 && CB[pos2cb[fr*FB+q]] !== tprev[pos2cb[fr*FB+q]]
+                    && CB[pos2cb[fr*FB+q]] === data[q]) tmoved[pos2cb[fr*FB+q]] = 1'b1;
+            tprev = exp;
+        end
+    endtask
+
+    // Per populated frame: strobe held high across many FrameData changes, then
+    // release and prove retention while FrameData keeps changing.
+    task transparent_frame(input integer fr);
+        integer j;
+        begin
+            write(fr, 32'h0); check("topen-prep");
+            FrameData = 32'h0f0f_3c3c; #1;
+            FrameStrobe = {NF{1'b0}}; FrameStrobe[fr] = 1'b1; #1;   // strobe rises, data already present
+            for (j = 0; j < FB; j = j + 1)
+                if (pos2cb[fr*FB+j] >= 0) exp[pos2cb[fr*FB+j]] = FrameData[j];
+            check("topen-rise");
+            tprev = exp;
+            topen_step(fr, 32'hffff_ffff, "topen-ones");
+            topen_step(fr, 32'h0000_0000, "topen-zeros");
+            topen_step(fr, 32'haaaa_aaaa, "topen-a");
+            topen_step(fr, 32'h5555_5555, "topen-5");
+            topen_step(fr, 32'hffff_ffff, "topen-ones2");
+            for (j = 0; j < FB; j = j + 1) begin      // walking one, strobe still high
+                topen_step(fr, 32'h1 << j, "topen-walk1");
+                topen_step(fr, ~(32'h1 << j), "topen-walk0");
+            end
+            for (j = 0; j < 8; j = j + 1) topen_step(fr, $random, "topen-rand");
+            FrameStrobe = {NF{1'b0}}; #1;              // release: last value is held
+            check("topen-release");
+            for (j = 0; j < 6; j = j + 1) begin
+                FrameData = (j == 0) ? ~FrameData : $random; #1; check("topen-retain");
+            end
         end
     endtask
 
@@ -121,6 +179,20 @@ module tb;
         for (f = 5; f < NF; f = f + 1) begin write(f, 32'h0); check("unused-zero"); end
         // Data changes with no strobe leave storage alone.
         for (i = 0; i < 64; i = i + 1) begin FrameData = $random; #1; check("nostrobe"); end
+        // Transparent-open phase (issue #195): level-sensitive behavior while strobe stays high.
+        tphase = 1; tmoved = {NB{1'b0}};
+        for (f = 0; f < NF; f = f + 1) begin
+            k = 0;
+            for (i = 0; i < FB; i = i + 1) if (pos2cb[f*FB+i] >= 0) k = k + 1;
+            if (k > 0) begin tframes = tframes + 1; transparent_frame(f); end
+        end
+        tphase = 0;
+        tbits = 0;
+        for (i = 0; i < NB; i = i + 1) if (tmoved[i]) tbits = tbits + 1;
+        if (tbits != NB || tframes < 1) begin
+            fails = fails + 1; tfails = tfails + 1;
+            $display("FAIL: transparent-open coverage %0d/%0d mapped bits, %0d frames", tbits, NB, tframes);
+        end
         // Randomized frame-write sequences against the map model.
         for (i = 0; i < 5000; i = i + 1) begin write($unsigned($random) % NF, $random); check("random"); end
 
@@ -142,8 +214,8 @@ module tb;
         if (n > 0) check_final;
         $fclose(fh);
         if (n < 2) begin fails = fails + 1; $display("FAIL: only %0d baseline streams replayed", n); end
-        if (fails == 0) $display("PASS: configmem_fabulous_equiv -- %0d checks, %0d baseline streams, 0 failures", checks, n);
-        else $display("FAIL: configmem_fabulous_equiv -- %0d failures / %0d checks", fails, checks);
+        if (fails == 0) $display("PASS: configmem_fabulous_equiv -- %0d checks, %0d baseline streams, 0 failures; transparent-open: %0d frames, %0d/%0d mapped bits changed under asserted strobe, %0d settled changes, %0d checks, 0 failures", checks, n, tframes, tbits, NB, topen, tchecks);
+        else $display("FAIL: configmem_fabulous_equiv -- %0d failures / %0d checks (%0d transparent-open failures / %0d checks)", fails, checks, tfails, tchecks);
         $finish;
     end
 endmodule

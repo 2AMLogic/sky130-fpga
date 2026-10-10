@@ -96,7 +96,9 @@ grep -q '^PASS: switch_matrix_fabulous_equiv' "$BUILD/sm_tb.out"
 # sim/bitstream/logic4_configmem.map, then the committed baseline streams'
 # frame payloads are replayed and compared with their recorded .cfg vectors.
 # FRAME STORAGE ONLY -- not a hardware serial receiver. Fails on compile error
-# or missing PASS; two scratch mutations (frame select, output mapping) must FAIL.
+# or missing PASS; four scratch mutations (frame select, output mapping,
+# rising-edge and falling-edge storage in place of the transparent latch) must FAIL; the
+# edge-storage ones must be caught by the transparent-open phase (issue #195).
 echo "=== ConfigMem storage equivalence (iverilog) ==="
 CM_V="$RUN/Tile/LOGIC4/LOGIC4_ConfigMem.v"
 CM_VEC="$BUILD/configmem_vectors.txt"
@@ -108,14 +110,25 @@ echo "PASS: test_configmem_frames ($(grep -o '^Ran [0-9]* tests' "$BUILD/test_co
 # strict adapter: a rejected stream exits nonzero (set -e) and leaves no vector file content
 python3 "$REPO/flow/configmem_frames.py" "$REPO/sim/bitstream" > "$CM_VEC" \
     || { echo "error: ConfigMem frame adapter rejected a committed stream (see stderr above)" >&2; exit 1; }
-cm_run() {  # $1 = ConfigMem file, $2 = output prefix; nonzero = did not complete
+cm_run() {  # $1 = ConfigMem file, $2 = output prefix, $3 = models file (default: generated); nonzero = did not complete
     iverilog -g2005 -o "$2_tb" "$REPO/design/fabulous/tb_configmem_equiv.v" "$1" \
-        "$RUN/Fabric/models_pack.v" || return 1
+        "${3:-$RUN/Fabric/models_pack.v}" || return 1
     gs_run_bounded_tee "ConfigMem equivalence $(basename "$2")" "$2.out" \
         vvp "$2_tb" +map="$REPO/sim/bitstream/logic4_configmem.map" +vec="$CM_VEC"
 }
 cm_run "$CM_V" "$BUILD/cm" || { echo "error: ConfigMem equivalence run failed (see $BUILD/cm.out)" >&2; exit 1; }
 grep -q '^PASS: configmem_fabulous_equiv' "$BUILD/cm.out"
+grep -q 'transparent-open: [1-9][0-9]* frames, 158/158 mapped bits changed under asserted strobe' "$BUILD/cm.out" \
+    || { echo "error: transparent-open phase did not report full mapped-bit coverage (see $BUILD/cm.out)" >&2; exit 1; }
+# the pinned generated config_latch must be level-sensitive (always @(*) if (E)), not edge-triggered
+python3 - "$RUN/Fabric/models_pack.v" <<'PYEOF'
+import re, sys
+m = re.search(r"module config_latch\b.*?endmodule", open(sys.argv[1]).read(), re.S)
+assert m, "config_latch not found in generated models_pack.v"
+b = m.group(0)
+assert re.search(r"always\s*@\(\s*\*\s*\)", b) and not re.search(r"posedge|negedge", b), \
+    "generated config_latch is not a level-sensitive latch"
+PYEOF
 echo "--- scratch mutations of the generated ConfigMem (each must be caught) ---"
 # (1) frame select: bit of frame 2 latched by frame 3's strobe
 python3 - "$CM_V" "$BUILD/cm_mut_select.v" "$BUILD/cm_mut_map.v" <<'PYEOF'
@@ -129,10 +142,25 @@ b = b.replace("ConfigBits_N[100]", "ConfigBits_N[@@]").replace("ConfigBits_N[101
 assert a != src and b != src
 open(sys.argv[2], "w").write(a); open(sys.argv[3], "w").write(b)
 PYEOF
-for m in select map; do
+# (2) storage kind (issue #195): scratch copies of models_pack.v whose config_latch is
+# rising-edge / falling-edge storage instead of a transparent latch. ConfigMem is unmodified.
+python3 - "$RUN/Fabric/models_pack.v" "$BUILD/cm_models_rise.v" "$BUILD/cm_models_fall.v" <<'PYEOF'
+import re, sys
+src = open(sys.argv[1]).read()
+m = re.search(r"module config_latch\b.*?endmodule", src, re.S)
+assert m
+for out, edge in ((sys.argv[2], "posedge"), (sys.argv[3], "negedge")):
+    mod = ("module config_latch (input wire D, E, output reg Q, QN);\n"
+           "    always @(%s E) begin Q <= D; QN <= ~D; end\n"
+           "endmodule" % edge)
+    open(out, "w").write(src.replace(m.group(0), mod))
+PYEOF
+cp "$CM_V" "$BUILD/cm_mut_rise.v"; cp "$CM_V" "$BUILD/cm_mut_fall.v"
+for m in select map rise fall; do
     # a mutation is caught only by a COMPLETED run reporting FAIL: a compile error,
     # simulator error or wall-clock timeout (issue #157) is an infrastructure failure
-    rc=0; cm_run "$BUILD/cm_mut_$m.v" "$BUILD/cm_mut_$m" >/dev/null 2>"$BUILD/cm_mut_$m.err" || rc=$?
+    mdl=""; case "$m" in rise) mdl="$BUILD/cm_models_rise.v";; fall) mdl="$BUILD/cm_models_fall.v";; esac
+    rc=0; cm_run "$BUILD/cm_mut_$m.v" "$BUILD/cm_mut_$m" $mdl >/dev/null 2>"$BUILD/cm_mut_$m.err" || rc=$?
     if [[ "$rc" -ne 0 ]]; then
         cat "$BUILD/cm_mut_$m.err" >&2
         echo "ConfigMem mutation '$m': run did not complete (rc=$rc; infrastructure failure, not a caught mutation; see $BUILD/cm_mut_$m.out)" >&2
@@ -141,6 +169,11 @@ for m in select map; do
     if grep -q '^PASS' "$BUILD/cm_mut_$m.out"; then
         echo "ConfigMem mutation '$m' was NOT caught" >&2; exit 1; fi
     grep -q '^FAIL' "$BUILD/cm_mut_$m.out" || { echo "mutation '$m' did not produce a bench FAIL" >&2; exit 1; }
+    if [[ "$m" == rise || "$m" == fall ]]; then
+        # must be caught by the transparent-open phase specifically (completed functional verdict)
+        grep -Eq '\([1-9][0-9]* transparent-open failures' "$BUILD/cm_mut_$m.out" \
+            || { echo "ConfigMem mutation '$m' not caught by the transparent-open phase" >&2; exit 1; }
+    fi
     echo "mutation '$m' caught: $(grep '^FAIL: configmem' "$BUILD/cm_mut_$m.out")"
 done
 
