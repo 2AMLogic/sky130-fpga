@@ -112,3 +112,42 @@ gs_classify() {
     elif [[ "$n_func" -eq 1 && "$n_fail" -eq 1 && "$n_pass" -eq 0 ]]; then echo FUNC_FAIL
     else echo INFRA; fi
 }
+
+# gs_classify_configmem <rc> <log>   (issue #196)
+# Verdict for design/fabulous/tb_configmem_equiv.v, which ends setup errors
+# with $finish (exit 0). Prints PASS, FUNC_FAIL or INFRA.
+#   PASS      rc 0, exactly one "PASS: configmem_fabulous_equiv -- N checks,
+#             S baseline streams, 0 failures[; transparent-open: ...]" (N>0), no
+#             FAIL/ERROR line at all.
+#   FUNC_FAIL rc 0, exactly one "FAIL: configmem_fabulous_equiv -- M failures /
+#             N checks[ (T transparent-open failures / C checks)]" with M>0 and
+#             N>0, no PASS line, no ERROR line, and no
+#             FAIL line other than ordinary per-check mismatch lines
+#             ("FAIL <what>: ...", no colon directly after FAIL).
+#   INFRA     everything else: nonzero exit / crash / timeout (even after a
+#             verdict), empty or missing log, setup ERROR or legacy "FAIL:"
+#             setup lines, missing / duplicate / conflicting summaries, zero
+#             counts, TIMEOUT/INFRA markers. Only FUNC_FAIL counts as a kill.
+gs_classify_configmem() {
+    local rc="$1" log="$2"
+    # optional suffixes: issue #195 transparent-open phase report
+    local pass_re='^PASS: configmem_fabulous_equiv -- ([0-9]+) checks, ([0-9]+) baseline streams, 0 failures(; transparent-open: [0-9]+ frames, [0-9]+/[0-9]+ mapped bits changed under asserted strobe, [0-9]+ settled changes, [0-9]+ checks, 0 failures)?$'
+    local func_re='^FAIL: configmem_fabulous_equiv -- ([0-9]+) failures / ([0-9]+) checks( \([0-9]+ transparent-open failures / [0-9]+ checks\))?$'
+    local n_pass_any n_pass n_func n_colon n_err line
+    if [[ "$rc" != 0 || ! -s "$log" ]]; then echo INFRA; return 0; fi
+    n_pass_any="$(grep -c -E '^PASS' "$log" || true)"
+    n_pass="$(grep -c -E "$pass_re" "$log" || true)"
+    n_func="$(grep -c -E "$func_re" "$log" || true)"
+    n_colon="$(grep -c -E '^FAIL:' "$log" || true)"
+    n_err="$(grep -c -E '^(ERROR|TIMEOUT|INFRA)' "$log" || true)"
+    if [[ "$n_err" -ne 0 ]]; then echo INFRA; return 0; fi
+    if [[ "$n_pass" -eq 1 && "$n_pass_any" -eq 1 && "$n_func" -eq 0 \
+          && "$(grep -c -E '^FAIL' "$log" || true)" -eq 0 ]]; then
+        line="$(grep -E "$pass_re" "$log")"
+        [[ "$line" =~ $pass_re && "${BASH_REMATCH[1]}" -gt 0 ]] && echo PASS || echo INFRA
+    elif [[ "$n_func" -eq 1 && "$n_colon" -eq 1 && "$n_pass_any" -eq 0 ]]; then
+        line="$(grep -E "$func_re" "$log")"
+        [[ "$line" =~ $func_re && "${BASH_REMATCH[1]}" -gt 0 && "${BASH_REMATCH[2]}" -gt 0 ]] \
+            && echo FUNC_FAIL || echo INFRA
+    else echo INFRA; fi
+}
