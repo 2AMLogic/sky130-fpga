@@ -4,6 +4,8 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-10-10
 
+- **PR #201**: verification: validate ConfigMem map and transaction input before functional verdicts (#200)
+- **Issue #200** (closed): Verification: validate ConfigMem transaction and map inputs before functional verdicts
 - **PR #198**: Verification: require completed functional summaries for ConfigMem mutation kills
 - **PR #199**: G5: verify ConfigMem latch transparency while FrameStrobe is asserted
 - **Issue #196** (closed): Verification: require completed functional summaries for ConfigMem mutation kills
