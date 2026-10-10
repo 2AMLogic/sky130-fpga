@@ -3,6 +3,10 @@
 # flow/nextpnr.sh in their default (verify, non --update-log) mode; either
 # script exits non-zero if its normalized log differs from the committed copy.
 #
+# The pull_request paths list is the explicit dependency list of flow/fabulous.sh
+# and flow/generated_tile_replay.sh (RTL compiled, helpers run or sourced,
+# testbenches, fixtures, pins); keep it in step when either script gains an input.
+#
 # Separate from signoff.yml and rtl-sim.yml on purpose (those are not edited
 # for unrelated checks). Path-filtered only, no push/schedule trigger.
 #
@@ -16,13 +20,19 @@ on:
   pull_request:
     paths:
       - 'design/fabulous/**'
+      # Generated-versus-repository replay inputs (flow/generated_tile_replay.sh):
+      # BEL equivalence, switch-matrix differential and repository composition.
       - 'design/rtl/lut4_slice.v'
+      - 'design/rtl/logic_tile_switch_matrix.v'
+      - 'design/rtl/logic_tile_routed.v'
       - 'flow/fabulous.sh'
       - 'flow/fabulous_summary.py'
       - 'flow/configmem_frames.py'
       - 'flow/generated_tile_replay.sh'
       - 'flow/gate_sim_verdict.sh'
       - 'flow/pin_fixtures.py'
+      - 'flow/check_regbel_fixtures.py'
+      - 'flow/pin_experiment.py'
       - 'sim/tb_logic_tile_bitstream.v'
       - 'flow/nextpnr.sh'
       - 'flow/nextpnr_io_overlay.py'

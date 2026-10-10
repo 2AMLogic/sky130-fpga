@@ -186,7 +186,16 @@ the `flow/sdf-resim.sh` leg was not re-examined.
 toolchain, so it is exactly reproducible on a stock runner and fails on a
 drifted claim or pinned script hash (the #53 failure mode). Other workflows:
 `signoff.yml` (manifest re-grade), `rtl-sim.yml` (Icarus testbenches),
-`fabulous-nextpnr.yml` (G1 logs).
+`fabulous-nextpnr.yml` (G1 logs, plus the generated-versus-repository
+replay: `flow/fabulous.sh` runs `flow/generated_tile_replay.sh`, which replays
+every committed stream on the FABulous-generated LOGIC4 tile and on the
+repository composition `design/rtl/logic_tile_routed.v`, so the workflow's
+`pull_request` paths list names both composition RTL files
+(`logic_tile_routed.v`, `logic_tile_switch_matrix.v`), `lut4_slice.v`, the
+testbench, the fixtures, and every helper the replay runs or sources
+(`gate_sim_verdict.sh`, `check_regbel_fixtures.py`, `pin_fixtures.py` (which loads `pin_experiment.py`),
+`fasm_to_bitstream.py`, `configmem_frames.py`). A change to any one of them
+alone selects the job; extend that list when the scripts gain an input).
 
 Not run in CI, and why (recorded as the finding of issue #109 rather than
 weakening any check mode):
