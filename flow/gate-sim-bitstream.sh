@@ -22,6 +22,8 @@
 #   SIM_TIMEOUT_SECONDS=<n> / SIM_KILL_AFTER_SECONDS=<n> override the per-run
 #   wall-clock budget (flow/gate_sim_verdict.sh, issue #157); a run that
 #   exceeds it is an infrastructure failure, never a negative-control rejection
+# Since issue #177 it also replays the 73-stream LUT-address basis (flow/lut_basis.py,
+# sim/tb_lut_basis.v) in one live instance via the flat cfg port (simulation-only loader).
 # Exit: nonzero on missing iverilog/vvp, missing PDK models, compile error,
 # simulation error, missing PASS line, or (with --negative) a negative case
 # that is wrongly accepted OR whose run did not complete with the terminal
@@ -161,6 +163,62 @@ fi
 echo "=== pin-experiment fixtures at gate level (sim/bitstream/pin_experiment, zero delay, +mutate) ==="
 "$REPO_ROOT/sim/pin_fixture_replay.sh" "$BUILD_DIR/$TB_NAME.vvp" gate || status=1
 
+# ---- LUT-address basis (issue #177): the 73 diagnostic streams of flow/lut_basis.py
+# (4 BELs x 16 addresses, all-ones, clearing cases) replayed in ONE live instance of the
+# committed synthesized netlist by sim/tb_lut_basis.v, with that bench's independent
+# oracle (expected output from the case identifier only). Diagnostic streams, not
+# mapper output. SCOPE: the netlist exposes the flat cfg port, so the bench's
+# simulation-only stream-to-cfg loader drives it; generated ConfigMem is NOT in this
+# netlist, and nothing here is a timing or ratified-fabric claim.
+LB_NAME="tb_lut_basis"
+LB="$BUILD_DIR/lut_basis"
+LB_VVP="$BUILD_DIR/$LB_NAME.vvp"
+LB_COV_RE='^COVERAGE: 4 BELs x 16 addresses = 64/64 one-hot cases; 4 all-ones, 5 all-zero cases; 73 cases loaded in sequence into one live tile$'
+rm -rf "$BUILD_DIR/lut_basis" "$BUILD_DIR/lut_basis_wrong"; mkdir -p "$LB"
+echo "=== LUT-address basis at gate level (issue #177): 4 BELs x 16 addresses, 73 streams, one live instance, zero delay ==="
+# basis_run <dir> <log>: one bounded run of all cases in <dir>; prints PASS | FUNC_FAIL | INFRA
+basis_run() {
+    local dir="$1" log="$2" rc=0
+    gs_run_bounded "$LB_NAME[basis]" "$log" ${GATE_SIM_VVP:-vvp} "$LB_VVP" \
+        +dir="$dir" +list="$LB/cases.txt" +wiring="$LB/basis.wiring" +map="$BS_DIR/logic4_configmem.map" || rc=$?
+    gs_classify "$rc" "$log" "$LB_NAME" basis
+}
+# basis_cfg_ok <dir> <log>: every case's loaded cfg == the stream's python decode
+basis_cfg_ok() {
+    local id got
+    while read -r id _; do
+        got="$(grep -m1 "^CFG $id " "$2" | cut -d' ' -f3)"
+        if [[ -z "$got" || "$got" != "$(tr -d '\n' < "$1/$id.cfg")" ]]; then
+            echo "  case $id: readback '$got' != decoded $(tr -d '\n' < "$1/$id.cfg")" >&2; return 1
+        fi
+    done < "$LB/cases.txt"
+}
+basis_gate_ok=0
+if ! python3 -I "$SCRIPT_DIR/lut_basis.py" "$LB" --snapshot "$BS_DIR/fabric_spec.json" >"$BUILD_DIR/lut_basis_gen.log" 2>&1; then
+    echo "error: LUT basis stream generation failed (see $BUILD_DIR/lut_basis_gen.log)" >&2; status=1
+elif [[ "$(wc -l < "$LB/cases.txt")" -ne 73 ]]; then
+    echo "error: expected 73 LUT basis cases" >&2; status=1
+elif ! iverilog -g2012 -s "$LB_NAME" -I "$REPO_ROOT/sim" -o "$LB_VVP" \
+        "$REPO_ROOT/sim/$LB_NAME.v" "$NETLIST" "$CELL_DIR/primitives.v" "$CELL_DIR/sky130_fd_sc_hd.v" \
+        2>"$BUILD_DIR/lut_basis_build.log"; then
+    echo "error: compile of the gate-level basis bench failed (see $BUILD_DIR/lut_basis_build.log)" >&2; status=1
+else
+    lb_log="$BUILD_DIR/${LB_NAME}_gate.log"
+    v="$(basis_run "$LB" "$lb_log")"
+    if [[ "$v" != PASS ]] || ! grep -qE "$LB_COV_RE" "$lb_log" \
+       || [[ "$(grep -c '^COVERAGE: BEL [A-D]: 16/16 addresses' "$lb_log")" -ne 4 ]]; then
+        echo "error: gate-level LUT basis did not complete with PASS and full coverage (verdict $v; see $lb_log)" >&2
+        tail -n 8 "$lb_log" >&2 || true; status=1
+    elif ! basis_cfg_ok "$LB" "$lb_log"; then
+        echo "error: gate-level LUT basis: loaded cfg != python decode" >&2; status=1
+    else
+        basis_gate_ok=1
+        grep '^COVERAGE' "$lb_log" | sed 's/^/  /'
+        echo "  $(grep -m1 '^PASS' "$lb_log")"
+        echo "=== LUT basis at gate level: PASS, 64/64 (BEL, address) one-hot cases, cfg == decode for all 73 streams ==="
+    fi
+fi
+
 if [[ "$NEGATIVE" -eq 1 ]]; then
     echo "=== negative checks (each MUST be reported as FAIL by the same pass criterion) ==="
     # neg_verdict <label> <verdict> <log>: prints OK line and returns 0 on FUNC_FAIL;
@@ -182,6 +240,29 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
     # judged against the casc_fan oracle and wiring.
     v="$(run_vvp "$BUILD_DIR/$TB_NAME.vvp" "$CORPUS_DIR/casc2_s1.bin" "$CORPUS_DIR/casc_fan_s1.wiring" casc_fan "$BUILD_DIR/neg_wrong_corpus.log")"
     neg_check "N3 (wrong corpus bitstream vs oracle)" "$v" "$BUILD_DIR/neg_wrong_corpus.log" || status=1
+    # N6 (issue #177): wrong program that still parses and completes -- in a scratch copy of
+    # the basis directory the stream of A_a05 is replaced by that of A_a06 while the case list
+    # (and therefore the identifier-derived oracle) is unchanged. Must give a completed
+    # functional FAIL on exactly case A_a05 (loader/simulator errors are infrastructure failures).
+    if [[ "$basis_gate_ok" -ne 1 ]]; then
+        echo "error: negative N6 skipped: the positive gate-level basis leg did not pass" >&2; status=1
+    else
+        NB="$BUILD_DIR/lut_basis_wrong"; cp -r "$LB" "$NB"
+        cp "$LB/A_a06.bin" "$NB/A_a05.bin"
+        cp "$LB/A_a06.cfg" "$NB/A_a05.cfg"
+        v="$(basis_run "$NB" "$BUILD_DIR/neg_basis_wrong_program.log")"
+        neg_check "N6 (basis A_a05 stream replaced by A_a06's)" "$v" "$BUILD_DIR/neg_basis_wrong_program.log" || status=1
+        if [[ "$v" == FUNC_FAIL ]]; then
+            got="$(sed -n 's/^  case \([A-Za-z0-9_]*\): [0-9]* mismatches$/\1/p' "$BUILD_DIR/neg_basis_wrong_program.log" | sort | xargs)"
+            if [[ "$got" != "A_a05" ]]; then
+                echo "error: negative N6 failing cases [$got] != predicted [A_a05]" >&2; status=1
+            elif ! basis_cfg_ok "$NB" "$BUILD_DIR/neg_basis_wrong_program.log"; then
+                echo "error: negative N6 loaded cfg != decode of the substituted streams" >&2; status=1
+            else
+                echo "negative N6 failing cases == predicted (A_a05 only, 1/73)"
+            fi
+        fi
+    fi
     # N4/N5: pin-experiment fixture defects (missing file, empty index, function-changing
     # LUT INIT corruption) must fail the gate-level replay too.
     "$REPO_ROOT/sim/pin_fixture_negative.sh" "$BUILD_DIR/$TB_NAME.vvp" gate || status=1
@@ -216,4 +297,4 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
 fi
 
 if [[ "$status" -ne 0 ]]; then echo "=== gate-sim-bitstream FAILED ===" >&2; exit 1; fi
-echo "=== ${TB_NAME} PASSES gate-level, zero delay, baseline + ${n_corpus} corpus + 3 pin-experiment fixtures (functional observation only; no timing claim) ==="
+echo "=== ${TB_NAME} PASSES gate-level, zero delay, baseline + ${n_corpus} corpus + 3 pin-experiment fixtures + 73-stream LUT-address basis (functional observation only; no timing claim) ==="

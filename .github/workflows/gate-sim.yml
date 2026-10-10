@@ -9,6 +9,10 @@
 # result fails the job (the --negative mode additionally proves the pass
 # criterion rejects a wrong bitstream and a corrupted netlist).
 #
+# Since issue #177 the bitstream gate also replays the 73-stream LUT-address basis
+# (flow/lut_basis.py -> sim/tb_lut_basis.v; consumes flow/fasm_to_bitstream.py and
+# sim/bitstream/fabric_spec.json + logic4_configmem.map) against the same netlist.
+#
 # Label: experimental same-index switch matrix (ADR-0004/0005 Proposed),
 # zero-delay, functional only. No SDF/timing and no ratified-fabric claim;
 # this workflow only schedules checks that already exist.
@@ -42,6 +46,10 @@ on:
       - 'design/rtl/**'
       - 'layout/experimental/**'
       - 'sim/tb_logic_tile*.v'
+      - 'sim/tb_lut_basis.v'
+      - 'flow/lut_basis.py'
+      - 'flow/fasm_to_bitstream.py'
+      - 'flow/check_regbel_fixtures.py'
       - 'sim/bitstream/**'
       - 'flow/gate-sim-bitstream.sh'
       - 'flow/gate_sim_verdict.sh'

@@ -99,3 +99,19 @@
       corpus fixtures replayed at gate level: 15/15 PASS ; pin-experiment 3/3 PASS ; negatives N1-N3 and pin N-a..N-c unchanged
   flow/check_regbel_fixtures.py now runs first (fixture-metadata gate). Not covered: timing/SDF,
     ratified fabric, inter-tile routing.
+
+2026-10-10  ./flow/gate-sim-bitstream.sh --negative @ issue #177 (EXPERIMENTAL, zero delay, functional observation only)
+  Simulator: Icarus Verilog 13.0 (stable) (v13_0). Netlist layout/experimental/logic_tile_routed.synth.v
+    sha256 0e7d4c702b06c7f4a3272cc60a95f4e1ec96c2fec7d74da66727738534a99f22; sky130_fd_sc_hd.v sha256
+    12d5d6448ccf265c544d88402d5c10ab6de9bee8b8cde48eee1f31ea8c3c3e45 (primitives.v pinned in gate-sim.yml).
+  Added a LUT-address basis leg: flow/lut_basis.py streams (73) replayed by sim/tb_lut_basis.v in one live
+    instance of the synthesized netlist, independent identifier-derived oracle:
+      PASS (28032 checks, 0 failures; 73/73 cases); coverage 4 BELs x 16 addresses = 64/64 one-hot cases,
+      4 all-ones, 5 all-zero (clearing) cases; each one-hot case on 16 vectors x 6 unrouted-track values x
+      4 BEL outputs; loaded cfg == python decode for all 73 streams.
+  Negative N6 (wrong program that parses and completes): A_a05.bin replaced by A_a06's, case list/oracle
+    unchanged -> completed functional FAIL (28032 checks, 12 failures) on exactly case A_a05.
+  Scope: the netlist has the flat cfg port, driven by the bench's simulation-only stream-to-cfg loader;
+    generated ConfigMem/frame storage is NOT in the gate netlist. Diagnostic streams, not mapper output.
+    Existing fixtures and N1-N5 unchanged and passing. Not covered: timing/SDF, ratified fabric, inter-tile.
+

@@ -380,6 +380,17 @@ but the PDK models are not available in `rtl-sim.yml`, so it is deliberately
 
 ## Bitstream-driven gate-level coverage (issue #119, EXPERIMENTAL)
 
+**LUT-address basis leg (issue #177).** The same script also replays the 73
+`flow/lut_basis.py` streams (4 BELs x 16 addresses, all-ones, clearing cases)
+through `sim/tb_lut_basis.v` in one live instance of the synthesized netlist,
+using that bench's identifier-derived oracle, and requires the full coverage
+report (64/64 one-hot, 4 all-ones, 5 all-zero, 73 cases), cfg == python decode,
+and a completed PASS. `--negative` adds N6: the A_a05 stream replaced by A_a06's
+with the oracle unchanged must give a completed functional FAIL on exactly
+`A_a05`. Scope: the netlist exposes the flat `cfg` port, driven by the bench's
+simulation-only stream-to-cfg loader; the generated ConfigMem/frame storage is
+not in the gate netlist, and there is no timing or ratified-fabric claim.
+
 **Label: experimental same-index switch matrix (ADR-0004/0005 Proposed),
 zero-delay, functional observation only.** `./flow/gate-sim-bitstream.sh`
 runs `sim/tb_logic_tile_bitstream.v` **unmodified**, once per committed
