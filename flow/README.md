@@ -4,6 +4,54 @@ Synthesis and place-and-route tooling — the `yosys` + `nextpnr` flow
 referenced by `CLAUDE.md` for the fabric itself, plus `klayout-tools` (`klt`)
 for sky130 physical design (layout, DRC/LVS, place-and-route).
 
+## Script index: script -> evidence / ledger -> CI workflow
+
+Every non-`test_*` file in `flow/`. "CI" names the workflow that runs or
+path-triggers on the file (`.github/workflows/`); "-" means it is not run in CI
+(see "Not run in CI" below, or it is a helper of a script that is not).
+Helpers are listed with their driver. `flow/test_*` files are the regression
+tests of the file named after them and run in the same workflow as their
+subject. Sections below document the main scripts; this table is the map.
+The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
+
+| Script | Produces / checks | CI |
+| --- | --- | --- |
+| `tool_versions.sh` | single source of tool pins (sourced by the others) | all flow workflows |
+| `pdk_root.sh` | `$PDK_ROOT`/`$PDK` resolution, sourced by `drc.sh`, `layout.sh`, `lvs.sh`, `sta-sweep.sh` | - |
+| `fabulous.sh` | `design/fabulous/generator.log` and generated-versus-repository checks | `fabulous-nextpnr.yml` |
+| `fabulous_summary.py` | summary of a FABulous run directory (emitted files, config-bit layout); run by `fabulous.sh` | `fabulous-nextpnr.yml` |
+| `nextpnr.sh` | `design/fabulous/nextpnr.log` | `fabulous-nextpnr.yml` |
+| `nextpnr_io_overlay.py` | harness-only pad model applied to a scratch copy of the nextpnr model (ADR-0005); run by `nextpnr.sh` | `fabulous-nextpnr.yml` |
+| `bitstream.sh` | `sim/bitstream/` fixtures | `fabulous-nextpnr.yml` |
+| `fasm_to_bitstream.py` | FASM -> frame stream assembler used by the fixtures, corpus and gate replays | `fabulous-nextpnr.yml`, `gate-sim.yml` |
+| `configmem_frames.py` | frame adapter for `design/fabulous/tb_configmem_equiv.v` | `fabulous-nextpnr.yml` |
+| `generated_tile_replay.sh` | `sim/generated_tile_replay.txt`, `sim/configmem_fabulous_equiv.txt` | `fabulous-nextpnr.yml` |
+| `gate_sim_verdict.sh` | PASS / FUNC_FAIL / INFRA classifier and `SIM_TIMEOUT_SECONDS` budget helpers, sourced by the gate and replay scripts | `gate-sim.yml`, `fabulous-nextpnr.yml` |
+| `sim_budget.py` | the same wall-clock budget for the Python drivers (reads the default from `gate_sim_verdict.sh`) | `gate-sim.yml` |
+| `corpus.sh`, `corpus_run.py` | `design/fabulous/corpus/results.txt` (routability corpus, opt-in) | - |
+| `check_regbel_fixtures.py` | registered-BEL fixture metadata check (`design/fabulous/corpus/corpus.json`) | `gate-sim.yml`, `fabulous-nextpnr.yml` |
+| `pin_experiment.sh`, `pin_experiment.py` | `design/fabulous/corpus/pin_experiment_results.txt` (opt-in pin-index experiment, issue #137) | `pin_experiment.py` path-triggers `fabulous-nextpnr.yml`; the `.sh` driver is not run |
+| `pin_fixtures.py` | index/provenance check of `sim/bitstream/pin_experiment/` fixtures | `fabulous-nextpnr.yml` |
+| `lut_basis.py` | 73-stream LUT-address basis for `sim/tb_lut_basis.v` | `gate-sim.yml`, `fabulous-nextpnr.yml` |
+| `route_diag.py`, `ctrl_route.py`, `output_route.py` | route diagnostic suites for `sim/tb_route_diag.v`, `sim/tb_ctrl_route.v`, `sim/tb_output_route.v` | `gate-sim.yml`, `fabulous-nextpnr.yml` |
+| `route_diag_negative.py` | legal-other-source negative controls N7/N8/N9 for those suites | `gate-sim.yml` |
+| `gate-sim-bitstream.sh` | `sim/logic_tile_bitstream_gate_results.txt` (EXPERIMENTAL, zero-delay) | `gate-sim.yml` |
+| `gate_route_diag.sh` | sourced by `gate-sim-bitstream.sh`; route diagnostic replay (feeds the same ledger) | `gate-sim.yml` |
+| `gate-sim-routed.sh` | `sim/logic_tile_routed_gate_results.txt` (EXPERIMENTAL, zero-delay) | `gate-sim.yml` |
+| `sdf-resim.sh`, `sdf_annotate_shim.py`, `sdf_canonicalize.py` | SDF-annotated gate-level re-simulation | - |
+| `synth.sh` | generic-cell netlist | - |
+| `layout.sh`, `par_request.py`, `par_report_trim.py`, `gds_canonicalize.py` | `layout/logic_tile.gds`, `.def`, `.par.json` | - |
+| `drc.sh`, `drc_report_trim.py` | `layout/logic_tile.drc.json` | - |
+| `lvs.sh`, `lvs_report_trim.py`, `lvs_declared_pins.py`, `lvs_sanitize_verilog.py` | `layout/logic_tile.lvs.json` | - |
+| `erc.sh`, `erc_report_trim.py`, `erc_supply_spec.json` | `layout/logic_tile.erc.json` | - |
+| `sta-sweep.sh`, `sta_report_trim.py`, `sta_sanitize_names.py`, `sta_envelope_check.py` | `measurements/timing-characterization/logic_tile.sta.json` | - |
+| `layout_routed.sh`, `layout_routed_record.py`, `routed_checks.sh`, `routed_pitch.py` | `layout/experimental/` composed-tile canary (EXPERIMENTAL) | - |
+| `_report_trim.py` | shared driver of the `*_report_trim.py` scripts | - |
+| `audit-evidence.sh`, `audit_evidence.py` | `measurements/claim-traceability.md` audit | `flow-evidence.yml` |
+| `audit_sim_ledgers.py` | append-only guard for the `sim/*.txt` ledgers | `flow-evidence.yml` |
+| `check_status_claims.py` | README/framework-gaps status drift check | `flow-evidence.yml` |
+| `gen_bitstream_format.py` | `design/bitstream-format.md` drift check | `flow-evidence.yml` |
+
 ## Toolchain versions
 
 `flow/layout.sh`'s and `flow/sta-sweep.sh`'s check mode (the `./flow/*.sh`
@@ -187,6 +235,11 @@ the `flow/sdf-resim.sh` leg was not re-examined.
 toolchain, so it is exactly reproducible on a stock runner and fails on a
 drifted claim or pinned script hash (the #53 failure mode). Other workflows:
 `signoff.yml` (manifest re-grade), `rtl-sim.yml` (Icarus testbenches),
+`gate-sim.yml` (issues #130, #189: zero-delay gate-level re-sims on pull
+requests; runs `flow/gate-sim-bitstream.sh --negative`,
+`flow/gate-sim-routed.sh`, `flow/test_gate_sim_verdict.sh`,
+`flow/test_sim_budget.sh`, `flow/test_route_diag_negative.py` and
+`flow/test_gate_route_diag.sh`; EXPERIMENTAL, functional only, see below),
 `fabulous-nextpnr.yml` (G1 logs, plus the generated-versus-repository
 replay: `flow/fabulous.sh` runs `flow/generated_tile_replay.sh`, which replays
 every committed stream on the FABulous-generated LOGIC4 tile and on the
@@ -1127,3 +1180,56 @@ python3 flow/test_gen_bitstream_format.py      # incl. changed-map-entry failure
 ```
 
 Needs no toolchain; `--check` runs in `.github/workflows/flow-evidence.yml`.
+
+### `flow/gate-sim-bitstream.sh` - EXPERIMENTAL zero-delay bitstream replay on the synthesized netlist (issues #119, #135, #177, #189)
+
+**Label: experimental same-index switch matrix (ADR-0004/0005 Proposed),
+zero-delay, functional observation only.** Replays the unmodified
+`sim/tb_logic_tile_bitstream.v` for the baseline fixtures, every indexed
+corpus fixture and the pin-experiment fixtures, then the LUT-address basis
+(`flow/lut_basis.py`) and the three route diagnostic suites (via
+`flow/gate_route_diag.sh`), all against the committed
+`layout/experimental/logic_tile_routed.synth.v` and the `sky130_fd_sc_hd`
+behavioral models. Inputs: `sim/bitstream/` (including
+`corpus/index.txt`), the netlist, and the PDK models (found via `klt` or
+`$PDK_ROOT`; needs `iverilog` and `vvp`). `--negative` additionally proves a
+wrong bitstream and a corrupted netlist are rejected as completed functional
+FAILs (infrastructure failures never count as rejections). Ledger:
+`sim/logic_tile_bitstream_gate_results.txt` (append-only). Budget: each
+simulator run is bounded by `SIM_TIMEOUT_SECONDS` (and
+`SIM_KILL_AFTER_SECONDS`), helpers in `flow/gate_sim_verdict.sh`; a timeout is
+an infrastructure failure. Scratch output: `flow/build/gate-sim-bitstream/`.
+CI: `gate-sim.yml`. Scope, non-claims and the individual negative controls:
+`sim/README.md`, "Bitstream-driven gate-level coverage (issue #119,
+EXPERIMENTAL)". Regression of the classifier: `flow/test_gate_sim_verdict.sh`;
+of the budget: `flow/test_sim_budget.sh`.
+
+### `flow/gate-sim-routed.sh` - EXPERIMENTAL zero-delay composed-tile re-sim (issue #112)
+
+**Label: composed tile, stand-in matrix (ADR-0004 Proposed), zero-delay,
+functional-only; no timing claim.** Re-runs the unmodified
+`sim/tb_logic_tile_routed.v` against the committed synthesized netlist
+`layout/experimental/logic_tile_routed.synth.v` and the `sky130_fd_sc_hd`
+models; needs only `iverilog`/`vvp` and the PDK models, no `klt` or OpenROAD.
+Ledger: `sim/logic_tile_routed_gate_results.txt` (append-only). Budget:
+`SIM_TIMEOUT_SECONDS` / `SIM_KILL_AFTER_SECONDS` (`flow/gate_sim_verdict.sh`).
+Scratch output: `flow/build/gate-sim-routed/`. CI: `gate-sim.yml`. Details and
+non-claims: `sim/README.md`, "Composed-tile gate-level coverage (issue #112,
+EXPERIMENTAL)".
+
+### `flow/gate_route_diag.sh` - EXPERIMENTAL route-diagnostic gate replay (issue #189)
+
+A sourced helper, not a command: `flow/gate-sim-bitstream.sh` sources it to
+replay the three route diagnostic suites (`flow/route_diag.py` ->
+`sim/tb_route_diag.v`, `flow/ctrl_route.py` -> `sim/tb_ctrl_route.v`,
+`flow/output_route.py` -> `sim/tb_output_route.v`) against the synthesized
+netlist, with each suite's own generator, bench and oracle, coverage checked
+against that suite's own manifest, and (with `--negative`)
+one legal-other-source negative control per suite built by
+`flow/route_diag_negative.py`. Zero-delay, observation-only, functional only,
+experimental same-index hardware. Inputs are the caller's `REPO_ROOT`,
+`BUILD_DIR`, `NETLIST`, `CELL_DIR`; there is no ledger of its own, the result
+is part of `sim/logic_tile_bitstream_gate_results.txt`. Each simulator run is
+bounded by `SIM_TIMEOUT_SECONDS`. Failure modes are regression-tested by
+`flow/test_gate_route_diag.sh`. Details: `sim/README.md`, "Route diagnostic
+legs (issue #189)" under the bitstream-driven gate-level section.
