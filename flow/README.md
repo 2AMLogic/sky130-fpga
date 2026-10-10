@@ -25,6 +25,7 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | `bitstream.sh` | `sim/bitstream/` fixtures | `fabulous-nextpnr.yml` |
 | `fasm_to_bitstream.py` | FASM -> frame stream assembler used by the fixtures, corpus and gate replays | `fabulous-nextpnr.yml`, `gate-sim.yml` |
 | `configmem_frames.py` | frame adapter for `design/fabulous/tb_configmem_equiv.v` | `fabulous-nextpnr.yml` |
+| `configmem_bad_inputs.py` | malformed map / vector cases (and valid controls) for `design/fabulous/tb_configmem_equiv.v`; run by `fabulous.sh` and `test_gate_sim_verdict.sh` (issue #200) | `fabulous-nextpnr.yml`, `gate-sim.yml` |
 | `generated_tile_replay.sh` | `sim/generated_tile_replay.txt`, `sim/configmem_fabulous_equiv.txt` | `fabulous-nextpnr.yml` |
 | `gate_sim_verdict.sh` | PASS / FUNC_FAIL / INFRA classifier and `SIM_TIMEOUT_SECONDS` budget helpers, sourced by the gate and replay scripts | `gate-sim.yml`, `fabulous-nextpnr.yml` |
 | `sim_budget.py` | the same wall-clock budget for the Python drivers (reads the default from `gate_sim_verdict.sh`) | `gate-sim.yml` |
@@ -248,7 +249,7 @@ repository composition `design/rtl/logic_tile_routed.v`, so the workflow's
 (`logic_tile_routed.v`, `logic_tile_switch_matrix.v`), `lut4_slice.v`, the
 testbench, the fixtures, and every helper the replay runs or sources
 (`gate_sim_verdict.sh`, `check_regbel_fixtures.py`, `pin_fixtures.py` (which loads `pin_experiment.py`),
-`fasm_to_bitstream.py`, `configmem_frames.py`). A change to any one of them
+`fasm_to_bitstream.py`, `configmem_frames.py`, `configmem_bad_inputs.py`). A change to any one of them
 alone selects the job; extend that list when the scripts gain an input).
 
 Not run in CI, and why (recorded as the finding of issue #109 rather than

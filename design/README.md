@@ -210,7 +210,19 @@ transparent-open phase (one-hot strobe held high while `FrameData` changes, ever
 mapped bit checked to follow, other frames and complements checked, then release
 and retention) and scratch rising-edge / falling-edge `config_latch` models that
 must fail in that phase; the generated latch is confirmed level-sensitive first. This verifies frame
-storage only, not a hardware serial receiver. Record:
+storage only, not a hardware serial receiver. Issue #200: the bench validates
+the whole map and vector file before any check runs, and any violation is a
+setup `ERROR` with no terminal summary (INFRA, never a mutation kill). The map
+must be a bijection onto `ConfigBits` 0..157 with unique frame positions and
+nothing after the last row; each vector stream is one `S <40 hex> <name>`
+record followed by exactly 20 `F <frame> <8 hex>` records covering frames 0..19
+once each (any order inside the stream; the adapter's order is replayed as-is),
+single-space fields, no blank or trailing lines, at least two streams. These
+are restrictions of this simulation transaction format (what
+`flow/configmem_frames.py` and the committed map emit), not of any hardware
+stream format; the full grammar is in the bench header.
+`flow/configmem_bad_inputs.py` derives 47 malformed cases plus 3 valid
+controls, run by `flow/fabulous.sh` and `flow/test_gate_sim_verdict.sh`. Record:
 `sim/configmem_fabulous_equiv.txt`.
 
 Generated composition (issue #140): `flow/generated_tile_replay.sh` (run by

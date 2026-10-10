@@ -151,3 +151,17 @@ gs_classify_configmem() {
             && echo FUNC_FAIL || echo INFRA
     else echo INFRA; fi
 }
+
+# gs_configmem_is_setup_error <rc> <log>   (issue #200)
+# True (exit 0) only when a tb_configmem_equiv.v run on broken INPUT ended the
+# way the bench's input contract requires: the simulator terminated on its own
+# (rc 0, so within the wall-clock budget -- not a timeout/kill), printed a
+# "ERROR: configmem_fabulous_equiv setup:" line, printed NO terminal summary
+# (no "PASS:"/"FAIL:" line at all), and gs_classify_configmem says INFRA.
+gs_configmem_is_setup_error() {
+    local rc="$1" log="$2"
+    [[ "$rc" == 0 && -s "$log" ]] || return 1
+    [[ "$(gs_classify_configmem "$rc" "$log")" == INFRA ]] || return 1
+    grep -q '^ERROR: configmem_fabulous_equiv setup:' "$log" || return 1
+    ! grep -q -E '^(PASS|FAIL):' "$log"
+}
