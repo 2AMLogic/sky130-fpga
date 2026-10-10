@@ -514,8 +514,148 @@ for m in C2_ES A0_NW D3_NE; do
 done
 [[ "$n_rdm" -eq 3 ]] || status=1
 
+# ---- 7. control-jump directional route diagnostic (issue #181) ---------------
+# Diagnostic assembler-generated streams, NOT mapper output: proves that every
+# existing directional source of every control-jump mux (4 enables x 4 edges, the
+# shared reset x 4 edges = 20) is selected through frame programming and reaches
+# its destination register(s). The oracle is a register reference model fed by
+# the applied stimulus (sim/tb_ctrl_route.v). Not the LUT-input routes of step 6,
+# not a component select sweep, no timing or ratified-fabric claim.
+echo "=== control-jump route diagnostic (issue #181): 4 enables x 4 edges + shared reset x 4 edges through the integrated tile ==="
+CR="$OUT/ctrl_route"; CR_TB="$REPO/sim/tb_ctrl_route.v"; CR_NAME=tb_ctrl_route
+[[ -s "$CR_TB" ]] || die "missing $CR_TB"
+python3 -I "$REPO/flow/ctrl_route.py" "$CR" --snapshot "$BS/fabric_spec.json" || die "control-route stream generation failed"
+[[ "$(wc -l < "$CR/cases.txt")" -eq 20 && "$(wc -l < "$CR/required.txt")" -eq 20 ]] || die "expected 20 control-route cases and 20 required routes"
+CR_GEN="$OUT/ctrl_gen.vvp"; CR_RTL="$OUT/ctrl_rtl.vvp"
+gen_compile "$GEN_TILE_V" "$CR_GEN" "$CR_TB" \
+    || { cat "$CR_GEN.compile.log" >&2; die "compile of the generated-tile control-route bench failed"; }
+iverilog -g2012 -Wall -o "$CR_RTL" "$REPO/design/rtl/lut4_slice.v" \
+    "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
+    "$CR_TB" >"$CR_RTL.compile.log" 2>&1 \
+    || { cat "$CR_RTL.compile.log" >&2; die "compile of the repository-composition control-route bench failed"; }
+ctrl_run() {   # <vvp> <log>; prints the verdict
+    local rc=0
+    gs_run_bounded "$(basename "$1" .vvp)[ctrl]" "$2" vvp "$1" +dir="$CR" +list="$CR/cases.txt" \
+        +wiring="$CR/ctrl.wiring" +map="$MAP" || rc=$?
+    gs_classify "$rc" "$2" "$CR_NAME" ctrl
+}
+ctrl_cfg_ok() {   # <log>: per-case ConfigBits/cfg readback == python decode of the stream
+    local id got
+    while read -r id _; do
+        got="$(grep -m1 "^CFG $id " "$1" | cut -d' ' -f3)"
+        if [[ -z "$got" || "$got" != "$(tr -d '\n' < "$CR/$id.cfg")" ]]; then
+            echo "  control case $id: readback '$got' != decoded $(tr -d '\n' < "$CR/$id.cfg")" >&2; return 1
+        fi
+    done < "$CR/cases.txt"
+}
+ctrl_cov_ok() {   # <log>: the coverage report must equal the required set, each route exactly once
+    local got
+    got="$(sed -n 's/^COVERAGE: ROUTE \(EN\|SR\) \([A-D-]\) \([NESW]\): .*checked on .*$/\1 \2 \3/p' "$1" | sort)"
+    [[ "$got" == "$(sort "$CR/required.txt")" ]] \
+        && [[ "$(echo "$got" | wc -l)" -eq 20 && "$(echo "$got" | uniq -d | wc -l)" -eq 0 ]] \
+        && grep -qE '^COVERAGE: 20/20 routes \(16 enable = 4 BELs x 4 edges, 4 shared-reset edges\); 20 cases loaded in sequence into one live tile; [0-9]+ phases; [0-9]+ full-disagreement phases .*; 0 duplicate case ids$' "$1"
+}
+ctrl_ok=1
+for comp in gen rtl; do
+    vvp_f="$CR_GEN"; [[ "$comp" == rtl ]] && vvp_f="$CR_RTL"
+    log="$OUT/ctrl_${comp}.log"
+    v="$(ctrl_run "$vvp_f" "$log")"
+    if [[ "$v" != PASS ]] || ! ctrl_cov_ok "$log"; then
+        echo "  control-route diagnostic [$comp]: FAIL (verdict $v or coverage differs from the required route set; see $log)" >&2
+        tail -n 8 "$log" >&2; ctrl_ok=0; status=1; continue
+    fi
+    ctrl_cfg_ok "$log" || { echo "  control-route diagnostic [$comp]: readback mismatch" >&2; ctrl_ok=0; status=1; }
+done
+if [[ "$ctrl_ok" -eq 1 ]]; then
+    gsum="$(grep -m1 '^PASS' "$OUT/ctrl_gen.log" | sed 's/^PASS: [^ ]* //')"
+    rsum="$(grep -m1 '^PASS' "$OUT/ctrl_rtl.log" | sed 's/^PASS: [^ ]* //')"
+    if [[ "$gsum" != "$rsum" ]]; then
+        echo "  control-route diagnostic: compositions disagree (generated $gsum vs repository $rsum)" >&2; status=1
+    else
+        grep -m1 '^COVERAGE: 20/20' "$OUT/ctrl_gen.log" | sed 's/^/  generated: /'
+        grep -m1 '^COVERAGE: 20/20' "$OUT/ctrl_rtl.log" | sed 's/^/  repository: /'
+        echo "  generated: $(grep -m1 '^GEN_TILE:' "$OUT/ctrl_gen.log")"
+        echo "  control-route diagnostic: PASS on both $gsum; 20/20 routes, readback == python decode for all 20 streams on both"
+    fi
+fi
+
+echo "--- scratch generated-matrix control-source permutations and enable-destination aliases vs the control-route diagnostic (each must give a completed functional FAIL on the predicted cases) ---"
+python3 -I - "$T/LOGIC4_switch_matrix.v" "$OUT" <<'PYEOF' || die "could not build control-route mutants"
+import sys
+sm, out = open(sys.argv[1]).read(), sys.argv[2]
+def swap(sink, i, j):   # exchange two sources of one control-jump mux (mux input list is {W,S,E,N})
+    n = sink[-1]
+    pat = "assign %s_input = {W1END%s,S1END%s,E1END%s,N1END%s};" % ((sink,) + (n,) * 4)
+    assert sm.count(pat) == 1, pat
+    order = ["N", "E", "S", "W"]
+    order[i], order[j] = order[j], order[i]
+    return sm.replace(pat, "assign %s_input = {%s};" % (sink, ",".join(f"{order[k]}1END{n}" for k in (3, 2, 1, 0))))
+def alias(dst, src):    # the destination BEL's enable takes another BEL's enable jump wire
+    pat = f"assign {dst} = {src[0]};"
+    assert sm.count(pat) == 1, pat
+    return sm.replace(pat, f"assign {dst} = {src[1]};")
+open(f"{out}/matrix_mut_ctrl_EN1_ES.v", "w").write(swap("J_EN_BEG1", 1, 2))
+open(f"{out}/matrix_mut_ctrl_EN3_NW.v", "w").write(swap("J_EN_BEG3", 0, 3))
+open(f"{out}/matrix_mut_ctrl_SR_ES.v", "w").write(swap("J_SR_BEG0", 1, 2))
+open(f"{out}/matrix_mut_ctrl_ALIAS_BA.v", "w").write(alias("LB_EN", ("J_EN_END1", "J_EN_END0")))
+open(f"{out}/matrix_mut_ctrl_ALIAS_DC.v", "w").write(alias("LD_EN", ("J_EN_END3", "J_EN_END2")))
+PYEOF
+# Predicted failing control cases, derived from the defect and the case roles (not from the DUT):
+#   EN1_ES / EN3_NW : only the tested enable of that BEL on the two exchanged edges (every other route
+#                     reads a track that equals its selected one while its enable is not under test)
+#   SR_ES           : every case whose reset is routed from E or S (the reset edge is column 5 of the case list)
+#   ALIAS_BA        : BEL B's enable becomes BEL A's: every case where enable A and enable B differ at some
+#                     phase = the four enable-A cases, the four enable-B cases and the four reset cases
+#   ALIAS_DC        : likewise for BEL D taking BEL C's enable: enable-C, enable-D and reset cases
+declare -A CRM_DESC=(
+    [EN1_ES]="BEL B enable: E and S sources exchanged in a scratch LOGIC4_switch_matrix.v"
+    [EN3_NW]="BEL D enable: N and W sources exchanged"
+    [SR_ES]="shared reset: E and S sources exchanged"
+    [ALIAS_BA]="enable-destination alias: LB_EN driven by J_EN_END0 (BEL A's enable)"
+    [ALIAS_DC]="enable-destination alias: LD_EN driven by J_EN_END2 (BEL C's enable)"
+)
+crm_expect() {
+    case "$1" in
+        EN1_ES) echo C_EN_B_E C_EN_B_S ;;
+        EN3_NW) echo C_EN_D_N C_EN_D_W ;;
+        SR_ES)  awk '$5 == "E" || $5 == "S" { print $1 }' "$CR/cases.txt" ;;
+        ALIAS_BA) echo C_EN_A_N C_EN_A_E C_EN_A_S C_EN_A_W C_EN_B_N C_EN_B_E C_EN_B_S C_EN_B_W C_SR_N C_SR_E C_SR_S C_SR_W ;;
+        ALIAS_DC) echo C_EN_C_N C_EN_C_E C_EN_C_S C_EN_C_W C_EN_D_N C_EN_D_E C_EN_D_S C_EN_D_W C_SR_N C_SR_E C_SR_S C_SR_W ;;
+    esac | tr ' ' '\n' | sort | xargs
+}
+n_crm=0
+for m in EN1_ES EN3_NW SR_ES ALIAS_BA ALIAS_DC; do
+    mvvp="$OUT/ctrl_mut_${m}.vvp"; mlog="$OUT/ctrl_mut_${m}.log"
+    mt="$OUT/matrix_mut_ctrl_${m}.v"; crc=0
+    [[ -s "$mt" && "$(diff <(cat "$T/LOGIC4_switch_matrix.v") "$mt" | grep -c '^>')" -eq 1 ]] \
+        || { echo "control-route mutant '$m': scratch matrix is not a one-line mutation" >&2; status=1; continue; }
+    iverilog -g2012 -Wall -DGEN_TILE -I "$REPO/sim" -o "$mvvp" \
+        "$TS" "$RUN/Fabric/models_pack.v" "$TS" "$T/lut4_ff_bel.v" "$TS" "$T/LOGIC4_ConfigMem.v" \
+        "$TS" "$mt" "$TS" "$GEN_TILE_V" "$CR_TB" >"$mvvp.compile.log" 2>&1 || crc=$?
+    if [[ "$crc" -ne 0 ]]; then
+        cat "$mvvp.compile.log" >&2
+        echo "control-route mutant '$m': FAIL (did not compile; a mutation must compile and fail functionally)" >&2
+        status=1; continue
+    fi
+    v="$(ctrl_run "$mvvp" "$mlog")"
+    if [[ "$v" != FUNC_FAIL ]]; then
+        echo "control-route mutant '$m' (${CRM_DESC[$m]}): NOT caught (verdict $v; a timeout, simulator error or missing verdict never counts; see $mlog)" >&2
+        status=1; continue
+    fi
+    got="$(sed -n 's/^  case \(C_[A-Z0-9_]*\): [0-9]* mismatches$/\1/p' "$mlog" | sort | xargs)"
+    want="$(crm_expect "$m")"
+    if [[ "$got" != "$want" ]]; then
+        echo "control-route mutant '$m' (${CRM_DESC[$m]}): failing cases [$got] != predicted [$want]" >&2
+        status=1; continue
+    fi
+    ctrl_cov_ok "$mlog" && ctrl_cfg_ok "$mlog" || { echo "control-route mutant '$m': coverage/readback not intact" >&2; status=1; continue; }
+    n_crm=$((n_crm + 1))
+    echo "control-route mutant '$m' (${CRM_DESC[$m]}) caught: compiled; $(grep -m1 '^FAIL' "$mlog" | sed 's/^FAIL: //'); failing cases == predicted ($(echo "$got" | wc -w)/20): $got; ConfigBits == decoded on all"
+done
+[[ "$n_crm" -eq 5 ]] || status=1
+
 if [[ "$status" -eq 0 ]]; then
-    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught; LUT basis 64/64 (BEL, address) cases on both compositions, 3/3 basis mutants caught; LUT-input routes 64/64 (BEL, pin, edge) cases on both compositions, 3/3 route mutants caught)"
+    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught; LUT basis 64/64 (BEL, address) cases on both compositions, 3/3 basis mutants caught; LUT-input routes 64/64 (BEL, pin, edge) cases on both compositions, 3/3 route mutants caught; control-jump routes 20/20 (16 enable + 4 reset) cases on both compositions, 5/5 control mutants caught)"
 else
     echo "generated-tile replay: FAIL" >&2
 fi

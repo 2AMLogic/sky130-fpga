@@ -38,6 +38,8 @@ on:
       - 'flow/lut_basis.py'
       - 'sim/tb_route_diag.v'
       - 'flow/route_diag.py'
+      - 'sim/tb_ctrl_route.v'
+      - 'flow/ctrl_route.py'
       - 'flow/nextpnr.sh'
       - 'flow/nextpnr_io_overlay.py'
       - 'flow/bitstream.sh'

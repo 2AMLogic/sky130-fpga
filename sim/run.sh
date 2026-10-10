@@ -165,6 +165,16 @@ else
     overall_status=1
 fi
 
+echo "=== control-jump route diagnostic stream generator unit tests (flow/test_ctrl_route.py, issue #181) ==="
+if python3 -I "$REPO_ROOT/flow/test_ctrl_route.py" >"$BUILD_DIR/test_ctrl_route.log" 2>&1 \
+   && grep -q '^OK' "$BUILD_DIR/test_ctrl_route.log"; then
+    echo "PASS: test_ctrl_route ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_ctrl_route.log"), 0 failures)"
+else
+    cat "$BUILD_DIR/test_ctrl_route.log" >&2
+    echo "error: control-jump route diagnostic generator unit tests failed" >&2
+    overall_status=1
+fi
+
 echo "=== bitstream fixtures reproduce from committed FASM (flow/fasm_to_bitstream.py check) ==="
 if ! python3 "$BS_TOOL" check "$BS_DIR"; then
     echo "error: committed sim/bitstream fixtures drifted from the assembler output" >&2
