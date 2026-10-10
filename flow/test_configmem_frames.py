@@ -81,9 +81,29 @@ class Malformed(unittest.TestCase):
                 rejects(self, C.variants(GOOD)[name])
 
     def test_reserved_bit_set(self):
-        d = bytearray(GOOD)
-        d[C.frame_off(1, 3) + 1] |= 0x01      # a bit between strobe and column fields
-        rejects(self, d, "frame-select")
+        # Reserved field of the frame-select word: bits nfr..(fbits - sel_w - 1),
+        # i.e. 20..26 for nfr = 20. Words are big-endian, so byte off+1 holds
+        # bits 16..23 and byte off holds bits 24..31. Only the reserved bit is
+        # set: strobe stays one-hot and the column stays in range.
+        a = SNAP["arch"]
+        nfr = a["max_frames_per_col"]
+        self.assertEqual(nfr, 20)              # bit positions below assume this
+        off = C.frame_off(1, 3)
+        for byte, mask, bit in ((1, 0x10, 20), (0, 0x01, 24)):
+            with self.subTest(bit=bit):
+                d = bytearray(GOOD)
+                self.assertFalse(d[off + byte] & mask)
+                d[off + byte] |= mask
+                word = int.from_bytes(d[off:off + 4], "big")
+                self.assertEqual(word ^ int.from_bytes(GOOD[off:off + 4], "big"), 1 << bit)
+                rejects(self, d, "frame-select")
+
+    def test_duplicate_frame_in_otherwise_complete_stream(self):
+        # complete stream plus one repeated frame: without the duplicate check the
+        # later write would silently overwrite the earlier one and be accepted
+        dup = GOOD[C.frame_off(1, 3):C.frame_off(1, 4)]
+        d = GOOD[:C.frame_off(1, 4)] + dup + GOOD[C.frame_off(1, 4):]
+        rejects(self, d, "duplicate")
 
     def test_zero_and_wrong_desync(self):
         z = bytearray(GOOD); z[-4:] = b"\0\0\0\0"
