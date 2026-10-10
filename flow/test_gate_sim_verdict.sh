@@ -85,6 +85,18 @@ cexpect "forced kill (137) after FAIL"   INFRA     137 "$CF"$'\n'
 cexpect "nonzero exit after PASS"        INFRA     1 "$CP"$'\n'
 cexpect "TIMEOUT marker with FAIL"       INFRA     0 "$CF"$'\nTIMEOUT: x\n'
 if [[ "$(gs_classify_configmem 0 "$T/nonexistent")" == INFRA ]]; then echo "ok   cm missing log -> INFRA"; else echo "FAIL cm missing log"; rc_all=1; fi
+# setup errors from the bench's input checks (PR #198 review): missing / empty /
+# truncated vector file is INFRA even when mismatch lines were printed first
+CE0="ERROR: configmem_fabulous_equiv setup: only 0 baseline streams in vector file /x"
+CE1="ERROR: configmem_fabulous_equiv setup: only 1 baseline streams in vector file /x"
+cexpect "cannot open vector file"        INFRA     0 $'ERROR: configmem_fabulous_equiv setup: cannot open vector file /nonexistent\n'
+cexpect "cannot open map file"           INFRA     0 $'ERROR: configmem_fabulous_equiv setup: cannot open map file /nonexistent\n'
+cexpect "zero baseline streams"          INFRA     0 "$CE0"$'\n'
+cexpect "one baseline stream"            INFRA     0 "$CE1"$'\n'
+cexpect "zero streams after mismatches"  INFRA     0 "$CM1"$'\n'"$CM1"$'\n'"$CE0"$'\n'
+cexpect "one stream after baseline mismatch" INFRA 0 "FAIL baseline s0: ConfigBits 0 recorded 1"$'\n'"$CE1"$'\n'
+cexpect "zero streams + stray FAIL summary" INFRA  0 "$CM1"$'\n'"$CE0"$'\n'"$CF"$'\n'
+cexpect "pre-fix baseline-streams FAIL form" INFRA 0 $'FAIL: only 0 baseline streams replayed\n'"$CF"$'\n'
 
 # stub runners through gs_run_bounded (real timeout path)
 cstub() {  # cstub <name> <want> <body...>
@@ -100,4 +112,36 @@ cstub baseline  PASS      "echo '$CP'"
 cstub setup0    INFRA     "echo 'ERROR: configmem_fabulous_equiv setup: bad map entry 1 2'"
 cstub crash     INFRA     "echo '$CF'; exit 139"
 cstub hang      INFRA     "echo '$CF'; sleep 30"
+cstub novec     INFRA     "echo '$CE0'"
+
+# Real bench (PR #198 review): unmodified generated ConfigMem, broken inputs.
+# Needs iverilog/vvp and the scratch FABulous output of flow/fabulous.sh
+# (CM_RUN_DIR, default flow/build/fabulous-run); skipped (and said so) otherwise.
+# flow/fabulous.sh runs the same checks unconditionally after its generator run.
+CM_RUN_DIR="${CM_RUN_DIR:-$HERE/build/fabulous-run}"
+CM_VEC_FILE="${CM_VEC_FILE:-$HERE/build/configmem_vectors.txt}"
+if command -v iverilog >/dev/null && command -v vvp >/dev/null \
+   && [[ -f "$CM_RUN_DIR/Tile/LOGIC4/LOGIC4_ConfigMem.v" && -f "$CM_RUN_DIR/Fabric/models_pack.v" ]]; then
+    if iverilog -g2005 -o "$T/cm_tb" "$HERE/../design/fabulous/tb_configmem_equiv.v" \
+            "$CM_RUN_DIR/Tile/LOGIC4/LOGIC4_ConfigMem.v" "$CM_RUN_DIR/Fabric/models_pack.v"; then
+        : >"$T/vec_empty"
+        cases=("missing-vec:/nonexistent/configmem_vectors.txt" "empty-vec:$T/vec_empty")
+        if [[ -s "$CM_VEC_FILE" ]]; then
+            awk '/^S/{n++} n<2' "$CM_VEC_FILE" >"$T/vec_one"
+            cases+=("one-stream-vec:$T/vec_one")
+        fi
+        for c in "${cases[@]}"; do
+            rc=0
+            SIM_TIMEOUT_SECONDS=120 SIM_KILL_AFTER_SECONDS=5 gs_run_bounded "cm-real-${c%%:*}" "$T/log" \
+                vvp "$T/cm_tb" +map="$HERE/../sim/bitstream/logic4_configmem.map" +vec="${c#*:}" 2>/dev/null || rc=$?
+            got="$(gs_classify_configmem "$rc" "$T/log")"
+            if [[ "$got" == INFRA ]] && grep -q '^ERROR: configmem_fabulous_equiv setup:' "$T/log" \
+               && ! grep -q '^\(PASS\|FAIL\): configmem_fabulous_equiv' "$T/log"; then
+                echo "ok   cm real bench ${c%%:*} -> $got (setup ERROR, no summary)"
+            else echo "FAIL cm real bench ${c%%:*}: got $got"; sed 's/^/     | /' "$T/log"; rc_all=1; fi
+        done
+    else echo "FAIL cm real bench: iverilog compile failed"; rc_all=1; fi
+else
+    echo "skip cm real bench: needs iverilog/vvp and $CM_RUN_DIR (run flow/fabulous.sh first)"
+fi
 exit "$rc_all"

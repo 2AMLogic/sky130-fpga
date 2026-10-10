@@ -133,6 +133,8 @@ module tb;
         end
         for (i = 0; i < NF*FB; i = i + 1) pos2cb[i] = -1;
         fh = $fopen(mapf, "r");
+        if (fh == 0) begin
+            $display("ERROR: configmem_fabulous_equiv setup: cannot open map file %0s", mapf); $finish; end
         n = 0;
         while ($fscanf(fh, "%d %d\n", a, b) == 2) begin
             if (a < 0 || a >= NB || b < 0 || b >= NF*FB || pos2cb[b] >= 0) begin
@@ -206,6 +208,8 @@ module tb;
         // Baseline streams: replay frame payloads in stream order; final ConfigBits
         // must equal the recorded .cfg vector.
         fh = $fopen(vecf, "r");
+        if (fh == 0) begin
+            $display("ERROR: configmem_fabulous_equiv setup: cannot open vector file %0s", vecf); $finish; end
         n = 0;
         while (!$feof(fh)) begin
             r = $fscanf(fh, " %c", tag);
@@ -220,7 +224,13 @@ module tb;
         end
         if (n > 0) check_final;
         $fclose(fh);
-        if (n < 2) begin fails = fails + 1; $display("FAIL: only %0d baseline streams replayed", n); end
+        // Fewer than 2 streams means a missing/empty/truncated vector file or a
+        // broken adapter -- an input problem, never a storage mismatch: setup
+        // ERROR and no terminal summary, so it can never count as a kill (#196).
+        if (n < 2) begin
+            $display("ERROR: configmem_fabulous_equiv setup: only %0d baseline streams in vector file %0s", n, vecf);
+            $finish;
+        end
         if (fails == 0) $display("PASS: configmem_fabulous_equiv -- %0d checks, %0d baseline streams, 0 failures; transparent-open: %0d frames, %0d/%0d mapped bits changed under asserted strobe, %0d settled changes, %0d checks, 0 failures", checks, n, tframes, tbits, NB, topen, tchecks);
         else $display("FAIL: configmem_fabulous_equiv -- %0d failures / %0d checks (%0d transparent-open failures / %0d checks)", fails, checks, tfails, tchecks);
         $finish;

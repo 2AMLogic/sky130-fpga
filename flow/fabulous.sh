@@ -130,6 +130,23 @@ b = m.group(0)
 assert re.search(r"always\s*@\(\s*\*\s*\)", b) and not re.search(r"posedge|negedge", b), \
     "generated config_latch is not a level-sensitive latch"
 PYEOF
+# (issue #196 / PR #198 review) broken bench inputs against the UNMODIFIED
+# ConfigMem must be setup ERRORs classified INFRA -- never a functional FAIL
+# that a mutant run could count as a kill.
+echo "--- ConfigMem bench input failures (each must be INFRA, not a kill) ---"
+: > "$BUILD/cm_vec_empty.txt"
+awk '/^S/{n++} n<2' "$CM_VEC" > "$BUILD/cm_vec_one.txt"
+for c in "missing:$BUILD/cm_vec_nonexistent.txt" "empty:$BUILD/cm_vec_empty.txt" "one-stream:$BUILD/cm_vec_one.txt"; do
+    rm -f "$BUILD/cm_vec_nonexistent.txt"
+    rc=0; gs_run_bounded "ConfigMem input ${c%%:*}" "$BUILD/cm_in_${c%%:*}.out" \
+        vvp "$BUILD/cm_tb" +map="$REPO/sim/bitstream/logic4_configmem.map" +vec="${c#*:}" || rc=$?
+    verdict="$(gs_classify_configmem "$rc" "$BUILD/cm_in_${c%%:*}.out")"
+    if [[ "$verdict" != INFRA ]] || ! grep -q '^ERROR: configmem_fabulous_equiv setup:' "$BUILD/cm_in_${c%%:*}.out"; then
+        echo "error: ConfigMem bench with ${c%%:*} vector file gave '$verdict', not a setup ERROR / INFRA (see $BUILD/cm_in_${c%%:*}.out)" >&2
+        exit 1
+    fi
+    echo "input '${c%%:*}' vector file -> $verdict: $(grep '^ERROR: configmem' "$BUILD/cm_in_${c%%:*}.out")"
+done
 echo "--- scratch mutations of the generated ConfigMem (each must be caught) ---"
 # (1) frame select: bit of frame 2 latched by frame 3's strobe
 python3 - "$CM_V" "$BUILD/cm_mut_select.v" "$BUILD/cm_mut_map.v" <<'PYEOF'
