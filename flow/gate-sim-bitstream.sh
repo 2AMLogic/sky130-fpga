@@ -24,6 +24,11 @@
 #   exceeds it is an infrastructure failure, never a negative-control rejection
 # Since issue #177 it also replays the 73-stream LUT-address basis (flow/lut_basis.py,
 # sim/tb_lut_basis.v) in one live instance via the flat cfg port (simulation-only loader).
+# Since issue #189 it also replays the three route diagnostic suites (flow/route_diag.py ->
+# sim/tb_route_diag.v, flow/ctrl_route.py -> sim/tb_ctrl_route.v, flow/output_route.py ->
+# sim/tb_output_route.v) the same way, with exact coverage of each suite's own required-route
+# manifest, per-case cfg readback == decode, and (with --negative) one legal-other-source
+# negative control per suite (flow/route_diag_negative.py) that must fail on exactly that case.
 # Exit: nonzero on missing iverilog/vvp, missing PDK models, compile error,
 # simulation error, missing PASS line, or (with --negative) a negative case
 # that is wrongly accepted OR whose run did not complete with the terminal
@@ -219,6 +224,18 @@ else
     fi
 fi
 
+# ---- route diagnostics (issue #189): the three existing route diagnostic suites (LUT-input
+# routes #176, control-jump routes #181, output-track sources #180) replayed against the same
+# netlist with their unmodified generators, benches and independent oracles; exact coverage
+# of each suite's own required-route manifest and per-case cfg readback == decode. Logic in
+# flow/gate_route_diag.sh. Flat cfg port (simulation-only loader), zero delay, functional only.
+# shellcheck source=flow/gate_route_diag.sh
+source "$SCRIPT_DIR/gate_route_diag.sh"
+echo "=== route diagnostics at gate level (issue #189): LUT-input, control-jump and output-track routes, one live instance each, zero delay ==="
+for s in $RD_SUITES; do
+    rd_positive "$s" || status=1
+done
+
 if [[ "$NEGATIVE" -eq 1 ]]; then
     echo "=== negative checks (each MUST be reported as FAIL by the same pass criterion) ==="
     # neg_verdict <label> <verdict> <log>: prints OK line and returns 0 on FUNC_FAIL;
@@ -263,6 +280,14 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
             fi
         fi
     fi
+    # N7/N8/N9 (issue #189): per route diagnostic suite, ONE valid diagnostic stream re-pointed to
+    # a different LEGAL source of the same sink (re-assembled by flow/route_diag_negative.py; a
+    # setup/assembly error is an infrastructure failure, not a detection). The case list and its
+    # identifier-derived oracle are unchanged, so each run must complete with a functional FAIL
+    # on exactly the altered case, with coverage intact and cfg == decode of the altered streams.
+    for s in $RD_SUITES; do
+        rd_negative "$s" || status=1
+    done
     # N4/N5: pin-experiment fixture defects (missing file, empty index, function-changing
     # LUT INIT corruption) must fail the gate-level replay too.
     "$REPO_ROOT/sim/pin_fixture_negative.sh" "$BUILD_DIR/$TB_NAME.vvp" gate || status=1
@@ -297,4 +322,4 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
 fi
 
 if [[ "$status" -ne 0 ]]; then echo "=== gate-sim-bitstream FAILED ===" >&2; exit 1; fi
-echo "=== ${TB_NAME} PASSES gate-level, zero delay, baseline + ${n_corpus} corpus + 3 pin-experiment fixtures + 73-stream LUT-address basis (functional observation only; no timing claim) ==="
+echo "=== ${TB_NAME} PASSES gate-level, zero delay, baseline + ${n_corpus} corpus + 3 pin-experiment fixtures + 73-stream LUT-address basis + route diagnostics ${RD_N[route]} LUT-input / ${RD_N[ctrl]} control-jump / ${RD_N[outroute]} output-track (functional observation only; no timing claim) ==="

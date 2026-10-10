@@ -391,6 +391,25 @@ with the oracle unchanged must give a completed functional FAIL on exactly
 simulation-only stream-to-cfg loader; the generated ConfigMem/frame storage is
 not in the gate netlist, and there is no timing or ratified-fabric claim.
 
+**Route diagnostic legs (issue #189).** The same script also replays the three
+route diagnostic suites against the synthesized netlist, each with its
+unmodified generator, bench and independent oracle (`flow/gate_route_diag.sh`):
+LUT-input directional routes (`flow/route_diag.py` -> `sim/tb_route_diag.v`,
+64 cases), control-jump enable/reset routes (`flow/ctrl_route.py` ->
+`sim/tb_ctrl_route.v`, 20) and boundary output-track sources
+(`flow/output_route.py` -> `sim/tb_output_route.v`, 112). Each needs a completed
+PASS, a coverage report exactly equal to that suite's own required-route
+manifest (`required.txt`, which must also equal the case list) and one cfg
+readback per case equal to the python decode. `--negative` adds N7/N8/N9: one
+case per suite re-pointed to a different legal source of the same sink
+(`flow/route_diag_negative.py` re-assembles it; the oracle is unchanged) must
+give a completed functional FAIL on exactly that case; a setup/assembly error
+or INFRA verdict never counts. `flow/test_gate_route_diag.sh` regression-tests
+the failure modes (missing/duplicate cases, readback mismatch, compile and
+simulator errors, timeouts, missing/conflicting verdicts). Same scope as the
+basis leg: flat cfg port with a simulation-only loader, zero delay, functional
+only, experimental same-index hardware.
+
 **Label: experimental same-index switch matrix (ADR-0004/0005 Proposed),
 zero-delay, functional observation only.** `./flow/gate-sim-bitstream.sh`
 runs `sim/tb_logic_tile_bitstream.v` **unmodified**, once per committed
