@@ -211,9 +211,23 @@ toolchain); pins would still live only in `flow/tool_versions.sh`.
 
 ## Current contents
 
+### `flow/generated_tile_replay.sh` - committed streams through the generated LOGIC4 tile (issue #140)
+
+Run by `flow/fabulous.sh` after it has generated into `flow/build/fabulous-run/`
+(by hand: `flow/generated_tile_replay.sh flow/build/fabulous-run flow/build`).
+It compiles `sim/tb_logic_tile_bitstream.v` with `-DGEN_TILE` against the
+generated `LOGIC4.v` and its generated ConfigMem, matrix and BELs, and also
+against `design/rtl/logic_tile_routed.v`. Every baseline, corpus and
+pin-experiment stream is replayed through the generated tile's
+`FrameData`/`FrameStrobe` ports and checked with the independent oracles.
+Three scratch composition mutations must each fail functionally. Takes about
+2 minutes, iverilog only, run serially. EXPERIMENTAL; details and non-claims
+are in `sim/README.md`, evidence in `sim/generated_tile_replay.txt`.
+
 ### `flow/nextpnr.sh` - nextpnr on the generated LOGIC4 model (G1, issue #87)
 
-Runs `flow/fabulous.sh`, then pinned yosys + `nextpnr-generic --uarch fabulous`
+Runs `flow/fabulous.sh` (with `FABULOUS_SKIP_TILE_REPLAY=1`: only the model is
+needed, so the integrated replay above is skipped there), then pinned yosys + `nextpnr-generic --uarch fabulous`
 (YosysHQ OSS CAD Suite tarball, sha256-verified, unpacked into the untracked
 `flow/build/oss-cad-suite/`; pins in `flow/tool_versions.sh`) on
 `design/fabulous/nextpnr/top.v`, and diffs the normalized log against the

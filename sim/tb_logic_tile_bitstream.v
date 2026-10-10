@@ -26,6 +26,22 @@
 // loaded stream; placement (which BEL) and pad/loopback wiring come from the
 // manifest. The oracle (the mapped design's function) is written independently
 // below and does not reuse assembler code.
+//
+// Compile-time DUT choice (issue #140):
+//   default        the repository composition design/rtl/logic_tile_routed.v,
+//                  configured through its flat 158-bit `cfg` port (cfg[i] =
+//                  frame bit of logic4_configmem.map line i).
+//   -DGEN_TILE     the FABulous-GENERATED tile module LOGIC4 (scratch output of
+//                  flow/fabulous.sh: LOGIC4.v + its generated LOGIC4_ConfigMem,
+//                  LOGIC4_switch_matrix and lut4_ff_bel instances, models_pack.v).
+//                  It is configured ONLY through its real FrameData/FrameStrobe
+//                  boundary ports: each frame of the stream addressed to the
+//                  logic tile is written, in stream order, as a legal frame write
+//                  (data, one-hot strobe, strobe release). The map is NOT used to
+//                  load it; the CFG= line is read back from the generated tile's
+//                  internal ConfigBits. Perturbations (+mutate) are re-written as
+//                  frames (the map only locates the flipped bit). Same oracles,
+//                  same CAP loopback / pad semantics; flow/generated_tile_replay.sh.
 `timescale 1ns/1ps
 
 module tb_logic_tile_bitstream;
@@ -36,11 +52,29 @@ module tb_logic_tile_bitstream;
     reg  [15:0]  tin;           // tin[4*dir + idx], dir: 0=N 1=E 2=S 3=W
     wire [15:0]  tout;
 
+`ifdef GEN_TILE
+    // Adapter onto the generated LOGIC4 boundary (port names as emitted by the
+    // pinned generator: <dir>1END = input track, <dir>1BEG = output track, the
+    // same names logic_tile_routed.v documents for <dir>_in / <dir>_out).
+    reg  [31:0] FrameData   = 32'b0;
+    reg  [19:0] FrameStrobe = 20'b0;
+    wire [31:0] FrameData_O;
+    wire [19:0] FrameStrobe_O;
+    wire        UserCLKo;
+    LOGIC4 dut (
+        .N1END(tin[3:0]),   .E1END(tin[7:4]),   .S1END(tin[11:8]),  .W1END(tin[15:12]),
+        .N1BEG(tout[3:0]),  .E1BEG(tout[7:4]),  .S1BEG(tout[11:8]), .W1BEG(tout[15:12]),
+        .UserCLK(clk), .UserCLKo(UserCLKo),
+        .FrameData(FrameData), .FrameData_O(FrameData_O),
+        .FrameStrobe(FrameStrobe), .FrameStrobe_O(FrameStrobe_O)
+    );
+`else
     logic_tile_routed dut (
         .clk(clk), .cfg(cfg),
         .n_in(tin[3:0]),  .e_in(tin[7:4]),  .s_in(tin[11:8]),  .w_in(tin[15:12]),
         .n_out(tout[3:0]), .e_out(tout[7:4]), .s_out(tout[11:8]), .w_out(tout[15:12])
     );
+`endif
 
     // ----------------------------------------------------------- bookkeeping
     integer checks = 0;
@@ -141,6 +175,45 @@ module tb_logic_tile_bitstream;
         end
     endtask
 
+    // ------------------------------------- GEN_TILE: real frame-port writes
+    // One legal frame write into the generated tile: data, one-hot strobe,
+    // strobe release, then FrameData scrambled (storage must hold). No-op for
+    // the repository composition (its cfg port is driven directly).
+    reg [31:0] held_frame [0:NFR-1];   // what the generated tile currently stores
+    integer    n_frame_writes = 0;
+    task write_frame(input integer fr, input [31:0] data);
+        begin
+`ifdef GEN_TILE
+            FrameData = data; #1;
+            FrameStrobe = 20'b0; FrameStrobe[fr] = 1'b1; #1;
+            FrameStrobe = 20'b0; #1;
+            FrameData = ~data ^ 32'h5a5a_a5a5; #1;
+            held_frame[fr] = data;
+            n_frame_writes = n_frame_writes + 1;
+`endif
+        end
+    endtask
+
+    // Bring the DUT to the configuration in `cfg` after a perturbation/restore.
+    // GEN_TILE: rewrite (as frames) every frame whose content changed; the map
+    // only locates bits, unmapped positions keep the loaded stream's (zero) bits.
+    task apply_cfg;
+`ifdef GEN_TILE
+        integer f, k;
+        reg [31:0] w;
+`endif
+        begin
+`ifdef GEN_TILE
+            for (f = 0; f < NFR; f = f + 1) begin
+                w = logic_frame[f] & ~mapped_mask[f];
+                for (k = 0; k < CFG_N; k = k + 1)
+                    if (cb_pos[k] / FBITS == f) w[cb_pos[k] % FBITS] = cfg[k];
+                if (w !== held_frame[f]) write_frame(f, w);
+            end
+`endif
+        end
+    endtask
+
     task reject(input [8*80-1:0] why);
         begin
             if (load_ok) reject_reason = why;
@@ -196,6 +269,7 @@ module tb_logic_tile_bitstream;
                             if (!ok) reject("truncated frame data");
                             else if (col == lx && (grid_rows - 2 - order) == ly) begin
                                 logic_frame[frame] = fw;
+                                write_frame(frame, fw);   // GEN_TILE: real frame port
                             end else if (fw != 0) begin
                                 reject("data for a tile without config bits");
                             end
@@ -290,6 +364,7 @@ module tb_logic_tile_bitstream;
     task flush_loops;
         begin
             cfg = clean_cfg;
+            apply_cfg;
             flush = 1'b1; #1; flush = 1'b0; #1;
         end
     endtask
@@ -514,7 +589,22 @@ module tb_logic_tile_bitstream;
             $display("FAIL: tb_logic_tile_bitstream[%0s]: loader rejected a stream that must load: %0s", design_name, reject_reason);
             $finish;
         end
+`ifdef GEN_TILE
+        // read back from the generated tile's own ConfigMem output (not the map)
+        $display("CFG=%040h", {2'b00, dut.ConfigBits});
+        $display("GEN_TILE: %0d frame writes through FrameData/FrameStrobe; %0d CAP loopbacks, %0d BELs used",
+                 n_frame_writes, n_loops, nbel);
+        // Configuring a live tile frame by frame lets the still-X ConfigBits of the
+        // first writes push an X into a CAP loopback. A don't-care cycle (an unused
+        // LUT pin defaulting to the loopback of a track the LUT itself drives, see
+        // flush_loops) then holds that simulation-only X forever. The repository
+        // composition never sees it because its cfg port is valid from time 0.
+        // Break it exactly as flush_loops does between perturbations: force the
+        // loopbacks to 0 once, after configuration and before any check.
+        flush = 1'b1; #1; flush = 1'b0; #1;
+`else
         $display("CFG=%040h", {2'b00, cfg});
+`endif
 
         // (1) the programmed tile implements the mapped design
         cur_fail = 0;
@@ -530,6 +620,7 @@ module tb_logic_tile_bitstream;
             for (m = 0; m < nsel; m = m + 1) begin     // every used routing-select bit
                 flush_loops;
                 cfg = saved_cfg ^ (158'b1 << sel_list[m]);
+                apply_cfg;
                 cur_fail = 0; run_all_env(2); nmut = nmut + 1;
                 if (cur_fail > 0) det = det + 1;
                 else begin surv = surv + 1; $display("  SURVIVED: flip of routing-select cfg[%0d]", sel_list[m]); end
@@ -547,6 +638,7 @@ module tb_logic_tile_bitstream;
                     else
                         cfg = saved_cfg ^ ((i == 0) ? (158'hFFFF << (17*bel_list[m]))
                                                     : (158'b1 << (17*bel_list[m] + 16)));
+                    apply_cfg;
                     cur_fail = 0; run_all_env(2); nmut = nmut + 1;
                     if (cur_fail > 0) det = det + 1;
                     else begin surv = surv + 1; $display("  SURVIVED: flip of BEL %0d cfg bit %0d", bel_list[m], (i == 2) ? 16 : i); end
