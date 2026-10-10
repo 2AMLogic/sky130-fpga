@@ -247,9 +247,15 @@ reset x 4 edges, read from the frozen pip model) and `sim/tb_ctrl_route.v`
 checks FF capture/hold/reset/reset-over-enable against a stimulus-driven
 register model on both compositions, with five scratch matrix mutants
 (source permutations and enable-destination aliases) that must fail on the
-predicted cases. Unit tests: `flow/test_lut_basis.py`, `flow/test_route_diag.py`,
-`flow/test_ctrl_route.py` (run by `sim/run.sh`). Takes about
-4 minutes, iverilog only, run serially. EXPERIMENTAL; details and non-claims
+predicted cases. Then the boundary output-route diagnostic (issue #180):
+`flow/output_route.py` assembles 112 streams (16 output tracks x 7 sources,
+read from the frozen pip model) and `sim/tb_output_route.v` observes the tile
+boundary directly (no CAP loopbacks) on both compositions, with four scratch
+matrix mutants (two source permutations, two sink select-field aliases) that
+must fail on the cases `flow/output_route.py predict` derives independently.
+Unit tests: `flow/test_lut_basis.py`, `flow/test_route_diag.py`,
+`flow/test_ctrl_route.py`, `flow/test_output_route.py` (run by `sim/run.sh`).
+Takes about 4 minutes, iverilog only, run serially. EXPERIMENTAL; details and non-claims
 are in `sim/README.md`, evidence in `sim/generated_tile_replay.txt`.
 
 ### `flow/nextpnr.sh` - nextpnr on the generated LOGIC4 model (G1, issue #87)

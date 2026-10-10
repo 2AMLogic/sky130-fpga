@@ -598,6 +598,47 @@ instances wired together by the generator (unmodified, in gitignored
   covered: ratified fabric (ADR-0004/0005 stay Proposed), inter-tile coverage,
   timing, mapper output, LUT data paths in registered mode, and the N edge is
   select 0 (default), so an N case alone does not prove a programmed select.
+- **Boundary output-track source diagnostic (issue #180, EXPERIMENTAL)**: after
+  the control-jump routes, `flow/output_route.py` assembles 112 streams, one per
+  legal (output edge, track, source) tuple: 16 output tracks x 7 sources (the
+  four BEL outputs and the three same-index incoming tracks of the other
+  edges). The required set is read from the frozen pip model; a missing or
+  duplicate case fails the generator, the bench refuses to report full
+  coverage for a missing or duplicated tuple, and the script requires the
+  bench's 112 `COVERAGE: ROUTE <edge> <track> <source>` lines to equal that
+  set once each. The tile boundary is observed directly (stimulus on the 16
+  incoming tracks, the 16 outgoing tracks read; no CAP loopbacks, so no
+  combinational feedback). Every stream routes all 16 output tracks (the tested
+  one from its tested source, the other 15 from case-dependent background
+  sources) and configures the four BELs as distinguishable functions
+  (A = pin0, B = NOT pin1, C = pin2, D = NOT pin3) of the tested sink's own
+  edge, so no BEL value is correlated with a candidate of the tested sink.
+  `sim/tb_output_route.v` loads the streams in sequence into one live tile
+  without reset (generated LOGIC4 only through FrameData/FrameStrobe; and the
+  repository composition), so each stream reprograms the select fields of the
+  previous one. In each of 6 environments of the other tracks the tested
+  edge's four tracks and the three incoming candidates take all 128
+  combinations (the selected source toggles against every combination of the
+  unselected candidates, including all six opposite, and the BELs take every
+  value combination), and all 16 outputs are compared with the value of their
+  source token each pattern, so a wrong source on any track and an aliased
+  sink both show. Expected values come from the case identifier, the background
+  token string and the applied stimulus only (no cfg, map, ConfigBits or matrix
+  signal). The script requires PASS on both compositions, the exact coverage
+  set, and readback == Python decode. Four scratch generated-matrix mutants
+  (BEL A/B sources exchanged on N1BEG0, S and BEL D exchanged on W1BEG3,
+  S1BEG2 using S1BEG1's select field, N1BEG3 using E1BEG3's select field) must
+  each compile and give a completed functional FAIL on exactly the cases
+  `flow/output_route.py predict` derives from the case list (stimulus set and
+  mux position rule, cross-checked against the assembler's encoding by
+  `flow/test_output_route.py`; never from the generated RTL); a compile error,
+  timeout or simulator error is never a detection (shared verdict classifier
+  and `SIM_TIMEOUT_SECONDS` budget). Not covered: ratified fabric
+  (ADR-0004/0005 stay Proposed), inter-tile coverage, timing, mapper output,
+  registered BEL outputs, sources other than the same-index tracks. G5 stays
+  open. Because a never-programmed sink also selects position 0, the check
+  that a tested position-0 source was programmed rests on the other 15 sinks
+  and neighbouring cases carrying non-zero selects.
 - **Simulation conventions** (not timing): the generated sources carry no
   `timescale`, and the matrix has FABulous's placeholder `assign #80` mux
   delays. They are compiled under `timescale 1ps/1ps`, so each mux takes 80 ps,

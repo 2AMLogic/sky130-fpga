@@ -172,3 +172,38 @@
     other than the same-index N/E/S/W tracks, LUT data paths in registered mode (the BELs are constant-one here), the N edge being select 0
     (default) so an N case alone does not prove a programmed select (the E/S/W cases and the N<->W mutant do), and mutants on enable A's
     sink (its candidate tracks share index 0 with the reset's, so its predicted-failure set is not as clean).
+
+2026-10-10  flow/generated_tile_replay.sh step 8 (run by hand on a copy of a flow/fabulous.sh generated run; pass-through of the full script) @ issue #180 (EXPERIMENTAL, zero delay, single tile)
+  Boundary output-track source diagnostic: every legal source of every boundary output track, selected through frame programming and observed
+  directly at the tile boundary (no CAP loopbacks).
+  Scope: 112 DIAGNOSTIC streams assembled by flow/output_route.py through the existing assembler (flow/fasm_to_bitstream.py assemble + pack,
+    decoded back) against sim/bitstream/fabric_spec.json. NOT mapper output; no routing widening, no mapper-policy decision, no timing, no
+    inter-tile and no ratified-fabric claim (ADR-0004/0005/0006 remain Proposed). Distinct from the fixed output routes of the LUT basis (#172),
+    the routes into the BELs (#176, #181) and the component select sweeps (design/fabulous/tb_switch_matrix_equiv.v drives cfg directly).
+  Required set: read from the frozen pip model: pips <src> -> <N|E|S|W>1BEG<i>, sources L<A..D>_O and the same-index <edge>1END<i> of the three
+    other edges = 16 x 7 = 112 (output edge, track, source); the generator fails on a missing/duplicate case or an unmodelled source, and the
+    bench/script coverage report must list the same 112 keys exactly once (verified negatively: a list with a case removed, one duplicated, and
+    one removed + one duplicated each end in FAIL: incomplete output-route coverage, 111/112, 111/112 + 1 duplicate, 110/112 + 1 duplicate).
+  Cases O_<E><i>_<src>, edge-major, loaded into ONE live tile with no reset between streams (every stream differs from its predecessor):
+    all 16 output tracks routed (tested sink from its tested source, other 15 from case-dependent background sources); BEL A = pin0, B = NOT pin1,
+    C = pin2, D = NOT pin3 of the tested sink's own edge (both polarities; no BEL value correlated with a candidate of the tested sink).
+  DUT: the generated LOGIC4 (+ConfigMem, matrix, BEL) configured only by FrameData/FrameStrobe (2240 frame writes = 112 streams x 20 frames),
+    and design/rtl/logic_tile_routed.v through its cfg port. Bench sim/tb_output_route.v.
+  Oracle (case identifier, background token string and applied stimulus only; no cfg/map/ConfigBits/internal mux signal): each of the 16
+    outputs == value of its source token; per case 6 environments x 128 combinations of the tested edge's 4 tracks and the 3 incoming candidates
+    (the selected source toggles against every combination of unselected candidates, 12 patterns per case with all six opposite).
+  Result: PASS on both compositions (1376256 checks, 0 failures; 112/112 cases), identical summaries;
+    COVERAGE: 112/112 routes (4 edges x 4 tracks x 7 sources); 112 cases loaded in sequence into one live tile; 1344 adversarial patterns; 0 duplicates.
+    Per-case readback (generated ConfigBits / repository cfg) == python decode of the stream, 112/112 on both.
+  Scratch generated-matrix mutants (compiled; completed functional FAIL; failing set == flow/output_route.py predict; readback and coverage intact):
+    N0_AB      : N1BEG0 BEL A <-> BEL B sources exchanged      12288 failures / 1376256 checks; 32 predicted cases
+    W3_SD      : W1BEG3 S <-> BEL D sources exchanged          15360 failures / 1376256 checks; 32 predicted cases
+    ALIAS_S2S1 : S1BEG2 uses S1BEG1's select field             39680 failures / 1376256 checks; 106 predicted cases
+    ALIAS_N3E3 : N1BEG3 uses E1BEG3's select field             41088 failures / 1376256 checks; 110 predicted cases
+    (the predicted sets include background-source cases, since all 16 outputs are checked in every case)
+  Unchanged in the same run: 20/20 fixtures PASS on both compositions, 5/5 composition mutations, LUT basis 64/64 with 3/3 mutants, LUT-input
+    routes 64/64 with 3/3 mutants, control-jump routes 20/20 with 5/5 mutants. Final line: generated-tile replay: PASS (... output-track sources
+    112/112 (edge, track, source) cases on both compositions, 4/4 output mutants caught). Wall time ~3m25s serial.
+  Not covered (G5 stays OPEN): ratified fabric, inter-tile routing, timing, the real frame-loader/pad hardware, mapper correctness, sources other
+    than the same-index N/E/S/W tracks and the four BEL outputs, registered BEL outputs, and the select-0 default (a never-programmed sink also
+    selects position 0, so a tested position-0 source relies on the other 15 sinks and neighbouring cases for programming evidence).
