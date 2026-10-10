@@ -71,6 +71,8 @@ on:
       - 'flow/gate-sim-bitstream.sh'
       - 'flow/gate_sim_verdict.sh'
       - 'flow/test_gate_sim_verdict.sh'
+      - 'flow/configmem_bad_inputs.py'
+      - 'design/fabulous/tb_configmem_equiv.v'
       - 'flow/test_sim_budget.sh'
       - 'flow/sim_budget.py'
       - 'sim/pin_fixture_replay.sh'

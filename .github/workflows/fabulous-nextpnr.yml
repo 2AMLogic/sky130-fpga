@@ -29,6 +29,7 @@ on:
       - 'flow/fabulous_summary.py'
       - 'flow/configmem_frames.py'
       - 'flow/test_configmem_frames.py'
+      - 'flow/configmem_bad_inputs.py'
       - 'sim/bitstream_corrupt.py'
       - 'flow/generated_tile_replay.sh'
       - 'flow/gate_sim_verdict.sh'

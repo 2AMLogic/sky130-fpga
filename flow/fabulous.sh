@@ -147,6 +147,31 @@ for c in "missing:$BUILD/cm_vec_nonexistent.txt" "empty:$BUILD/cm_vec_empty.txt"
     fi
     echo "input '${c%%:*}' vector file -> $verdict: $(grep '^ERROR: configmem' "$BUILD/cm_in_${c%%:*}.out")"
 done
+# (issue #200) malformed transaction records and maps (flow/configmem_bad_inputs.py:
+# short/extra fields, bad tags/numbers/widths, out-of-range or duplicate/missing
+# frames, F before S, truncated streams, trailing input, non-bijective or malformed
+# maps) must each terminate as a setup ERROR with no summary; its positive controls
+# (frame order permuted inside each stream, no final newline) must still PASS.
+CM_BAD="$BUILD/cm_bad_inputs"
+rm -rf "$CM_BAD"
+python3 "$REPO/flow/configmem_bad_inputs.py" "$CM_VEC" "$REPO/sim/bitstream/logic4_configmem.map" "$CM_BAD" \
+    > "$BUILD/cm_bad_inputs.lst"
+n_bad=0; n_good=0
+while read -r expect kind name vecf mapf; do
+    o="$CM_BAD/$expect-$kind-$name.out"
+    rc=0; gs_run_bounded "ConfigMem input $kind $name" "$o" vvp "$BUILD/cm_tb" +map="$mapf" +vec="$vecf" || rc=$?
+    if [[ "$expect" == bad ]]; then
+        gs_configmem_is_setup_error "$rc" "$o" || {
+            echo "error: ConfigMem bench with malformed $kind '$name' gave '$(gs_classify_configmem "$rc" "$o")' (rc=$rc), not a setup ERROR with no summary (see $o)" >&2; exit 1; }
+        n_bad=$((n_bad + 1))
+    else
+        [[ "$(gs_classify_configmem "$rc" "$o")" == PASS ]] || {
+            echo "error: ConfigMem bench rejected valid $kind control '$name' (see $o)" >&2; exit 1; }
+        n_good=$((n_good + 1))
+    fi
+done < "$BUILD/cm_bad_inputs.lst"
+echo "malformed inputs: $n_bad/$n_bad setup ERROR -> INFRA (no summary); valid controls: $n_good/$n_good PASS"
+grep -h '^ERROR: configmem' "$CM_BAD/bad-vec-truncated-2nd-stream.out"
 echo "--- scratch mutations of the generated ConfigMem (each must be caught) ---"
 # (1) frame select: bit of frame 2 latched by frame 3's strobe
 python3 - "$CM_V" "$BUILD/cm_mut_select.v" "$BUILD/cm_mut_map.v" <<'PYEOF'
@@ -198,6 +223,13 @@ for m in select map rise fall; do
             || { echo "ConfigMem mutation '$m' not caught by the transparent-open phase" >&2; exit 1; }
     fi
     echo "mutation '$m' caught: $(grep '^FAIL: configmem' "$BUILD/cm_mut_$m.out")"
+    # (issue #200) the same mutant fed a truncated second stream must still be a
+    # setup ERROR: malformed input never yields a summary, even on a broken DUT
+    rc=0; gs_run_bounded "ConfigMem mutation $m + truncated stream" "$BUILD/cm_mut_${m}_trunc.out" \
+        vvp "$BUILD/cm_mut_${m}_tb" +map="$REPO/sim/bitstream/logic4_configmem.map" \
+        +vec="$CM_BAD/vec_truncated-2nd-stream.txt" || rc=$?
+    gs_configmem_is_setup_error "$rc" "$BUILD/cm_mut_${m}_trunc.out" || {
+        echo "error: mutation '$m' with a truncated vector file was not a setup ERROR (see $BUILD/cm_mut_${m}_trunc.out)" >&2; exit 1; }
 done
 
 # Integrated generated-tile replay (issue #140): the component checks above

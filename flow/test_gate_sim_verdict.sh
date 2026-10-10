@@ -108,6 +108,29 @@ cexpect "zero streams after mismatches"  INFRA     0 "$CM1"$'\n'"$CM1"$'\n'"$CE0
 cexpect "one stream after baseline mismatch" INFRA 0 "FAIL baseline s0: ConfigBits 0 recorded 1"$'\n'"$CE1"$'\n'
 cexpect "zero streams + stray FAIL summary" INFRA  0 "$CM1"$'\n'"$CE0"$'\n'"$CF"$'\n'
 cexpect "pre-fix baseline-streams FAIL form" INFRA 0 $'FAIL: only 0 baseline streams replayed\n'"$CF"$'\n'
+# issue #200: malformed transaction / map input is a setup ERROR -> INFRA, also
+# when it follows mismatch lines; the input predicate also requires rc 0 and no summary
+CET="ERROR: configmem_fabulous_equiv setup: vector file /x: last stream s2 incomplete at EOF: 2 of 20 frames"
+CEM="ERROR: configmem_fabulous_equiv setup: bad map entry 0 131 (map file /m line 2: duplicate ConfigBits index)"
+cexpect "truncated 2nd stream"           INFRA     0 "$CET"$'\n'
+cexpect "truncated stream after mismatch" INFRA    0 "$CM1"$'\n'"$CET"$'\n'
+cexpect "duplicate ConfigBits index"     INFRA     0 "$CEM"$'\n'
+cexpect "bad record line"                INFRA     0 $'ERROR: configmem_fabulous_equiv setup: vector file /x line 23: wrong field count (want 3)\n'
+sexpect() {  # sexpect <name> <want yes|no> <rc> <log content>
+    printf '%s' "$4" >"$T/log"
+    local got=no; gs_configmem_is_setup_error "$3" "$T/log" && got=yes
+    if [[ "$got" == "$2" ]]; then echo "ok   cm setup-error $1 -> $got"; else echo "FAIL cm setup-error $1: want $2 got $got"; rc_all=1; fi
+}
+sexpect "plain setup ERROR"              yes 0   "$CET"$'\n'
+sexpect "setup ERROR after mismatches"   yes 0   "$CM1"$'\n'"$CET"$'\n'
+sexpect "setup ERROR + FAIL summary"     no  0   "$CET"$'\n'"$CF"$'\n'
+sexpect "setup ERROR + PASS summary"     no  0   "$CEM"$'\n'"$CP"$'\n'
+sexpect "setup ERROR, nonzero exit"      no  1   "$CET"$'\n'
+sexpect "setup ERROR, then timeout"      no  124 "$CET"$'\n'
+sexpect "completed functional FAIL"      no  0   "$CM1"$'\n'"$CF"$'\n'
+sexpect "baseline PASS"                  no  0   "$CP"$'\n'
+sexpect "other ERROR (not setup)"        no  0   $'ERROR: something else\n'
+sexpect "empty log"                      no  0   ""
 
 # stub runners through gs_run_bounded (real timeout path)
 cstub() {  # cstub <name> <want> <body...>
@@ -146,11 +169,27 @@ if command -v iverilog >/dev/null && command -v vvp >/dev/null \
             SIM_TIMEOUT_SECONDS=120 SIM_KILL_AFTER_SECONDS=5 gs_run_bounded "cm-real-${c%%:*}" "$T/log" \
                 vvp "$T/cm_tb" +map="$HERE/../sim/bitstream/logic4_configmem.map" +vec="${c#*:}" 2>/dev/null || rc=$?
             got="$(gs_classify_configmem "$rc" "$T/log")"
-            if [[ "$got" == INFRA ]] && grep -q '^ERROR: configmem_fabulous_equiv setup:' "$T/log" \
-               && ! grep -q '^\(PASS\|FAIL\): configmem_fabulous_equiv' "$T/log"; then
+            if gs_configmem_is_setup_error "$rc" "$T/log"; then
                 echo "ok   cm real bench ${c%%:*} -> $got (setup ERROR, no summary)"
             else echo "FAIL cm real bench ${c%%:*}: got $got"; sed 's/^/     | /' "$T/log"; rc_all=1; fi
         done
+        # issue #200: malformed transaction records / maps and valid controls
+        # (flow/configmem_bad_inputs.py), driven through the real bench
+        if [[ -s "$CM_VEC_FILE" ]] && python3 "$HERE/configmem_bad_inputs.py" "$CM_VEC_FILE" \
+                "$HERE/../sim/bitstream/logic4_configmem.map" "$T/bad" >"$T/bad.lst"; then
+            while read -r expect kind name vecf mapf; do
+                rc=0
+                SIM_TIMEOUT_SECONDS=120 SIM_KILL_AFTER_SECONDS=5 gs_run_bounded "cm-real-$kind-$name" "$T/log" \
+                    vvp "$T/cm_tb" +map="$mapf" +vec="$vecf" 2>/dev/null || rc=$?
+                got="$(gs_classify_configmem "$rc" "$T/log")"
+                if [[ "$expect" == bad ]] && gs_configmem_is_setup_error "$rc" "$T/log"; then
+                    echo "ok   cm real bench bad $kind $name -> $got (setup ERROR, no summary)"
+                elif [[ "$expect" == good && "$got" == PASS ]]; then
+                    echo "ok   cm real bench valid $kind control $name -> $got"
+                else echo "FAIL cm real bench $expect $kind $name: got $got (rc=$rc)"; sed 's/^/     | /' "$T/log"; rc_all=1; fi
+            done <"$T/bad.lst"
+        elif [[ -s "$CM_VEC_FILE" ]]; then echo "FAIL cm real bench: configmem_bad_inputs.py failed"; rc_all=1
+        else echo "skip cm real bench malformed inputs: needs $CM_VEC_FILE (run flow/fabulous.sh first)"; fi
     else echo "FAIL cm real bench: iverilog compile failed"; rc_all=1; fi
 else
     echo "skip cm real bench: needs iverilog/vvp and $CM_RUN_DIR (run flow/fabulous.sh first)"
