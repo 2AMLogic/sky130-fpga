@@ -136,3 +136,39 @@
   Not covered (G5 stays OPEN): ratified fabric, inter-tile routing, timing, the real frame-loader/pad hardware, mapper correctness,
     sources other than the same-index N/E/S/W tracks, registered-mode behaviour, the N edge being select 0 (default) so an N case alone
     does not prove a programmed select (the E/S/W cases and the N<->W mutant do).
+
+2026-10-10  flow/generated_tile_replay.sh step 7 (run by hand on a copy of the flow/fabulous.sh generated run) @ issue #181 (EXPERIMENTAL, zero delay, single tile)
+  Control-jump directional route diagnostic: every existing matrix source of every enable and of the shared reset, selected through frame programming.
+  Scope: 20 DIAGNOSTIC streams assembled by flow/ctrl_route.py through the existing assembler (flow/fasm_to_bitstream.py assemble + pack,
+    decoded back) against sim/bitstream/fabric_spec.json. NOT mapper output; no routing widening, no mapper-policy decision, no timing and
+    no ratified-fabric claim (ADR-0004/0005/0006 remain Proposed). Distinct from the registered fixtures of #156 (one EN/SR source per BEL),
+    the LUT-input routes of #176, and the component select sweeps (design/fabulous/tb_switch_matrix_equiv.v drives cfg directly).
+  Required set: read from the frozen pip model: pips <N|E|S|W>1END<k> -> J_EN_BEG<k> (k = 0..3, enable k reaches exactly BEL k through
+    J_EN_BEG<k> -> J_EN_END<k> -> L<k>_EN) = 16, and <N|E|S|W>1END0 -> J_SR_BEG0 (reset reaches all four BELs through J_SR_END0) = 4;
+    the generator fails on a missing/duplicate case or a different destination fan-out, and the bench/script coverage report must list
+    the same 20 keys exactly once.
+  Cases C_EN_<X>_<E> (16) and C_SR_<E> (4), loaded into ONE live tile with no reset between streams (every stream differs from its predecessor):
+    all four BELs registered constant-one (FF, INIT all ones); all four enables and the reset routed from explicit edges; L<x>_O -> S1BEG<j>.
+  DUT: the generated LOGIC4 (+ConfigMem, matrix, BEL) configured only by FrameData/FrameStrobe (400 frame writes = 20 streams x 20 frames),
+    and design/rtl/logic_tile_routed.v through its cfg port. Bench sim/tb_ctrl_route.v.
+  Oracle (register reference model fed by the applied stimulus only; no cfg/map/ConfigBits/internal control net): FF next state =
+    SR ? 0 : EN ? 1 : hold, checked on all four BELs before and after every clock edge. Enable cases (8 phases): reset with enable low,
+    capture on BEL X only, hold with unselected enable tracks high, clear, hold 0, capture, reset over enable, hold 0; the other three BELs
+    must stay 0 (destination aliasing). Reset cases (11 phases, per-BEL enable vectors): capture, reset with enables low, reset over all
+    enables, hold with reset inactive, mixed-enable captures, mixed-enable reset priority, on all four BELs.
+  Result: PASS on both compositions (1296 checks, 0 failures; 20/20 cases), identical summaries;
+    COVERAGE: 20/20 routes (16 enable, 4 shared-reset edges); 172 phases; 140 full-disagreement phases (every unselected candidate track opposite
+    the selected control); 0 duplicates. Per-case readback (generated ConfigBits / repository cfg) == python decode of the stream, 20/20 on both.
+  Scratch generated-matrix mutants (compiled; completed functional FAIL; failing set == predicted from the defect; readback intact):
+    EN1_ES   : BEL B enable E <-> S exchanged   10 failures / 1296 checks; C_EN_B_E C_EN_B_S
+    EN3_NW   : BEL D enable N <-> W exchanged   10 failures / 1296 checks; C_EN_D_N C_EN_D_W
+    SR_ES    : shared reset E <-> S exchanged  242 failures / 1296 checks; the 10 cases whose reset edge is E or S
+    ALIAS_BA : LB_EN driven by J_EN_END0       64 failures / 1296 checks; C_EN_A_*, C_EN_B_*, C_SR_* (12 cases)
+    ALIAS_DC : LD_EN driven by J_EN_END2       64 failures / 1296 checks; C_EN_C_*, C_EN_D_*, C_SR_* (12 cases)
+  Unchanged in the same run: 20/20 fixtures PASS on both compositions, 5/5 composition mutations, LUT basis 64/64 with 3/3 mutants,
+    LUT-input routes 64/64 with 3/3 mutants. Final line: generated-tile replay: PASS (... control-jump routes 20/20 (16 enable + 4 reset)
+    cases on both compositions, 5/5 control mutants caught). Wall time ~2m52s serial.
+  Not covered (G5 stays OPEN): ratified fabric, inter-tile routing, timing, the real frame-loader/pad hardware, mapper correctness, sources
+    other than the same-index N/E/S/W tracks, LUT data paths in registered mode (the BELs are constant-one here), the N edge being select 0
+    (default) so an N case alone does not prove a programmed select (the E/S/W cases and the N<->W mutant do), and mutants on enable A's
+    sink (its candidate tracks share index 0 with the reset's, so its predicted-failure set is not as clean).

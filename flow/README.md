@@ -241,8 +241,14 @@ assembles 64 streams (4 BELs x 4 input pins x 4 edges, the required set read
 from the frozen pip model) and `sim/tb_route_diag.v` drives each selected
 boundary track against the disagreeing unselected tracks on both compositions,
 with three scratch matrix source-permutation mutants that must fail on the
-predicted routes. Unit tests: `flow/test_lut_basis.py`, `flow/test_route_diag.py`
-(run by `sim/run.sh`). Takes about
+predicted routes. Then the control-jump route diagnostic (issue #181):
+`flow/ctrl_route.py` assembles 20 streams (4 enables x 4 edges + the shared
+reset x 4 edges, read from the frozen pip model) and `sim/tb_ctrl_route.v`
+checks FF capture/hold/reset/reset-over-enable against a stimulus-driven
+register model on both compositions, with five scratch matrix mutants
+(source permutations and enable-destination aliases) that must fail on the
+predicted cases. Unit tests: `flow/test_lut_basis.py`, `flow/test_route_diag.py`,
+`flow/test_ctrl_route.py` (run by `sim/run.sh`). Takes about
 4 minutes, iverilog only, run serially. EXPERIMENTAL; details and non-claims
 are in `sim/README.md`, evidence in `sim/generated_tile_replay.txt`.
 

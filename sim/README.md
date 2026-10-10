@@ -569,6 +569,35 @@ instances wired together by the generator (unmodified, in gitignored
   programmed; the other three edges of the same pin and the N/W-type mutant
   cover that. Not mapper output, no routing widening, no timing or
   ratified-fabric claim; G5 stays open for inter-tile verification.
+- **Control-jump directional route diagnostic (issue #181, EXPERIMENTAL)**: after
+  the LUT-input routes, `flow/ctrl_route.py` assembles 20 streams, one per
+  existing control source: each of the four enables (`J_EN_BEG<k>`, 4 edges
+  each) and the shared reset (`J_SR_BEG0`, 4 edges). The required set and the
+  destination fan-out (enable k reaches only BEL k; the reset reaches all four)
+  are read from the frozen pip model; a missing or duplicate case fails the
+  generator, and the script requires the bench's 20 `COVERAGE: ROUTE <EN|SR>
+  <BEL|-> <edge>` lines to equal that set once each. All four BELs are
+  registered constant-one functions, so no data track can contend with a
+  control track and the FF state is the observable. `sim/tb_ctrl_route.v` loads
+  the streams in sequence into one live tile without reset (generated LOGIC4
+  only through FrameData/FrameStrobe; and the repository composition) and
+  checks every phase before and after the clock edge against a register
+  reference model fed by the applied stimulus only (no cfg, map, ConfigBits or
+  internal control net): capture, hold, synchronous reset with enables low and
+  reset over enable, with the unselected directional candidate tracks of the
+  control under test driven opposite to it (full disagreement in 140 of 172
+  phases; the index-0 tracks shared by enable A and the reset keep both
+  selected tracks pinned). Enable cases assert the destination BEL and that the
+  other three BELs do not move; reset cases check all four BELs. The script
+  requires PASS on both compositions, the exact coverage set, and readback ==
+  Python decode. Five scratch generated-matrix mutants (B enable E<->S, D
+  enable N<->W, reset E<->S, `LB_EN` aliased to enable A, `LD_EN` aliased to
+  enable C) must each compile and give a completed functional FAIL on exactly
+  the predicted cases; a compile error, timeout or simulator error is never a
+  detection (shared verdict classifier and `SIM_TIMEOUT_SECONDS` budget). Not
+  covered: ratified fabric (ADR-0004/0005 stay Proposed), inter-tile coverage,
+  timing, mapper output, LUT data paths in registered mode, and the N edge is
+  select 0 (default), so an N case alone does not prove a programmed select.
 - **Simulation conventions** (not timing): the generated sources carry no
   `timescale`, and the matrix has FABulous's placeholder `assign #80` mux
   delays. They are compiled under `timescale 1ps/1ps`, so each mux takes 80 ps,
