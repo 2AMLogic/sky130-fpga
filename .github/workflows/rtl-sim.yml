@@ -35,6 +35,9 @@ jobs:
       - name: Simulation wall-clock budget regression (stub simulators, issue #157)
         run: ./flow/test_sim_budget.sh
 
+      - name: Mutation verdict classifier regression (stub simulators, issue #164)
+        run: python3 -I sim/test_mutation_verdict.py
+
       - name: Run RTL testbench suite
         run: ./sim/run.sh
 

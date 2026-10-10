@@ -4,7 +4,8 @@
 Applies a fixed, enumerated list of single-point mutations to a COPY of the
 RTL in the gitignored sim/build/mutation/ dir (committed RTL is never
 touched), rebuilds every testbench against each mutant with iverilog, and
-requires at least one testbench to report non-PASS (kill). Mutants are run
+requires at least one testbench to complete with a functional FAIL (kill);
+crashes, empty/missing/conflicting verdicts and timeouts are ERROR, not kills. Mutants are run
 strictly serially. Equivalent mutants must be listed, with a one-line
 justification, in sim/mutation_allowlist.txt.
 
@@ -14,6 +15,7 @@ really survives, and every mutation applied cleanly.
 """
 import datetime
 import pathlib
+import re
 import subprocess
 import sys
 
@@ -123,38 +125,76 @@ def srcs(d, names):
     return [str(d / n) for n in names]
 
 
-# testbench name, rtl files, extra vvp arg-sets (list of (label, args, pass-prefix))
+# testbench name, rtl files, extra vvp arg-sets (list of (label, args, verdict-id)).
+# verdict-id is the name each bench prints in its terminal PASS/FAIL line.
 def bench_list():
     bs = []
     for dname, stem in (("comb", "top_io"), ("reg", "top_reg")):
         bs.append((dname, [f"+bin={BS/stem}.bin", f"+map={BS/'logic4_configmem.map'}",
                            f"+wiring={BS/(stem + '.wiring')}", f"+design={dname}", "+mutate"],
-                   f"PASS: tb_logic_tile_bitstream[{dname}]"))
+                   f"tb_logic_tile_bitstream[{dname}]"))
     return [
-        ("tb_lut4_slice", [SL], [("", [], "PASS: tb_lut4_slice")]),
-        ("tb_logic_tile", [SL, LT], [("", [], "PASS: tb_logic_tile")]),
-        ("tb_switch_matrix", [SM], [("", [], "PASS: tb_switch_matrix")]),
-        ("tb_logic_tile_routed", [SL, SM, RT], [("", [], "PASS: tb_logic_tile_routed")]),
-        ("tb_logic_tile_gapfill", [SL, LT, SM, RT], [("", [], "PASS: tb_logic_tile_gapfill")]),
+        ("tb_lut4_slice", [SL], [("", [], "tb_lut4_slice")]),
+        ("tb_logic_tile", [SL, LT], [("", [], "tb_logic_tile")]),
+        ("tb_switch_matrix", [SM], [("", [], "tb_switch_matrix")]),
+        ("tb_logic_tile_routed", [SL, SM, RT], [("", [], "tb_logic_tile_routed")]),
+        ("tb_logic_tile_gapfill", [SL, LT, SM, RT], [("", [], "tb_logic_tile_gapfill")]),
         ("tb_logic_tile_bitstream", [SL, SM, RT], bs),
     ]
 
 
+def classify(rc, txt, tb):
+    """Classify one completed vvp run of verdict-id `tb` (issue #164).
+
+    Returns "PASS", "FUNC_FAIL" or "INFRA". Mirrors gs_classify in
+    flow/gate_sim_verdict.sh, but accepts every bench's terminal summary:
+      PASS:  "PASS: <tb> ..." and "FAIL: <tb> -- N checks, M failures" /
+             "FAIL: <tb> (N checks, M failures[, K perturbations survived])".
+    PASS needs rc 0, exactly one PASS line and no FAIL line at all. FUNC_FAIL
+    needs rc 0, exactly one terminal FAIL summary and no PASS line; other FAIL
+    lines (per-check mismatches) are tolerated except for the bitstream bench,
+    where any FAIL that is not the summary is a loader/setup failure. Anything
+    else (nonzero rc, empty output, no/duplicate/conflicting verdict) is INFRA
+    and never a kill."""
+    if rc != 0 or not txt.strip():
+        return "INFRA"
+    t = re.escape(tb)
+    pass_re = re.compile(rf"^PASS: {t}(?=[\s(]|$)")
+    func_re = re.compile(rf"^FAIL: {t} (?:-- \d+ checks, \d+ failures"
+                         rf"|\(\d+ checks, \d+ failures(?:, \d+ perturbations survived)?\))$")
+    lines = txt.splitlines()
+    n_pass = sum(bool(pass_re.match(l)) for l in lines)
+    n_func = sum(bool(func_re.match(l)) for l in lines)
+    n_fail = sum(l.startswith("FAIL") for l in lines)
+    if n_pass == 1 and n_func == 0 and n_fail == 0:
+        return "PASS"
+    strict = tb.startswith("tb_logic_tile_bitstream[")
+    if n_func == 1 and n_pass == 0 and (n_fail == 1 or not strict):
+        return "FUNC_FAIL"
+    return "INFRA"
+
+
 def killer(mdir):
-    """Return (killer-name or None, error-text or None). Errors are compile
-    failures and simulation timeouts (infrastructure, never a kill)."""
+    """Return (killer-name or None, error-text or None). Only a completed
+    functional FAIL is a kill. Errors are compile failures, simulation
+    timeouts and any run without a clean verdict (infrastructure, never a
+    kill)."""
     for name, files, runs in bench_list():
         out = mdir / f"{name}.out"
         rc, txt = run(["iverilog", "-g2012", "-I", str(SIM), "-o", str(out)]
                       + srcs(mdir, files) + [str(SIM / f"{name}.v")])
         if rc != 0:
             return None, f"{name}: {txt.strip()[:300]}"
-        for label, args, prefix in runs:
+        for label, args, tb in runs:
             rc, txt = run(["vvp", str(out)] + args)
+            what = name + (f"[{label}]" if label else "")
             if rc is None:
-                return None, f"{name}" + (f"[{label}]" if label else "") + f": {txt}"
-            if rc != 0 or not any(l.startswith(prefix) for l in txt.splitlines()):
-                return name + (f"[{label}]" if label else ""), None
+                return None, f"{what}: {txt}"
+            verdict = classify(rc, txt, tb)
+            if verdict == "INFRA":
+                return None, f"{what}: no clean verdict (rc={rc}): {txt.strip()[-300:] or '<empty output>'}"
+            if verdict == "FUNC_FAIL":
+                return what, None
     return None, None
 
 
@@ -201,7 +241,7 @@ def main():
         k, err = killer(mdir)
         if err:
             status = "ERROR"
-            bad.append(f"{mid}: mutant did not compile or its run did not complete ({err})")
+            bad.append(f"{mid}: mutant did not compile or its run did not complete cleanly ({err})")
         elif k and mid in allow:
             status = "KILLED-BUT-ALLOWLISTED"
             bad.append(f"{mid}: allowlisted as equivalent but killed by {k}; remove from allowlist")
@@ -218,7 +258,8 @@ def main():
     total = len(rows)
     killed = sum(r[2] == "KILLED" for r in rows)
     allowed = sum(r[2] == "ALLOWLISTED" for r in rows)
-    summary = f"mutants: total={total} killed={killed} allowlisted={allowed} surviving={len(bad)}"
+    errors = sum(r[2] == "ERROR" for r in rows)
+    summary = f"mutants: total={total} killed={killed} allowlisted={allowed} surviving={len(bad) - errors} errors={errors}"
     print(summary)
     for b in bad:
         print("FAIL:", b, file=sys.stderr)
