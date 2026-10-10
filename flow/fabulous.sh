@@ -157,7 +157,9 @@ done
 # The control-jump route diagnostic (issue #181: every enable/reset directional
 # source through frame programming, sim/tb_ctrl_route.v) follows the same pattern,
 # as does the boundary output-track source diagnostic (issue #180: every output
-# edge/track/source tuple, sim/tb_output_route.v).
+# edge/track/source tuple, sim/tb_output_route.v) and by the tile clock and frame
+# forwarding diagnostic (issue #188: UserCLKo, FrameData_O, FrameStrobe_O,
+# sim/tb_boundary_fwd.v).
 # EXPERIMENTAL; see sim/README.md.
 echo "=== generated-tile integrated replay (iverilog) ==="
 if [[ "${FABULOUS_SKIP_TILE_REPLAY:-0}" == 1 ]]; then

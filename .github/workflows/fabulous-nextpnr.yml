@@ -44,6 +44,7 @@ on:
       - 'flow/ctrl_route.py'
       - 'sim/tb_output_route.v'
       - 'flow/output_route.py'
+      - 'sim/tb_boundary_fwd.v'
       - 'flow/nextpnr.sh'
       - 'flow/nextpnr_io_overlay.py'
       - 'flow/bitstream.sh'
