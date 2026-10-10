@@ -100,7 +100,14 @@ grep -q '^PASS: switch_matrix_fabulous_equiv' "$BUILD/sm_tb.out"
 echo "=== ConfigMem storage equivalence (iverilog) ==="
 CM_V="$RUN/Tile/LOGIC4/LOGIC4_ConfigMem.v"
 CM_VEC="$BUILD/configmem_vectors.txt"
-python3 "$REPO/flow/configmem_frames.py" "$REPO/sim/bitstream" > "$CM_VEC"
+# adapter unit tests (issue #169): malformed streams must be rejected, valid ones sliced unchanged
+python3 "$REPO/flow/test_configmem_frames.py" >"$BUILD/test_configmem_frames.log" 2>&1 \
+    || { cat "$BUILD/test_configmem_frames.log" >&2; echo "error: ConfigMem adapter unit tests failed" >&2; exit 1; }
+grep -q '^OK' "$BUILD/test_configmem_frames.log"
+echo "PASS: test_configmem_frames ($(grep -o '^Ran [0-9]* tests' "$BUILD/test_configmem_frames.log"), 0 failures)"
+# strict adapter: a rejected stream exits nonzero (set -e) and leaves no vector file content
+python3 "$REPO/flow/configmem_frames.py" "$REPO/sim/bitstream" > "$CM_VEC" \
+    || { echo "error: ConfigMem frame adapter rejected a committed stream (see stderr above)" >&2; exit 1; }
 cm_run() {  # $1 = ConfigMem file, $2 = output prefix; nonzero = did not complete
     iverilog -g2005 -o "$2_tb" "$REPO/design/fabulous/tb_configmem_equiv.v" "$1" \
         "$RUN/Fabric/models_pack.v" || return 1
