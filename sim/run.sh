@@ -145,6 +145,16 @@ else
     overall_status=1
 fi
 
+echo "=== LUT basis stream generator unit tests (flow/test_lut_basis.py, issue #172) ==="
+if python3 -I "$REPO_ROOT/flow/test_lut_basis.py" >"$BUILD_DIR/test_lut_basis.log" 2>&1 \
+   && grep -q '^OK' "$BUILD_DIR/test_lut_basis.log"; then
+    echo "PASS: test_lut_basis ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_lut_basis.log"), 0 failures)"
+else
+    cat "$BUILD_DIR/test_lut_basis.log" >&2
+    echo "error: LUT basis generator unit tests failed" >&2
+    overall_status=1
+fi
+
 echo "=== bitstream fixtures reproduce from committed FASM (flow/fasm_to_bitstream.py check) ==="
 if ! python3 "$BS_TOOL" check "$BS_DIR"; then
     echo "error: committed sim/bitstream fixtures drifted from the assembler output" >&2

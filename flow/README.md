@@ -220,8 +220,15 @@ generated `LOGIC4.v` and its generated ConfigMem, matrix and BELs, and also
 against `design/rtl/logic_tile_routed.v`. Every baseline, corpus and
 pin-experiment stream is replayed through the generated tile's
 `FrameData`/`FrameStrobe` ports and checked with the independent oracles.
-Three scratch composition mutations must each fail functionally. Takes about
-2 minutes, iverilog only, run serially. EXPERIMENTAL; details and non-claims
+Three scratch composition mutations must each fail functionally. It then runs
+the LUT basis diagnostic (issue #172): `flow/lut_basis.py <out dir>` assembles
+73 diagnostic streams (one-hot INIT for every address of every BEL, plus
+all-ones/all-zero clearing cases) through the existing assembler, and
+`sim/tb_lut_basis.v` checks every BEL output against the selected address on
+both compositions, with three scratch mutants (LUT-input permutation, BEL
+INIT-bit swap, BEL A/B slice swap) that must fail on the predicted cases.
+Unit tests: `flow/test_lut_basis.py` (run by `sim/run.sh`). Takes about
+3 minutes, iverilog only, run serially. EXPERIMENTAL; details and non-claims
 are in `sim/README.md`, evidence in `sim/generated_tile_replay.txt`.
 
 ### `flow/nextpnr.sh` - nextpnr on the generated LOGIC4 model (G1, issue #87)

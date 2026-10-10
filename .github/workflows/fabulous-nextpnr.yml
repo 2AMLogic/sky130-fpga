@@ -24,6 +24,8 @@ on:
       - 'flow/gate_sim_verdict.sh'
       - 'flow/pin_fixtures.py'
       - 'sim/tb_logic_tile_bitstream.v'
+      - 'sim/tb_lut_basis.v'
+      - 'flow/lut_basis.py'
       - 'flow/nextpnr.sh'
       - 'flow/nextpnr_io_overlay.py'
       - 'flow/bitstream.sh'

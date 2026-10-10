@@ -69,3 +69,43 @@
     swap that compiles but is not sensitized on that BEL fails the run. No infrastructure failures.
   Not covered: ratified fabric (ADR-0004/0005 remain Proposed), inter-tile routing, timing, the real
     frame-loader/pad hardware, any BEL combination beyond one registered BEL per fixture.
+
+2026-10-10  flow/generated_tile_replay.sh step 5 (run by hand on flow/build/fabulous-run from ./flow/fabulous.sh) @ issue #172 (EXPERIMENTAL, zero delay, single tile)
+  LUT basis diagnostic: every truth-table address of every LUT4 BEL through the integrated tile.
+  Scope: 73 DIAGNOSTIC streams assembled by flow/lut_basis.py through the existing assembler
+    (flow/fasm_to_bitstream.py assemble + pack, decoded back) against sim/bitstream/fabric_spec.json.
+    They are NOT mapper output and are no evidence that yosys/nextpnr map every truth table correctly.
+    Cases, loaded in this order into ONE live tile with no reset between them: blank; then per BEL A..D
+    all-ones, one-hot INIT for addresses 0..15, all-zero. FF (reg_sel) never set (combinational).
+  Routes (one shared set, 36 pips, each present in the frozen pip model; wiring traced from the FASM):
+    CAP_N pad i -> S1BEG<i> -> LOGIC4 S1END<i> -> L{A,B,C,D}_I<i> (i = 0..3; the matrix offers each
+    LUT input I<i> exactly N/E/S/W1END<i>); L{A,B,C,D}_O -> S1BEG{0,1,2,3} -> CAP_S pads A..D. No loopbacks.
+  DUT: same generated files as the #140 record (sha256 LOGIC4.v f285e4b9..., LOGIC4_ConfigMem.v
+    dcdfc776..., LOGIC4_switch_matrix.v 4a8c1f3f..., lut4_ff_bel.v 8ae0889c..., models_pack.v 0bb111e1...),
+    configured only by FrameData/FrameStrobe frame writes (all 20 frames of every stream:
+    1460 frame writes); and design/rtl/logic_tile_routed.v through its cfg port. Bench sim/tb_lut_basis.v.
+  Oracle (from the case identifier only; cfg/map/ConfigBits never used for an expected value):
+    selected BEL output == (input vector == address) for one-hot, == 1 for all-ones; the other three
+    BEL outputs == 0; all 16 vectors x 6 values on the unrouted input tracks (0000, FFFF, AAAA, 5555,
+    2 random) x 4 BEL outputs per case. Verdicts classified by flow/gate_sim_verdict.sh under the
+    SIM_TIMEOUT_SECONDS budget.
+  Result: LUT basis PASS on both compositions (28032 checks, 0 failures; 73/73 cases), identical summaries.
+    COVERAGE: BEL A: 16/16 addresses, BEL B: 16/16, BEL C: 16/16, BEL D: 16/16
+              (each one-hot case: all 16 input vectors x 6 unrouted-track values x 4 BEL outputs)
+    COVERAGE: 4 BELs x 16 addresses = 64/64 one-hot cases; 4 all-ones, 5 all-zero cases; 73 cases
+              loaded in sequence into one live tile -- on the generated LOGIC4 and on the repository composition.
+    Per-case readback (generated ConfigBits / repository cfg) == python decode of the stream, 73/73 on both.
+  Scratch mutants (each compiled; completed functional FAIL; failing case set == the set predicted from
+    the defect; readback still == decoded on every case, so storage checks cannot see them):
+    lutin_C : LUT-input permutation, BEL C I0 <-> I1 in a scratch LOGIC4.v
+              96 failures / 28032 checks; 8/73 cases: C_a01 C_a02 C_a05 C_a06 C_a09 C_a10 C_a13 C_a14
+    init56  : generated-BEL INIT-bit swap, LUT entries 5 <-> 6 in a scratch lut4_ff_bel.v (all BELs)
+              96 failures / 28032 checks; 8/73 cases: {A,B,C,D}_a05, {A,B,C,D}_a06
+    belcfg  : BEL A <-> BEL B ConfigBits slices swapped (the step-4 scratch LOGIC4.v)
+              768 failures / 28032 checks; 34/73 cases: every A and B one-hot and all-ones case
+  Unchanged in the same run: 20/20 fixtures PASS on both compositions, 5/5 composition mutations caught.
+  Final line: generated-tile replay: PASS (20/20 fixtures, 5/5 composition mutations caught; LUT basis
+    64/64 (BEL, address) cases on both compositions, 3/3 basis mutants caught). Wall time ~2m45s serial.
+  Not covered (G5 stays OPEN): ratified fabric (ADR-0004/0005 remain Proposed), inter-tile routing across
+    the demo grid, timing, the real frame-loader/pad hardware, mapper correctness for arbitrary truth tables,
+    LUT input routes other than the same-index S1END tracks, registered-mode address coverage.

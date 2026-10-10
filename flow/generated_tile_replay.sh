@@ -31,6 +31,18 @@
 #      then produce a completed functional FAIL from at least one oracle, with no
 #      infrastructure failure on any fixture. Each EN/SR swap on BEL X must in
 #      addition FAIL functionally on its matching fixture regbel_x_s1.
+#   5. (issue #172) LUT basis diagnostic: flow/lut_basis.py assembles 73
+#      deterministic streams (blank; per BEL A..D: all-ones, one-hot INIT for each
+#      of the 16 addresses, all-zero) through the existing assembler, and
+#      sim/tb_lut_basis.v loads them in sequence into one live tile (generated
+#      LOGIC4 via FrameData/FrameStrobe, and the repository composition), sweeping
+#      all 16 input vectors with the oracle "BEL output == (vector == selected
+#      address)" taken from the case identifier. Both must PASS and report 64/64
+#      one-hot (BEL, address) cases; ConfigBits readback == python decode per case.
+#      Scratch mutants -- a LUT-input permutation (BEL C I0<->I1 in LOGIC4.v), a
+#      generated-BEL INIT-bit swap (lut4_ff_bel.v LUT entries 5<->6) and the BEL
+#      A/B ConfigBits slice swap -- must each compile and give a completed
+#      functional FAIL on exactly the basis cases the defect predicts.
 #
 # Missing fixture/index, compile error, simulator error, a missing or
 # conflicting terminal verdict, or an undetected mutation fails the script.
@@ -104,11 +116,11 @@ PYEOF
 # time). This is a simulation convention, NOT a timing model or claim.
 TS="$OUT/timescale_1ps.v"
 printf '`timescale 1ps/1ps\n' > "$TS"
-gen_compile() {  # $1 = LOGIC4.v to use, $2 = output vvp
+gen_compile() {  # $1 = LOGIC4.v to use, $2 = output vvp, [$3 = bench, $4 = lut4_ff_bel.v]
     iverilog -g2012 -Wall -DGEN_TILE -I "$REPO/sim" -o "$2" \
-        "$TS" "$RUN/Fabric/models_pack.v" "$TS" "$T/lut4_ff_bel.v" \
+        "$TS" "$RUN/Fabric/models_pack.v" "$TS" "${4:-$T/lut4_ff_bel.v}" \
         "$TS" "$T/LOGIC4_ConfigMem.v" "$TS" "$T/LOGIC4_switch_matrix.v" \
-        "$TS" "$1" "$TB" >"$2.compile.log" 2>&1
+        "$TS" "$1" "${3:-$TB}" >"$2.compile.log" 2>&1
 }
 GEN_VVP="$OUT/gen.vvp"; RTL_VVP="$OUT/rtl.vvp"
 gen_compile "$GEN_TILE_V" "$GEN_VVP" || { cat "$GEN_VVP.compile.log" >&2; die "compile of the generated tile bench failed"; }
@@ -251,8 +263,127 @@ for m in belcfg ensr_A ensr_B ensr_C ensr_D; do
     for d in "${det[@]}"; do echo "    FAIL: $d"; done
 done
 
+# ---- 5. LUT basis diagnostic (issue #172) -----------------------------------
+# Diagnostic assembler-generated streams, NOT mapper output: proves address
+# selection of every LUT entry on every BEL through the integrated tile, nothing
+# about how yosys/nextpnr map truth tables.
+echo "=== LUT basis diagnostic (issue #172): 4 BELs x 16 addresses through the integrated tile ==="
+LB="$OUT/lut_basis"; LB_TB="$REPO/sim/tb_lut_basis.v"; LB_NAME=tb_lut_basis
+[[ -s "$LB_TB" ]] || die "missing $LB_TB"
+python3 -I "$REPO/flow/lut_basis.py" "$LB" --snapshot "$BS/fabric_spec.json" || die "LUT basis stream generation failed"
+[[ "$(wc -l < "$LB/cases.txt")" -eq 73 ]] || die "expected 73 LUT basis cases"
+LB_GEN="$OUT/basis_gen.vvp"; LB_RTL="$OUT/basis_rtl.vvp"
+gen_compile "$GEN_TILE_V" "$LB_GEN" "$LB_TB" \
+    || { cat "$LB_GEN.compile.log" >&2; die "compile of the generated-tile basis bench failed"; }
+iverilog -g2012 -Wall -o "$LB_RTL" "$REPO/design/rtl/lut4_slice.v" \
+    "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
+    "$LB_TB" >"$LB_RTL.compile.log" 2>&1 \
+    || { cat "$LB_RTL.compile.log" >&2; die "compile of the repository-composition basis bench failed"; }
+# basis_run <vvp> <log>: one bounded run of all 73 cases; prints the verdict
+basis_run() {
+    local rc=0
+    gs_run_bounded "$(basename "$1" .vvp)[basis]" "$2" vvp "$1" +dir="$LB" +list="$LB/cases.txt" \
+        +wiring="$LB/basis.wiring" +map="$MAP" || rc=$?
+    gs_classify "$rc" "$2" "$LB_NAME" basis
+}
+# basis_cfg_ok <log>: every case's ConfigBits/cfg readback == python decode of its stream
+basis_cfg_ok() {
+    local id got
+    while read -r id _; do
+        got="$(grep -m1 "^CFG $id " "$1" | cut -d' ' -f3)"
+        if [[ -z "$got" || "$got" != "$(tr -d '\n' < "$LB/$id.cfg")" ]]; then
+            echo "  case $id: readback '$got' != decoded $(tr -d '\n' < "$LB/$id.cfg")" >&2; return 1
+        fi
+    done < "$LB/cases.txt"
+}
+COV_RE='^COVERAGE: 4 BELs x 16 addresses = 64/64 one-hot cases; 4 all-ones, 5 all-zero cases; 73 cases loaded in sequence into one live tile$'
+basis_ok=1
+for comp in gen rtl; do
+    vvp_f="$LB_GEN"; [[ "$comp" == rtl ]] && vvp_f="$LB_RTL"
+    log="$OUT/basis_${comp}.log"
+    v="$(basis_run "$vvp_f" "$log")"
+    if [[ "$v" != PASS ]] || ! grep -qE "$COV_RE" "$log" \
+       || [[ "$(grep -c '^COVERAGE: BEL [A-D]: 16/16 addresses' "$log")" -ne 4 ]]; then
+        echo "  LUT basis [$comp]: FAIL (verdict $v or incomplete coverage; see $log)" >&2
+        tail -n 8 "$log" >&2; basis_ok=0; status=1; continue
+    fi
+    basis_cfg_ok "$log" || { echo "  LUT basis [$comp]: readback mismatch" >&2; basis_ok=0; status=1; }
+done
+if [[ "$basis_ok" -eq 1 ]]; then
+    gsum="$(grep -m1 '^PASS' "$OUT/basis_gen.log" | sed 's/^PASS: [^ ]* //')"
+    rsum="$(grep -m1 '^PASS' "$OUT/basis_rtl.log" | sed 's/^PASS: [^ ]* //')"
+    if [[ "$gsum" != "$rsum" ]]; then
+        echo "  LUT basis: compositions disagree (generated $gsum vs repository $rsum)" >&2; status=1
+    else
+        grep '^COVERAGE' "$OUT/basis_gen.log" | sed 's/^/  generated: /'
+        grep '^COVERAGE' "$OUT/basis_rtl.log" | sed 's/^/  repository: /'
+        echo "  generated: $(grep -m1 '^GEN_TILE:' "$OUT/basis_gen.log")"
+        echo "  LUT basis: PASS on both $gsum; readback == python decode for all 73 streams on both"
+    fi
+fi
+
+echo "--- scratch mutants vs the LUT basis (each must give a completed functional FAIL on the predicted cases) ---"
+python3 -I - "$GEN_TILE_V" "$T/lut4_ff_bel.v" "$OUT" <<'PYEOF' || die "could not build LUT basis mutants"
+import sys
+tile, bel, out = open(sys.argv[1]).read(), open(sys.argv[2]).read(), sys.argv[3]
+a = ".I({LC_I3, LC_I2, LC_I1, LC_I0})"
+assert tile.count(a) == 1, a
+open(f"{out}/LOGIC4_mut_lutin_C.v", "w").write(tile.replace(a, ".I({LC_I3, LC_I2, LC_I0, LC_I1})"))
+b = "wire [15:0] LUT_values = ConfigBits[15:0];"
+assert bel.count(b) == 1, b
+open(f"{out}/lut4_ff_bel_mut_init56.v", "w").write(bel.replace(
+    b, "wire [15:0] LUT_values = {ConfigBits[15:7], ConfigBits[5], ConfigBits[6], ConfigBits[4:0]};"))
+PYEOF
+[[ -s "$OUT/LOGIC4_mut_belcfg.v" ]] || die "missing the belcfg composition mutant from step 4"
+# Predicted failing basis cases, derived from the defect (not from the DUT):
+#   lutin_C : BEL C inputs I0/I1 exchanged -> C one-hot addresses with bit0 != bit1, nothing else
+#   init56  : LUT entries 5/6 exchanged in the shared BEL module -> a05 and a06 on every BEL
+#   belcfg  : BEL A/B config slices exchanged -> every A and B all-ones / one-hot case
+declare -A LBM_DESC=(
+    [lutin_C]="LUT-input permutation: BEL C I0 <-> I1 (scratch LOGIC4.v)"
+    [init56]="generated-BEL INIT-bit swap: LUT entries 5 <-> 6 (scratch lut4_ff_bel.v, all four BELs)"
+    [belcfg]="BEL A <-> BEL B ConfigBits slices swapped (scratch LOGIC4.v)"
+)
+lbm_expect() {
+    local x k
+    case "$1" in
+        lutin_C) echo C_a01 C_a02 C_a05 C_a06 C_a09 C_a10 C_a13 C_a14 ;;
+        init56)  for x in A B C D; do echo "${x}_a05 ${x}_a06"; done ;;
+        belcfg)  for x in A B; do echo "${x}_ones"; for k in $(seq -w 0 15); do echo "${x}_a$k"; done; done ;;
+    esac | tr ' ' '\n' | sort | xargs
+}
+n_lbm=0
+for m in lutin_C init56 belcfg; do
+    mvvp="$OUT/basis_mut_${m}.vvp"; mlog="$OUT/basis_mut_${m}.log"; crc=0
+    case "$m" in
+        lutin_C) gen_compile "$OUT/LOGIC4_mut_lutin_C.v" "$mvvp" "$LB_TB" || crc=$? ;;
+        init56)  gen_compile "$GEN_TILE_V" "$mvvp" "$LB_TB" "$OUT/lut4_ff_bel_mut_init56.v" || crc=$? ;;
+        belcfg)  gen_compile "$OUT/LOGIC4_mut_belcfg.v" "$mvvp" "$LB_TB" || crc=$? ;;
+    esac
+    if [[ "$crc" -ne 0 ]]; then
+        cat "$mvvp.compile.log" >&2
+        echo "basis mutant '$m': FAIL (did not compile; a mutation must compile and fail functionally)" >&2
+        status=1; continue
+    fi
+    v="$(basis_run "$mvvp" "$mlog")"
+    if [[ "$v" != FUNC_FAIL ]]; then
+        echo "basis mutant '$m' (${LBM_DESC[$m]}): NOT caught (verdict $v; a timeout, simulator error or missing verdict never counts; see $mlog)" >&2
+        status=1; continue
+    fi
+    got="$(sed -n 's/^  case \([A-Za-z0-9_]*\): [0-9]* mismatches$/\1/p' "$mlog" | sort | xargs)"
+    want="$(lbm_expect "$m")"
+    if [[ "$got" != "$want" ]]; then
+        echo "basis mutant '$m' (${LBM_DESC[$m]}): failing cases [$got] != predicted [$want]" >&2
+        status=1; continue
+    fi
+    basis_cfg_ok "$mlog" || { echo "basis mutant '$m': readback mismatch" >&2; status=1; continue; }
+    n_lbm=$((n_lbm + 1))
+    echo "basis mutant '$m' (${LBM_DESC[$m]}) caught: compiled; $(grep -m1 '^FAIL' "$mlog" | sed 's/^FAIL: //'); failing cases == predicted ($(echo "$got" | wc -w)/73): $got; ConfigBits == decoded on all"
+done
+[[ "$n_lbm" -eq 3 ]] || status=1
+
 if [[ "$status" -eq 0 ]]; then
-    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught)"
+    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught; LUT basis 64/64 (BEL, address) cases on both compositions, 3/3 basis mutants caught)"
 else
     echo "generated-tile replay: FAIL" >&2
 fi
