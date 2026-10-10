@@ -62,8 +62,7 @@ pins that script's bytes by sha256, and `flow/audit-evidence.sh` checks the
 pin. The record can't be honestly reconciled until the script's
 klt/OpenROAD regeneration is re-run, and its DEF-reproducibility gate
 currently fails under the pinned toolchain (see `flow/README.md`). Its two
-`vvp` legs still run without a wall-clock bound; the follow-up issue linked
-from PR #159 tracks this. A
+`vvp` legs still run without a wall-clock bound; issue #162 tracks this. A
 simulation-time watchdog can't interrupt a zero-time event loop (for example,
 an oscillating faulty configuration or scratch mutation), so the bound is
 enforced on the process with GNU coreutils `timeout`.
