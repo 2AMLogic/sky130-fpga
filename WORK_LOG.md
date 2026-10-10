@@ -4,6 +4,23 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-10-10
 
+- **PR #182**: Pin-index experiment: registered regcasc case with one-register transition equivalence (#160)
+- **PR #179**: feat(sim): LUT-input directional route diagnostic through frame programming (#176)
+- **PR #178**: Gate verification: replay the LUT-address basis against the synthesized composed tile
+- **PR #175**: G5: LUT basis diagnostic, every truth-table address on every BEL through the generated tile (#172)
+- **PR #174**: ci: select generated-tile differential replay on its RTL and helper dependencies
+- **PR #171**: ci: trigger harness-format drift check on document and fixture changes
+- **PR #167**: fix(sim): distinguish RTL mutation kills from simulator infrastructure failures
+- **PR #166**: spec: draft ADR-0006 (Proposed) for mapper-side LUT pin-assignment policy
+- **Issue #160** (closed): Routability: test whether the LUT pin-index confounder also explains the regcasc seed-2 non-convergence
+- **Issue #176** (closed): G5: cover every LUT-input directional route through generated-tile frame programming
+- **Issue #177** (closed): Gate verification: replay the LUT-address basis against the synthesized composed tile
+- **Issue #163** (closed): Guard telemetry: retain stash-scope:create-redirect check
+- **Issue #172** (closed): G5: prove all LUT truth-table addresses on every BEL through generated-tile frame replay
+- **Issue #173** (closed): CI: select generated-tile differential replay for its RTL and runtime dependencies
+- **Issue #170** (closed): CI: trigger harness-format drift checks on document and fixture changes
+- **Issue #164** (closed): Verification: distinguish RTL mutation kills from simulator infrastructure failures
+- **Issue #161** (closed): Spec: draft ADR-0006 (Proposed) for mapper-side LUT pin-assignment policy
 - **PR #159**: Bound simulator processes; timeouts are infrastructure failures (#157)
 - **PR #158**: G5: exercise registered control wiring on every generated-tile BEL (#156)
 - **PR #155**: G5: replay committed streams through the integrated FABulous-generated tile
