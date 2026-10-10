@@ -87,13 +87,20 @@ check "completed functional FAIL unchanged (rc=$RC)" "[[ $RC -eq 0 && \$(gs_clas
 bounded own_rc124
 check "simulator's own rc 124 is INFRA but not reported as a timeout" "[[ $RC -eq 124 && -z \"\$ERR\" ]] && ! grep -q '^TIMEOUT' '$T/own_rc124.log' && [[ \$(gs_classify $RC '$T/own_rc124.log' $TB $D) == INFRA ]]"
 
-# tee variant (sim/run.sh, gate-sim-routed.sh, fabulous.sh, sdf-resim.sh)
+# tee variant (sim/run.sh, gate-sim-routed.sh, fabulous.sh)
 RC=0; out="$(gs_run_bounded_tee tee_ok "$T/tee_ok.log" "$T/pass_ok" 2>/dev/null)" || RC=$?
 check "tee variant: completed run streams and logs output (rc=$RC)" "[[ $RC -eq 0 && \"\$out\" == *'$PASSL'* ]] && cmp -s '$T/tee_ok.log' <('$T/pass_ok')"
 t0="$(now_ms)"; RC=0; gs_run_bounded_tee tee_hang "$T/tee_hang.log" "$T/pass_then_hang" >/dev/null 2>"$T/tee.err" || RC=$?
 el=$(( $(now_ms) - t0 ))
 check "tee variant: PASS then TERM-ignoring hang -> rc 137 within bound (${el}ms)" "[[ $RC -eq 137 && $el -lt 6000 ]] && grep -q 'tee_hang' '$T/tee.err'"
 check "tee variant under set -e returns the status instead of aborting" "( set -e; gs_run_bounded_tee x '$T/x.log' '$T/own_rc124' >/dev/null || [[ \$? -eq 124 ]] )"
+# the helper must not depend on the caller's pipefail to report a timeout
+RC=0; ( set +o pipefail; gs_run_bounded_tee nopf "$T/nopf.log" "$T/hang_term" >/dev/null 2>"$T/nopf.err" ) || RC=$?
+check "tee variant without caller pipefail: timeout still rc 124 (rc=$RC)" "[[ $RC -eq 124 ]] && grep -q '^TIMEOUT: .*nopf' '$T/nopf.log'"
+RC=0; ( set +o pipefail; gs_run_bounded_tee nopf_ok "$T/nopf_ok.log" "$T/pass_ok" >/dev/null 2>&1 ) || RC=$?
+check "tee variant without caller pipefail: completed run still rc 0 (rc=$RC)" "[[ $RC -eq 0 ]]"
+RC=0; ( set +o pipefail; gs_run_bounded_tee nopf_rc "$T/nopf_rc.log" "$T/own_rc124" >/dev/null 2>&1 ) || RC=$?
+check "tee variant without caller pipefail: simulator's own nonzero rc preserved (rc=$RC)" "[[ $RC -eq 124 ]]"
 
 # ---- 3. Python drivers: a timeout is never a kill / pass ------------------
 pyout="$(cd "$T" && python3 -I - "$REPO" <<'PY' 2>&1

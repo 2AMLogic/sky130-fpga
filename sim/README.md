@@ -55,7 +55,15 @@ wall-clock budget. This covers `sim/run.sh`, `sim/run.sh --mutation`
 (`sim/mutation.py`), `sim/pin_fixture_replay.sh`,
 `flow/gate-sim-bitstream.sh`, `flow/gate-sim-routed.sh`,
 `flow/generated_tile_replay.sh`, the equivalence benches in
-`flow/fabulous.sh`, `flow/sdf-resim.sh` and `flow/corpus_run.py`. A
+`flow/fabulous.sh` and `flow/corpus_run.py`. **`flow/sdf-resim.sh` is not
+bounded yet.** The current timing record
+(`measurements/timing-characterization/records/20261008-233733-23e6b5e.md`)
+pins that script's bytes by sha256, and `flow/audit-evidence.sh` checks the
+pin. The record can't be honestly reconciled until the script's
+klt/OpenROAD regeneration is re-run, and its DEF-reproducibility gate
+currently fails under the pinned toolchain (see `flow/README.md`). Its two
+`vvp` legs still run without a wall-clock bound; the follow-up issue linked
+from PR #159 tracks this. A
 simulation-time watchdog can't interrupt a zero-time event loop (for example,
 an oscillating faulty configuration or scratch mutation), so the bound is
 enforced on the process with GNU coreutils `timeout`.
@@ -90,7 +98,20 @@ A timed-out run therefore can't count as a caught mutation, a negative-control
 rejection or a pass. The drivers report the fixture, the budget and the log
 path on stderr, and append a `TIMEOUT:` line to that fixture's log (the
 simulator's own output stays in the log). Runs that complete keep exactly
-their previous classification. Regression: `flow/test_sim_budget.sh` (stub
+their previous classification.
+
+**Limitation: only the direct child is signalled.** The helpers run
+`timeout --foreground` so that an interactive Ctrl-C still reaches the
+simulator. In that mode `timeout` signals only the process it started, not
+that process's own children. Plain `vvp` is a single binary, so this doesn't
+affect the drivers as shipped. But if a simulator override (for example
+`GATE_SIM_VVP`) points at a wrapper script that doesn't `exec` the real
+simulator, the timeout kills the wrapper and leaves the simulator running as
+an orphan. With the streamed (`tee`) variant, the orphan also holds the pipe
+open, so the driver doesn't return until the orphan exits. The run is still
+reported as `INFRA`. Wrapper scripts should `exec` the simulator.
+
+Regression: `flow/test_sim_budget.sh` (stub
 simulators, no iverilog needed; run in the `rtl-sim` and `gate-sim`
 workflows).
 

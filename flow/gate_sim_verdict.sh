@@ -85,12 +85,16 @@ gs_run_bounded() {
 
 # gs_run_bounded_tee <fixture> <log> <cmd...>: like `cmd | tee log` (stdout to
 # both, stderr to the terminal) under the budget; returns cmd's exit status.
+# Self-contained: the status is read from PIPESTATUS in both branches, so a
+# timeout (124/137) is returned whether or not the caller set pipefail.
 gs_run_bounded_tee() {
-    local fixture="$1" log="$2" rc=0 t0; shift 2
+    local fixture="$1" log="$2" rc=0 t0 ps; shift 2
     gs_budget_check || { echo "INFRA: invalid simulation budget settings; '$fixture' not run" >"$log"; return 125; }
     t0="$(_gs_now_ms)"
-    if timeout --foreground -k "$(gs_kill_after)" "$(gs_budget)" "$@" | tee "$log"; then rc=0
-    else rc="${PIPESTATUS[0]}"; [[ "$rc" != 0 ]] || rc=1; fi  # rc=1: tee itself failed
+    if timeout --foreground -k "$(gs_kill_after)" "$(gs_budget)" "$@" | tee "$log"; then ps="${PIPESTATUS[*]}"
+    else ps="${PIPESTATUS[*]}"; fi
+    rc="${ps%% *}"
+    [[ "$rc" != 0 || "${ps##* }" == 0 ]] || rc=1  # rc=1: tee itself failed
     _gs_after_run "$fixture" "$log" "$rc" "$t0"
     return "$rc"
 }
