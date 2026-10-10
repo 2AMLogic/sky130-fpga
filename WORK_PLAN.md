@@ -25,7 +25,7 @@ _None._
 
 Issues currently being built (`loom:building`).
 
-- **#169**: Verification: reject malformed streams in the ConfigMem frame adapter
+_None._
 
 ## PRs Awaiting Review
 
@@ -47,9 +47,7 @@ _None._
 
 ## Proposed (Architect / Hermit)
 
-- **#180**: G5: verify every boundary output-track source through generated-tile frame programming *(architect)*
-- **#181**: G5: verify every directional reset and enable source through generated-tile frame programming *(architect)*
-- **#183**: Evidence: enforce append-only on sim/*results.txt ledgers at PR time *(architect)*
+_None._
 
 ## Epics
 
@@ -62,10 +60,10 @@ _None._
 | Operator merge-risk holds | 1 |
 | Operator priority | 0 |
 | Ready (`loom:issue`) | 0 |
-| In Progress (`loom:building`) | 1 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 0 |
-| Architect / Hermit proposals | 3 |
+| Architect / Hermit proposals | 0 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
