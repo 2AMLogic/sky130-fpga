@@ -16,7 +16,8 @@
 # provenance, netlist relation) and flow/fasm_to_bitstream.py check (every stream
 # reproduces from its FASM). Per case: vvp must exit 0 and print the recognised
 # terminal PASS verdict with no FAIL line, and the loaded CFG must equal the python
-# decoder and the recorded .cfg.
+# decoder and the recorded .cfg. Each vvp run is bounded by SIM_TIMEOUT_SECONDS
+# (flow/gate_sim_verdict.sh, issue #157); a timeout is an infrastructure failure.
 #
 # Not a baseline-corpus expectation; no timing and no ratified-fabric claim.
 # Exit: 0 iff every case passes; nonzero otherwise. Summary line:
@@ -36,6 +37,7 @@ TB_NAME="tb_logic_tile_bitstream"
 # shared rc-aware verdict classifier (issue #141)
 # shellcheck source=../flow/gate_sim_verdict.sh
 source "$REPO_ROOT/flow/gate_sim_verdict.sh"
+gs_budget_check || exit 1
 EXPECTED=3
 mkdir -p "$LOG_DIR"
 status=0
@@ -59,8 +61,10 @@ while read -r stem oracle; do
     n=$((n + 1))
     log="$LOG_DIR/${stem}.log"
     rc=0
-    vvp "$VVP_BIN" +bin="$FIX_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
-        +wiring="$FIX_DIR/$stem.wiring" +design="$oracle" +mutate >"$log" 2>&1 || rc=$?
+    # bounded by SIM_TIMEOUT_SECONDS (issue #157): a timeout is rc 124/137 -> INFRA
+    gs_run_bounded "pin-experiment ${stem}[${oracle}] [$LABEL]" "$log" \
+        vvp "$VVP_BIN" +bin="$FIX_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
+        +wiring="$FIX_DIR/$stem.wiring" +design="$oracle" +mutate || rc=$?
     verdict="$(gs_classify "$rc" "$log" "$TB_NAME" "$oracle")"
     case "$verdict" in
         PASS) ;;
@@ -68,7 +72,8 @@ while read -r stem oracle; do
             echo "pin-experiment [$oracle] $stem [$LABEL]: FAIL (completed functional rejection, see $log)" >&2
             tail -n 8 "$log" >&2; status=1; continue ;;
         *)
-            echo "pin-experiment [$oracle] $stem [$LABEL]: FAIL (infrastructure failure: rc=$rc, no recognised verdict, see $log)" >&2
+            if grep -q '^TIMEOUT:' "$log"; then why="simulation timeout after $(gs_budget)s"; else why="no recognised verdict"; fi
+            echo "pin-experiment [$oracle] $stem [$LABEL]: FAIL (infrastructure failure: rc=$rc, $why, see $log)" >&2
             tail -n 8 "$log" >&2; status=1; continue ;;
     esac
     sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$log" | cut -d= -f2)"

@@ -32,6 +32,9 @@ jobs:
           iverilog -V | head -n 1
           vvp -V | head -n 1
 
+      - name: Simulation wall-clock budget regression (stub simulators, issue #157)
+        run: ./flow/test_sim_budget.sh
+
       - name: Run RTL testbench suite
         run: ./sim/run.sh
 

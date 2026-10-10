@@ -24,6 +24,8 @@ BUILD = SIM / "build" / "mutation"
 ALLOW = SIM / "mutation_allowlist.txt"
 RESULTS = SIM / "rtl_mutation_results.txt"
 BS = SIM / "bitstream"
+sys.path.insert(0, str(ROOT / "flow"))
+import sim_budget  # noqa: E402  per-run wall-clock budget (issue #157)
 
 SM = "logic_tile_switch_matrix.v"
 RT = "logic_tile_routed.v"
@@ -104,12 +106,17 @@ def apply(mid, fname, old, new, anchor):
     return text.replace(old, new, 1)
 
 
-def run(cmd, timeout=120):
+def run(cmd):
+    """Run under the SIM_TIMEOUT_SECONDS budget. Returns (rc, output), or
+    (None, reason) if the budget expired: a timeout is an infrastructure
+    failure and must never be counted as a kill (issue #157)."""
+    b = sim_budget.budget()
     try:
-        p = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        p = subprocess.run(cmd, capture_output=True, text=True, timeout=b)
         return p.returncode, p.stdout + p.stderr
     except subprocess.TimeoutExpired:
-        return 124, "timeout"
+        return None, f"TIMEOUT: {' '.join(map(str, cmd))[:200]} exceeded the {b}s wall-clock budget " \
+                     "(SIM_TIMEOUT_SECONDS) -- infrastructure failure, not a kill"
 
 
 def srcs(d, names):
@@ -134,7 +141,8 @@ def bench_list():
 
 
 def killer(mdir):
-    """Return (killer-name or None, compile-error-text or None)."""
+    """Return (killer-name or None, error-text or None). Errors are compile
+    failures and simulation timeouts (infrastructure, never a kill)."""
     for name, files, runs in bench_list():
         out = mdir / f"{name}.out"
         rc, txt = run(["iverilog", "-g2012", "-I", str(SIM), "-o", str(out)]
@@ -143,6 +151,8 @@ def killer(mdir):
             return None, f"{name}: {txt.strip()[:300]}"
         for label, args, prefix in runs:
             rc, txt = run(["vvp", str(out)] + args)
+            if rc is None:
+                return None, f"{name}" + (f"[{label}]" if label else "") + f": {txt}"
             if rc != 0 or not any(l.startswith(prefix) for l in txt.splitlines()):
                 return name + (f"[{label}]" if label else ""), None
     return None, None
@@ -191,7 +201,7 @@ def main():
         k, err = killer(mdir)
         if err:
             status = "ERROR"
-            bad.append(f"{mid}: mutant did not compile ({err})")
+            bad.append(f"{mid}: mutant did not compile or its run did not complete ({err})")
         elif k and mid in allow:
             status = "KILLED-BUT-ALLOWLISTED"
             bad.append(f"{mid}: allowlisted as equivalent but killed by {k}; remove from allowlist")

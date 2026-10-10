@@ -24,6 +24,11 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=flow/tool_versions.sh
 source "$REPO/flow/tool_versions.sh"
+# simulation wall-clock budget helpers (issue #157): SIM_TIMEOUT_SECONDS /
+# SIM_KILL_AFTER_SECONDS bound every vvp run below and in generated_tile_replay.sh
+# shellcheck source=flow/gate_sim_verdict.sh
+source "$REPO/flow/gate_sim_verdict.sh"
+gs_budget_check || exit 1
 
 BUILD="$REPO/flow/build"
 VENV="$BUILD/fab-venv"
@@ -70,7 +75,8 @@ iverilog -g2005 -o "$BUILD/bel_tb" \
     "$REPO/design/fabulous/tb_lut4_ff_bel_equiv.v" \
     "$REPO/design/fabulous/Tile/LOGIC4/lut4_ff_bel.v" \
     "$REPO/design/rtl/lut4_slice.v"
-vvp "$BUILD/bel_tb" | tee "$BUILD/bel_tb.out"
+gs_run_bounded_tee "BEL equivalence bel_tb" "$BUILD/bel_tb.out" vvp "$BUILD/bel_tb" \
+    || { echo "error: BEL equivalence run failed (see $BUILD/bel_tb.out)" >&2; exit 1; }
 grep -q '^PASS' "$BUILD/bel_tb.out"
 
 # Switch-matrix differential check (issue #96): the FABulous-generated
@@ -80,7 +86,8 @@ iverilog -g2005 -o "$BUILD/sm_tb" \
     "$REPO/design/fabulous/tb_switch_matrix_equiv.v" \
     "$RUN/Tile/LOGIC4/LOGIC4_switch_matrix.v" \
     "$REPO/design/rtl/logic_tile_switch_matrix.v"
-vvp "$BUILD/sm_tb" | tee "$BUILD/sm_tb.out"
+gs_run_bounded_tee "switch-matrix equivalence sm_tb" "$BUILD/sm_tb.out" vvp "$BUILD/sm_tb" \
+    || { echo "error: switch-matrix equivalence run failed (see $BUILD/sm_tb.out)" >&2; exit 1; }
 grep -q '^PASS: switch_matrix_fabulous_equiv' "$BUILD/sm_tb.out"
 
 # ConfigMem storage differential check (issue #136): the FABulous-generated
@@ -94,12 +101,13 @@ echo "=== ConfigMem storage equivalence (iverilog) ==="
 CM_V="$RUN/Tile/LOGIC4/LOGIC4_ConfigMem.v"
 CM_VEC="$BUILD/configmem_vectors.txt"
 python3 "$REPO/flow/configmem_frames.py" "$REPO/sim/bitstream" > "$CM_VEC"
-cm_run() {  # $1 = ConfigMem file, $2 = output prefix
+cm_run() {  # $1 = ConfigMem file, $2 = output prefix; nonzero = did not complete
     iverilog -g2005 -o "$2_tb" "$REPO/design/fabulous/tb_configmem_equiv.v" "$1" \
-        "$RUN/Fabric/models_pack.v"
-    vvp "$2_tb" +map="$REPO/sim/bitstream/logic4_configmem.map" +vec="$CM_VEC" | tee "$2.out"
+        "$RUN/Fabric/models_pack.v" || return 1
+    gs_run_bounded_tee "ConfigMem equivalence $(basename "$2")" "$2.out" \
+        vvp "$2_tb" +map="$REPO/sim/bitstream/logic4_configmem.map" +vec="$CM_VEC"
 }
-cm_run "$CM_V" "$BUILD/cm"
+cm_run "$CM_V" "$BUILD/cm" || { echo "error: ConfigMem equivalence run failed (see $BUILD/cm.out)" >&2; exit 1; }
 grep -q '^PASS: configmem_fabulous_equiv' "$BUILD/cm.out"
 echo "--- scratch mutations of the generated ConfigMem (each must be caught) ---"
 # (1) frame select: bit of frame 2 latched by frame 3's strobe
@@ -115,7 +123,15 @@ assert a != src and b != src
 open(sys.argv[2], "w").write(a); open(sys.argv[3], "w").write(b)
 PYEOF
 for m in select map; do
-    if cm_run "$BUILD/cm_mut_$m.v" "$BUILD/cm_mut_$m" >/dev/null 2>&1 && grep -q '^PASS' "$BUILD/cm_mut_$m.out"; then
+    # a mutation is caught only by a COMPLETED run reporting FAIL: a compile error,
+    # simulator error or wall-clock timeout (issue #157) is an infrastructure failure
+    rc=0; cm_run "$BUILD/cm_mut_$m.v" "$BUILD/cm_mut_$m" >/dev/null 2>"$BUILD/cm_mut_$m.err" || rc=$?
+    if [[ "$rc" -ne 0 ]]; then
+        cat "$BUILD/cm_mut_$m.err" >&2
+        echo "ConfigMem mutation '$m': run did not complete (rc=$rc; infrastructure failure, not a caught mutation; see $BUILD/cm_mut_$m.out)" >&2
+        exit 1
+    fi
+    if grep -q '^PASS' "$BUILD/cm_mut_$m.out"; then
         echo "ConfigMem mutation '$m' was NOT caught" >&2; exit 1; fi
     grep -q '^FAIL' "$BUILD/cm_mut_$m.out" || { echo "mutation '$m' did not produce a bench FAIL" >&2; exit 1; }
     echo "mutation '$m' caught: $(grep '^FAIL: configmem' "$BUILD/cm_mut_$m.out")"

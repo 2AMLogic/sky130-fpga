@@ -22,6 +22,11 @@
 #
 # Exit status: 0 if every testbench reports PASS with zero failures,
 # non-zero otherwise.
+#
+# Every vvp run is bounded by a per-simulation wall-clock budget
+# (SIM_TIMEOUT_SECONDS, default in flow/gate_sim_verdict.sh; SIM_KILL_AFTER_SECONDS
+# grace before a forced kill). A run that exceeds it fails the suite as an
+# infrastructure error, naming the testbench/fixture, budget and log path.
 
 set -euo pipefail
 
@@ -29,6 +34,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 RTL_DIR="$REPO_ROOT/design/rtl"
 BUILD_DIR="$SCRIPT_DIR/build"
+# Wall-clock budget for every simulator run (issue #157): SIM_TIMEOUT_SECONDS /
+# SIM_KILL_AFTER_SECONDS, validated here; helpers live with the verdict
+# classifier in flow/gate_sim_verdict.sh.
+# shellcheck source=../flow/gate_sim_verdict.sh
+source "$REPO_ROOT/flow/gate_sim_verdict.sh"
+gs_budget_check || exit 1
 
 mkdir -p "$BUILD_DIR"
 
@@ -101,7 +112,7 @@ for entry in "${TESTBENCHES[@]}"; do
     fi
 
     echo "=== running ${name} ==="
-    if ! vvp "$out_bin" | tee "$log_file"; then
+    if ! gs_run_bounded_tee "${name}" "$log_file" vvp "$out_bin"; then
         echo "error: simulation run failed for ${name}" >&2
         overall_status=1
         continue
@@ -155,7 +166,7 @@ else
         bs_args=(+bin="$BS_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" +wiring="$BS_DIR/$stem.wiring" +design="$dname")
         log_file="$BUILD_DIR/${name}_${dname}.log"
         echo "=== running ${name} [${dname}] (bitstream sim/bitstream/$stem.bin, with perturbation checks) ==="
-        if ! vvp "$out_bin" "${bs_args[@]}" +mutate | tee "$log_file"; then
+        if ! gs_run_bounded_tee "${name}[${dname}] $stem" "$log_file" vvp "$out_bin" "${bs_args[@]}" +mutate; then
             echo "error: simulation run failed for ${name} [${dname}]" >&2
             overall_status=1
             continue
@@ -181,8 +192,14 @@ else
         nrej=0; nbad=0
         for bad in "$BUILD_DIR/bitstream_bad_${dname}"/*.bin; do
             nbad=$((nbad + 1))
-            if vvp "$out_bin" +bin="$bad" +map="$BS_DIR/logic4_configmem.map" +wiring="$BS_DIR/$stem.wiring" \
-                   +design="$dname" +expect_reject | grep -q "^PASS: ${name}\[${dname}\] loader rejected"; then
+            bad_log="${bad%.bin}.log"; rc=0
+            gs_run_bounded "${name}[${dname}] malformed $(basename "$bad")" "$bad_log" \
+                vvp "$out_bin" +bin="$bad" +map="$BS_DIR/logic4_configmem.map" +wiring="$BS_DIR/$stem.wiring" \
+                +design="$dname" +expect_reject || rc=$?
+            if [[ "$rc" -ne 0 ]]; then
+                echo "error: loader check of malformed stream $(basename "$bad") [${dname}] did not complete (rc=$rc; infrastructure failure, see $bad_log)" >&2
+                overall_status=1
+            elif grep -q "^PASS: ${name}\[${dname}\] loader rejected" "$bad_log"; then
                 nrej=$((nrej + 1))
             else
                 echo "error: loader accepted malformed stream $(basename "$bad") [${dname}]" >&2
@@ -224,8 +241,9 @@ if [[ -f "$out_bin" ]]; then
         n_corpus=$((n_corpus + 1))
         log_file="$BUILD_DIR/${name}_${stem}.log"
         echo "=== running ${name} [${oracle}] corpus fixture ${stem} (with perturbation checks) ==="
-        if ! vvp "$out_bin" +bin="$CORPUS_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
-                +wiring="$CORPUS_DIR/$stem.wiring" +design="$oracle" +mutate | tee "$log_file"; then
+        if ! gs_run_bounded_tee "${name}[${oracle}] corpus $stem" "$log_file" \
+                vvp "$out_bin" +bin="$CORPUS_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
+                +wiring="$CORPUS_DIR/$stem.wiring" +design="$oracle" +mutate; then
             echo "error: simulation run failed for ${stem}" >&2
             overall_status=1
             continue

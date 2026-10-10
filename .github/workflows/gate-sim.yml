@@ -46,6 +46,10 @@ on:
       - 'flow/gate-sim-bitstream.sh'
       - 'flow/gate_sim_verdict.sh'
       - 'flow/test_gate_sim_verdict.sh'
+      - 'flow/test_sim_budget.sh'
+      - 'flow/sim_budget.py'
+      - 'sim/pin_fixture_replay.sh'
+      - 'sim/pin_fixture_negative.sh'
       - 'flow/gate-sim-routed.sh'
       - '.github/workflows/gate-sim.yml'
 
@@ -114,6 +118,9 @@ jobs:
 
       - name: Verdict classifier regression (no simulator needed)
         run: ./flow/test_gate_sim_verdict.sh
+
+      - name: Simulation wall-clock budget regression (stub simulators, issue #157)
+        run: ./flow/test_sim_budget.sh
 
       - name: Gate-level bitstream re-sim (with negative checks)
         run: ./flow/gate-sim-bitstream.sh --negative

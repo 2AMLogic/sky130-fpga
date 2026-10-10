@@ -130,6 +130,10 @@ done
 
 # shellcheck source=./tool_versions.sh
 source "$SCRIPT_DIR/tool_versions.sh"
+# simulation wall-clock budget (issue #157): SIM_TIMEOUT_SECONDS / SIM_KILL_AFTER_SECONDS
+# shellcheck source=flow/gate_sim_verdict.sh
+source "$SCRIPT_DIR/gate_sim_verdict.sh"
+gs_budget_check || exit 1
 print_tool_version_banner
 
 # Same native-yosys-over-YoWASP preference as flow/layout.sh -- see that
@@ -373,7 +377,7 @@ if ! "$IVERILOG" -g2012 -gspecify -ginterconnect -T "$SDF_CORNER" \
 fi
 
 echo "=== running ${TB_NAME} gate-level (zero delay) ==="
-if ! "$VVP" "$ZERO_DELAY_VVP" | tee "$ZERO_DELAY_LOG"; then
+if ! gs_run_bounded_tee "${TB_NAME} gate-level zero delay" "$ZERO_DELAY_LOG" "$VVP" "$ZERO_DELAY_VVP"; then
     echo "error: gate-level simulation run failed for ${TB_NAME}" >&2
     exit 1
 fi
@@ -409,10 +413,15 @@ if ! "$IVERILOG" -g2012 -gspecify -ginterconnect -T "$SDF_CORNER" \
 fi
 
 echo "=== running ${TB_NAME} gate-level (SDF-annotated) -- expected to crash, see klayout-tools#1890 ==="
-set +e
-"$VVP" "$SDF_ANNOTATED_VVP" >"$SDF_ANNOTATED_LOG" 2>&1
-SDF_RUN_EXIT=$?
-set -e
+SDF_RUN_EXIT=0
+gs_run_bounded "${TB_NAME} gate-level SDF-annotated" "$SDF_ANNOTATED_LOG" "$VVP" "$SDF_ANNOTATED_VVP" \
+    || SDF_RUN_EXIT=$?
+# A wall-clock timeout is an infrastructure failure, never the expected crash,
+# even if the signature was printed before the run stalled (issue #157).
+if grep -q '^TIMEOUT:' "$SDF_ANNOTATED_LOG"; then
+    echo "error: SDF-annotated leg hit the $(gs_budget)s wall-clock budget (infrastructure failure; transcript: $SDF_ANNOTATED_LOG)" >&2
+    exit 1
+fi
 
 if grep -q "$KNOWN_CRASH_SIGNATURE" "$SDF_ANNOTATED_LOG"; then
     echo "=== SDF-annotated leg reproduces the cited, known upstream blocker (exit $SDF_RUN_EXIT) ==="

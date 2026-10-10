@@ -48,6 +48,52 @@ regeneration command (also in `design/README.md`, "Switch-matrix RTL (#78)").
 
 Exit status is `0` iff every testbench reports `PASS` with zero failures.
 
+### Simulation wall-clock budget (issue #157)
+
+Every simulator (`vvp`) run started by the replay drivers has a per-run
+wall-clock budget. This covers `sim/run.sh`, `sim/run.sh --mutation`
+(`sim/mutation.py`), `sim/pin_fixture_replay.sh`,
+`flow/gate-sim-bitstream.sh`, `flow/gate-sim-routed.sh`,
+`flow/generated_tile_replay.sh`, the equivalence benches in
+`flow/fabulous.sh`, `flow/sdf-resim.sh` and `flow/corpus_run.py`. A
+simulation-time watchdog can't interrupt a zero-time event loop (for example,
+an oscillating faulty configuration or scratch mutation), so the bound is
+enforced on the process with GNU coreutils `timeout`.
+
+| Variable | Meaning | Default |
+|---|---|---|
+| `SIM_TIMEOUT_SECONDS` | budget per simulation run, positive integer seconds | `300` |
+| `SIM_KILL_AFTER_SECONDS` | grace after `TERM` before a forced `KILL` | `10` |
+
+Example: `SIM_TIMEOUT_SECONDS=600 ./flow/gate-sim-bitstream.sh --negative` on a
+slow machine. Empty, zero, negative, fractional or suffixed values (`10s`), and
+values above 999999, are rejected before anything runs. The default lives in
+one place (`GS_SIM_TIMEOUT_DEFAULT` in `flow/gate_sim_verdict.sh`).
+`flow/sim_budget.py` reads that value for the Python drivers.
+
+**Default basis.** These are serial single-run times measured on a shared
+8-vCPU dev host (2026-10-10, Icarus 13.0). The slowest fixtures are the
+`regcasc` corpus fixtures, at about 16-22 s on the RTL bench, about 24 s at
+gate level (zero delay) and about 15-23 s on the generated-tile/repository
+benches of `flow/generated_tile_replay.sh`. Every other fixture finishes in
+under 5 s. The full `sim/run.sh` takes about 70 s, and
+`flow/gate-sim-bitstream.sh --negative` about 97 s. 300 s gives more than 10x
+margin over the slowest run and stays inside the 15/20-minute CI job limits,
+so a stall still produces a per-fixture verdict in CI.
+
+**A timeout is an infrastructure failure, never a verdict.** A run that
+exceeds the budget is stopped with `TERM`. If it ignores `TERM`, it is
+force-killed after the grace period. It returns 124 or 137, and that nonzero
+status goes to `gs_classify` unchanged, so the run is always `INFRA`. This holds
+even if it printed a `PASS` or terminal functional `FAIL` line before stalling.
+A timed-out run therefore can't count as a caught mutation, a negative-control
+rejection or a pass. The drivers report the fixture, the budget and the log
+path on stderr, and append a `TIMEOUT:` line to that fixture's log (the
+simulator's own output stays in the log). Runs that complete keep exactly
+their previous classification. Regression: `flow/test_sim_budget.sh` (stub
+simulators, no iverilog needed; run in the `rtl-sim` and `gate-sim`
+workflows).
+
 ### CI
 
 `.github/workflows/rtl-sim.yml` (workflow `rtl-sim`) runs `./sim/run.sh` on

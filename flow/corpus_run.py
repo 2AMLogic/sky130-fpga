@@ -39,6 +39,9 @@ import subprocess
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sim_budget  # noqa: E402  per-simulation wall-clock budget (issue #157)
+
 REPO = Path(__file__).resolve().parent.parent
 BUILD = REPO / "flow" / "build"
 SRC = REPO / "design" / "fabulous" / "nextpnr"
@@ -239,9 +242,12 @@ def compile_tb():
 def simulate(tb, binf, wiring, cfgf, oracle, snap_dir):
     """Run the unmodified-loader testbench with perturbation checks + cfg cross-check."""
     rc, out = sh(["vvp", tb, f"+bin={binf}", f"+map={snap_dir / 'logic4_configmem.map'}",
-                  f"+wiring={wiring}", f"+design={oracle}", "+mutate"])
+                  f"+wiring={wiring}", f"+design={oracle}", "+mutate"], timeout=sim_budget.budget())
     if rc is None:
         return False, "vvp not found"
+    if rc == "timeout":
+        return False, (f"simulation TIMEOUT: exceeded the {sim_budget.budget()}s wall-clock budget "
+                       "(SIM_TIMEOUT_SECONDS) -- infrastructure failure")
     m = re.search(r"^PASS: tb_logic_tile_bitstream\[\w+\] \((.*)\)$", out, re.M)
     cfg = re.search(r"^CFG=([0-9a-f]+)", out, re.M)
     if rc != 0 or not m or not cfg:
