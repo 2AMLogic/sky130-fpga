@@ -44,6 +44,17 @@
 #      A/B ConfigBits slice swap -- must each compile and give a completed
 #      functional FAIL on exactly the basis cases the defect predicts.
 #
+#   6. (issue #176) LUT-input directional route diagnostic: flow/route_diag.py
+#      assembles one stream per (BEL, input pin, edge) matrix source into a LUT
+#      input -- 4 x 4 x 4 = 64, the required set read from the frozen pip model --
+#      and sim/tb_route_diag.v loads them in sequence into one live tile (generated
+#      LOGIC4 via FrameData/FrameStrobe, and the repository composition), driving
+#      the selected boundary track against every combination of the three
+#      unselected directional tracks. The coverage report must list exactly the
+#      required routes, each once; a missing or duplicate route fails. Scratch
+#      generated-matrix source-selection permutations must each compile and give a
+#      completed functional FAIL on exactly the predicted route cases.
+#
 # Missing fixture/index, compile error, simulator error, a missing or
 # conflicting terminal verdict, or an undetected mutation fails the script.
 # Every vvp run is bounded by the SIM_TIMEOUT_SECONDS wall-clock budget
@@ -382,8 +393,129 @@ for m in lutin_C init56 belcfg; do
 done
 [[ "$n_lbm" -eq 3 ]] || status=1
 
+# ---- 6. LUT-input directional route diagnostic (issue #176) -----------------
+# Diagnostic assembler-generated streams, NOT mapper output: proves that every
+# existing directional source of every LUT input is selected through frame
+# programming. Not a component select sweep (tb_switch_matrix_equiv.v drives cfg
+# directly) and not LUT address coverage (step 5 uses the S edge only).
+echo "=== LUT-input route diagnostic (issue #176): 4 BELs x 4 pins x 4 edges through the integrated tile ==="
+RD="$OUT/route_diag"; RD_TB="$REPO/sim/tb_route_diag.v"; RD_NAME=tb_route_diag
+[[ -s "$RD_TB" ]] || die "missing $RD_TB"
+python3 -I "$REPO/flow/route_diag.py" "$RD" --snapshot "$BS/fabric_spec.json" || die "route diagnostic stream generation failed"
+[[ "$(wc -l < "$RD/cases.txt")" -eq 64 && "$(wc -l < "$RD/required.txt")" -eq 64 ]] || die "expected 64 route cases and 64 required routes"
+RD_GEN="$OUT/route_gen.vvp"; RD_RTL="$OUT/route_rtl.vvp"
+gen_compile "$GEN_TILE_V" "$RD_GEN" "$RD_TB" \
+    || { cat "$RD_GEN.compile.log" >&2; die "compile of the generated-tile route bench failed"; }
+iverilog -g2012 -Wall -o "$RD_RTL" "$REPO/design/rtl/lut4_slice.v" \
+    "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
+    "$RD_TB" >"$RD_RTL.compile.log" 2>&1 \
+    || { cat "$RD_RTL.compile.log" >&2; die "compile of the repository-composition route bench failed"; }
+route_run() {   # <vvp> <log>; prints the verdict
+    local rc=0
+    gs_run_bounded "$(basename "$1" .vvp)[route]" "$2" vvp "$1" +dir="$RD" +list="$RD/cases.txt" \
+        +wiring="$RD/route.wiring" +map="$MAP" || rc=$?
+    gs_classify "$rc" "$2" "$RD_NAME" route
+}
+route_cfg_ok() {   # <log>: per-case ConfigBits/cfg readback == python decode of the stream
+    local id got
+    while read -r id _; do
+        got="$(grep -m1 "^CFG $id " "$1" | cut -d' ' -f3)"
+        if [[ -z "$got" || "$got" != "$(tr -d '\n' < "$RD/$id.cfg")" ]]; then
+            echo "  route case $id: readback '$got' != decoded $(tr -d '\n' < "$RD/$id.cfg")" >&2; return 1
+        fi
+    done < "$RD/cases.txt"
+}
+route_cov_ok() {   # <log>: the coverage report must equal the required set, each route exactly once
+    local got
+    got="$(sed -n 's/^COVERAGE: ROUTE \([A-D]\) \([0-3]\) \([NESW]\): selected track toggled.*$/\1 \2 \3/p' "$1" | sort)"
+    [[ "$got" == "$(sort "$RD/required.txt")" ]] \
+        && [[ "$(echo "$got" | wc -l)" -eq 64 && "$(echo "$got" | uniq -d | wc -l)" -eq 0 ]] \
+        && grep -qE '^COVERAGE: 64/64 routes \(4 BELs x 4 pins x 4 edges\); 64 cases loaded in sequence into one live tile; [0-9]+ adversarial .* 0 duplicate case ids$' "$1"
+}
+route_ok=1
+for comp in gen rtl; do
+    vvp_f="$RD_GEN"; [[ "$comp" == rtl ]] && vvp_f="$RD_RTL"
+    log="$OUT/route_${comp}.log"
+    v="$(route_run "$vvp_f" "$log")"
+    if [[ "$v" != PASS ]] || ! route_cov_ok "$log"; then
+        echo "  route diagnostic [$comp]: FAIL (verdict $v or coverage differs from the required route set; see $log)" >&2
+        tail -n 8 "$log" >&2; route_ok=0; status=1; continue
+    fi
+    route_cfg_ok "$log" || { echo "  route diagnostic [$comp]: readback mismatch" >&2; route_ok=0; status=1; }
+done
+if [[ "$route_ok" -eq 1 ]]; then
+    gsum="$(grep -m1 '^PASS' "$OUT/route_gen.log" | sed 's/^PASS: [^ ]* //')"
+    rsum="$(grep -m1 '^PASS' "$OUT/route_rtl.log" | sed 's/^PASS: [^ ]* //')"
+    if [[ "$gsum" != "$rsum" ]]; then
+        echo "  route diagnostic: compositions disagree (generated $gsum vs repository $rsum)" >&2; status=1
+    else
+        grep -m1 '^COVERAGE: 64/64' "$OUT/route_gen.log" | sed 's/^/  generated: /'
+        grep -m1 '^COVERAGE: 64/64' "$OUT/route_rtl.log" | sed 's/^/  repository: /'
+        echo "  generated: $(grep -m1 '^GEN_TILE:' "$OUT/route_gen.log")"
+        echo "  route diagnostic: PASS on both $gsum; 64/64 routes, readback == python decode for all 64 streams on both"
+    fi
+fi
+
+echo "--- scratch generated-matrix source-selection permutations vs the route diagnostic (each must give a completed functional FAIL on the predicted routes) ---"
+python3 -I - "$T/LOGIC4_switch_matrix.v" "$OUT" <<'PYEOF' || die "could not build route mutants"
+import sys
+sm, out = open(sys.argv[1]).read(), sys.argv[2]
+def swap(sink, i, j):   # exchange two sources of one sink mux (mux input list is {W,S,E,N})
+    pat = "assign %s_input = {W1END%s,S1END%s,E1END%s,N1END%s};" % ((sink,) + (sink[-1],) * 4)
+    assert sm.count(pat) == 1, pat
+    order = ["N", "E", "S", "W"]
+    order[i], order[j] = order[j], order[i]
+    new = "assign %s_input = {%s};" % (sink, ",".join(f"{order[k]}1END{sink[-1]}" for k in (3, 2, 1, 0)))
+    return sm.replace(pat, new)
+open(f"{out}/matrix_mut_C2_ES.v", "w").write(swap("LC_I2", 1, 2))
+open(f"{out}/matrix_mut_A0_NW.v", "w").write(swap("LA_I0", 0, 3))
+open(f"{out}/matrix_mut_D3_NE.v", "w").write(swap("LD_I3", 0, 1))
+PYEOF
+# Predicted failing route cases, derived from the defect: the two exchanged sources of that one sink
+# on that one BEL, nothing else (every other sink, pin and BEL is untouched).
+declare -A RDM_DESC=(
+    [C2_ES]="BEL C pin I2: E and S sources exchanged in a scratch LOGIC4_switch_matrix.v"
+    [A0_NW]="BEL A pin I0: N and W sources exchanged (the default select 0 moves to W)"
+    [D3_NE]="BEL D pin I3: N and E sources exchanged"
+)
+declare -A RDM_WANT=(
+    [C2_ES]="R_C_I2_E R_C_I2_S"
+    [A0_NW]="R_A_I0_N R_A_I0_W"
+    [D3_NE]="R_D_I3_E R_D_I3_N"
+)
+n_rdm=0
+for m in C2_ES A0_NW D3_NE; do
+    mvvp="$OUT/route_mut_${m}.vvp"; mlog="$OUT/route_mut_${m}.log"
+    mt="$OUT/matrix_mut_${m}.v"; crc=0
+    [[ -s "$mt" && "$(diff <(cat "$T/LOGIC4_switch_matrix.v") "$mt" | grep -c '^>')" -eq 1 ]] \
+        || { echo "route mutant '$m': scratch matrix is not a one-line mutation" >&2; status=1; continue; }
+    iverilog -g2012 -Wall -DGEN_TILE -I "$REPO/sim" -o "$mvvp" \
+        "$TS" "$RUN/Fabric/models_pack.v" "$TS" "$T/lut4_ff_bel.v" "$TS" "$T/LOGIC4_ConfigMem.v" \
+        "$TS" "$mt" "$TS" "$GEN_TILE_V" "$RD_TB" >"$mvvp.compile.log" 2>&1 || crc=$?
+    if [[ "$crc" -ne 0 ]]; then
+        cat "$mvvp.compile.log" >&2
+        echo "route mutant '$m': FAIL (did not compile; a mutation must compile and fail functionally)" >&2
+        status=1; continue
+    fi
+    v="$(route_run "$mvvp" "$mlog")"
+    if [[ "$v" != FUNC_FAIL ]]; then
+        echo "route mutant '$m' (${RDM_DESC[$m]}): NOT caught (verdict $v; a timeout, simulator error or missing verdict never counts; see $mlog)" >&2
+        status=1; continue
+    fi
+    got="$(sed -n 's/^  case \(R_[A-Z0-9_]*\): [0-9]* mismatches$/\1/p' "$mlog" | sort | xargs)"
+    want="$(echo "${RDM_WANT[$m]}" | tr ' ' '\n' | sort | xargs)"
+    if [[ "$got" != "$want" ]]; then
+        echo "route mutant '$m' (${RDM_DESC[$m]}): failing cases [$got] != predicted [$want]" >&2
+        status=1; continue
+    fi
+    route_cov_ok "$mlog" && route_cfg_ok "$mlog" || { echo "route mutant '$m': coverage/readback not intact" >&2; status=1; continue; }
+    n_rdm=$((n_rdm + 1))
+    echo "route mutant '$m' (${RDM_DESC[$m]}) caught: compiled; $(grep -m1 '^FAIL' "$mlog" | sed 's/^FAIL: //'); failing cases == predicted ($got); ConfigBits == decoded on all"
+done
+[[ "$n_rdm" -eq 3 ]] || status=1
+
 if [[ "$status" -eq 0 ]]; then
-    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught; LUT basis 64/64 (BEL, address) cases on both compositions, 3/3 basis mutants caught)"
+    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught; LUT basis 64/64 (BEL, address) cases on both compositions, 3/3 basis mutants caught; LUT-input routes 64/64 (BEL, pin, edge) cases on both compositions, 3/3 route mutants caught)"
 else
     echo "generated-tile replay: FAIL" >&2
 fi

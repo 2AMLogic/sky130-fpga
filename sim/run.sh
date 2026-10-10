@@ -155,6 +155,16 @@ else
     overall_status=1
 fi
 
+echo "=== LUT-input route diagnostic stream generator unit tests (flow/test_route_diag.py, issue #176) ==="
+if python3 -I "$REPO_ROOT/flow/test_route_diag.py" >"$BUILD_DIR/test_route_diag.log" 2>&1 \
+   && grep -q '^OK' "$BUILD_DIR/test_route_diag.log"; then
+    echo "PASS: test_route_diag ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_route_diag.log"), 0 failures)"
+else
+    cat "$BUILD_DIR/test_route_diag.log" >&2
+    echo "error: LUT-input route diagnostic generator unit tests failed" >&2
+    overall_status=1
+fi
+
 echo "=== bitstream fixtures reproduce from committed FASM (flow/fasm_to_bitstream.py check) ==="
 if ! python3 "$BS_TOOL" check "$BS_DIR"; then
     echo "error: committed sim/bitstream fixtures drifted from the assembler output" >&2
