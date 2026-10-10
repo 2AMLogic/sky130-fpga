@@ -209,6 +209,16 @@ select, output mapping) and requires the bench to fail. This verifies frame
 storage only, not a hardware serial receiver. Record:
 `sim/configmem_fabulous_equiv.txt`.
 
+Generated composition (issue #140): `flow/generated_tile_replay.sh` (run by
+`flow/fabulous.sh`) instantiates the generated tile module `LOGIC4.v`, which
+wires the ConfigMem, matrix and BELs above together. It configures the tile only
+through `FrameData`/`FrameStrobe` from the committed streams and checks it with
+the independent design oracles of `sim/tb_logic_tile_bitstream.v`, side by side
+with `design/rtl/logic_tile_routed.v`. Scratch composition mutations (BEL
+config-slice swap, EN/SR swaps) must fail functionally. The component checks
+above stay for localizing faults. Details: `sim/README.md`. Record:
+`sim/generated_tile_replay.txt`.
+
 Mux fan-in (45 sinks, 90 config bits): 8 sinks fan-in 1 (BEL EN/SR, no config),
 21 sinks fan-in 4 (16 LUT inputs, 4 `J_EN_BEG`, `J_SR_BEG0`; 2 bits each),
 16 sinks fan-in 7 (the N/E/S/W track drivers; 3 bits each, codes 7 unused).

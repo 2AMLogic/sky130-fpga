@@ -41,7 +41,10 @@ BUILD="$REPO/flow/build"
 OSS="$BUILD/oss-cad-suite"
 mkdir -p "$BUILD/dl"
 
-"$REPO/flow/fabulous.sh" >"$BUILD/fabulous-for-nextpnr.out" 2>&1 || {
+# Only the regenerated model is needed here; the ~2 min integrated generated-tile
+# replay (issue #140) is run by a direct flow/fabulous.sh invocation, not repeated
+# for every nextpnr/bitstream/corpus run (fabulous.sh prints that it was skipped).
+FABULOUS_SKIP_TILE_REPLAY=1 "$REPO/flow/fabulous.sh" >"$BUILD/fabulous-for-nextpnr.out" 2>&1 || {
     echo "flow/fabulous.sh failed:" >&2; tail -20 "$BUILD/fabulous-for-nextpnr.out" >&2; exit 1; }
 
 TGZ="$BUILD/dl/$RECORDED_OSS_CAD_TARBALL"

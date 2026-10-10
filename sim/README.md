@@ -378,6 +378,69 @@ general-routability claim. Details: `design/fabulous/corpus/pin_experiment.md`;
 evidence appended to `sim/logic_tile_bitstream_results.txt` and
 `sim/logic_tile_bitstream_gate_results.txt`.
 
+## Integrated generated-tile replay (issue #140, EXPERIMENTAL)
+
+The component checks of `flow/fabulous.sh` (BEL, switch matrix, ConfigMem)
+each test one generated module on its own. `flow/generated_tile_replay.sh`,
+run by `flow/fabulous.sh` after a clean generation, tests the generated
+**composition** instead: the FABulous-emitted tile module `LOGIC4.v` with its
+generated `LOGIC4_ConfigMem`, `LOGIC4_switch_matrix` and four `lut4_ff_bel`
+instances wired together by the generator (unmodified, in gitignored
+`flow/build/fabulous-run/`).
+
+- **Generated-tile boundary covered**: the 4x4 track ports `N/E/S/W1END[3:0]`
+  (inputs) and `N/E/S/W1BEG[3:0]` (outputs), `UserCLK`, and the configuration
+  ports `FrameData[31:0]` / `FrameStrobe[19:0]`. `UserCLKo`, `FrameData_O` and
+  `FrameStrobe_O` (pass-through to neighbouring tiles) are connected but not
+  checked; no inter-tile chaining is exercised. The script first checks that
+  the generated header declares exactly these ports and that the module
+  composes the ConfigMem, the matrix and the four BELs. The adapter is the
+  `ifdef GEN_TILE` block of `sim/tb_logic_tile_bitstream.v`: ports are joined
+  by name, `<dir>1END`/`<dir>1BEG` to the bench's `<dir>` input/output tracks.
+- **Configuration only through the frame ports**: each frame of the committed
+  stream that addresses the logic tile is written in stream order as a legal
+  frame write (data, one-hot `FrameStrobe`, strobe release, `FrameData`
+  scrambled). The map is not used to load the generated tile. Its internal
+  `ConfigBits` are read back and must equal the recorded `.cfg`. `+mutate`
+  perturbations are rewritten as frames (the map only locates the flipped bit).
+- **Same oracles, same environment**: the same bench, independent oracles, CAP
+  loopbacks (100 ps transport) and pad interpretation as the #74 harness, so
+  capture/hold and reset-over-enable (`reg`, `regcasc`) and LUT cascades
+  through loopbacks (`casc2`, `casc_fan`, `regcasc`, `top_reg`) are covered.
+  Every fixture runs on both the generated tile and
+  `design/rtl/logic_tile_routed.v`. Both must PASS on their own and report the
+  same check and perturbation counts, so they are compared with the oracles
+  and not only with each other.
+- **Fixtures**: `top_io` (comb), `top_reg` (reg), every line of
+  `sim/bitstream/corpus/index.txt` and the three verified pin-experiment
+  streams. A missing index or file, a compile error, a simulator error, or a
+  missing or conflicting terminal verdict (`flow/gate_sim_verdict.sh`) fails
+  the run.
+- **Composition mutations** (scratch copies of `LOGIC4.v`): BEL A/B
+  `ConfigBits` slices swapped, EN/SR swapped on BEL A, and EN/SR swapped on
+  BEL B. Each must compile and then give a completed functional FAIL from at
+  least one oracle. The readback `ConfigBits` still equal the recorded `.cfg`,
+  so storage-level checks cannot see these defects.
+- **Simulation conventions** (not timing): the generated sources carry no
+  `timescale`, and the matrix has FABulous's placeholder `assign #80` mux
+  delays. They are compiled under `timescale 1ps/1ps`, so each mux takes 80 ps,
+  well inside the bench's 1 ns settle time. Because the tile is configured
+  live, the still-X `ConfigBits` of the first frame writes can push an X into
+  a CAP loopback. A don't-care cycle (see `flush_loops` in the bench) then holds
+  it forever. After configuration the bench forces the loopbacks to 0 once,
+  the same way it does between perturbations. Without that step `casc_fan_s3`
+  fails with an X on every check. The repository composition does not need it
+  because its `cfg` is valid from time 0.
+
+Evidence: `sim/generated_tile_replay.txt` (append-only). Scope: one generated
+tile with the harness's same-index matrix, CAP loopbacks and pad overlay. The
+frame writes are a bench model, not a hardware serial configuration loader.
+There is no timing claim, no inter-tile claim and no ratified-fabric claim
+(ADR-0004/0005 remain Proposed). `flow/nextpnr.sh` calls `flow/fabulous.sh`
+with `FABULOUS_SKIP_TILE_REPLAY=1` (printed as SKIPPED) so this replay is not
+repeated for each nextpnr/bitstream/corpus run. A direct `flow/fabulous.sh`
+(also the CI step) always runs it.
+
 ## Out of scope here
 
 Bitstream-level verification of the *ratified* fabric (the Wilton-class

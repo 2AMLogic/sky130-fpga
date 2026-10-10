@@ -11,7 +11,9 @@
 #     config-bit layout, and an iverilog equivalence run of the FABulous BEL
 #     against design/rtl/lut4_slice.v, and a differential iverilog run of the
 #     FABulous switch matrix against design/rtl/logic_tile_switch_matrix.v
-#     (generated output stays in flow/build/, never committed).
+#     (generated output stays in flow/build/, never committed), the ConfigMem
+#     storage check, and flow/generated_tile_replay.sh: committed streams
+#     replayed through the integrated generated LOGIC4 tile (issue #140).
 #
 # Usage: flow/fabulous.sh [--update-log]
 #   default       run, print summary, diff the normalized log against the
@@ -118,6 +120,21 @@ for m in select map; do
     grep -q '^FAIL' "$BUILD/cm_mut_$m.out" || { echo "mutation '$m' did not produce a bench FAIL" >&2; exit 1; }
     echo "mutation '$m' caught: $(grep '^FAIL: configmem' "$BUILD/cm_mut_$m.out")"
 done
+
+# Integrated generated-tile replay (issue #140): the component checks above
+# stay for diagnosis; this one instantiates the freshly generated LOGIC4 tile
+# (its generated ConfigMem, switch matrix and four BELs wired together by the
+# generator), loads every committed baseline/corpus/pin-experiment stream through
+# its real FrameData/FrameStrobe ports and checks it with the independent design
+# oracles of sim/tb_logic_tile_bitstream.v, side by side with the repository
+# composition. Three scratch composition mutations (BEL config slice swap, EN/SR
+# swaps) must each produce a functional FAIL. EXPERIMENTAL; see sim/README.md.
+echo "=== generated-tile integrated replay (iverilog) ==="
+if [[ "${FABULOUS_SKIP_TILE_REPLAY:-0}" == 1 ]]; then
+    echo "SKIPPED: generated-tile replay (FABULOUS_SKIP_TILE_REPLAY=1, set by flow/nextpnr.sh; run flow/fabulous.sh directly for it)"
+else
+    "$REPO/flow/generated_tile_replay.sh" "$RUN" "$BUILD"
+fi
 
 if [[ "${1:-}" == "--update-log" ]]; then
     cp "$NORM" "$REPO/design/fabulous/generator.log"

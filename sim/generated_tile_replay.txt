@@ -1,0 +1,51 @@
+# Append-only evidence record (issue #140). Add new dated entries below; do not edit old ones.
+# Reproduce: flow/fabulous.sh   (runs flow/generated_tile_replay.sh; FABulous 2.2.0, Icarus Verilog 13.0)
+
+2026-10-10  flow/generated_tile_replay.sh  (bench: sim/tb_logic_tile_bitstream.v -DGEN_TILE; base 8ecb005)
+  LABEL : EXPERIMENTAL single generated LOGIC4 tile on the G1 harness (same-index matrix, CAP
+          loopbacks, pad overlay). No serial configuration loader, no timing, no inter-tile and
+          no ratified-fabric claim (ADR-0004/0005 Proposed).
+  DUT   : FABulous-generated Tile/LOGIC4/LOGIC4.v composing LOGIC4_ConfigMem + LOGIC4_switch_matrix
+          + 4x lut4_ff_bel (+ Fabric/models_pack.v), unmodified, in gitignored flow/build/fabulous-run/.
+          sha256 LOGIC4.v               = f285e4b9f9326a8671ffdb5e18898b17c10b363411a51c4ac776cb1b53cfecce
+          sha256 LOGIC4_ConfigMem.v     = dcdfc776e732e5ed0043014bd4a4aefab0981baec9ea0f0d9a767df42a2e2686
+          sha256 LOGIC4_switch_matrix.v = 4a8c1f3f2da8292b73f0808eee6cd65dc3992428df978b5b3af98a184de0202b
+          sha256 lut4_ff_bel.v          = 8ae0889ced0347a9e0ec271c12e8cd95518b40b6faa9753efaee05c59581aeeb
+          sha256 models_pack.v          = 0bb111e18e1941b5c21d528ef60d2e3195ed311b99f59c35c9f2fc8543344a09
+  Boundary: N/E/S/W1END[3:0] in, N/E/S/W1BEG[3:0] out, UserCLK, FrameData[31:0], FrameStrobe[19:0]
+          (UserCLKo / FrameData_O / FrameStrobe_O connected, not checked). Header port set and the
+          ConfigMem/matrix/4-BEL composition are checked before compiling.
+  Method: each frame addressed to the logic tile written in stream order through FrameData/
+          FrameStrobe (20 legal frame writes per stream; map not used to load); internal ConfigBits
+          read back == recorded .cfg == python decoder; same independent oracles, CAP loopbacks
+          and pad interpretation as the #74 harness, +mutate perturbations rewritten as frames.
+          Every fixture also run on design/rtl/logic_tile_routed.v; both PASS with identical
+          check/perturbation counts.
+  Result: generated-tile replay: 16/16 fixtures PASS on the generated LOGIC4 and the repository composition
+    top_io           [comb]     5409 checks, 0 failures; 26/26 perturbations detected (0 loopbacks)
+    top_reg          [reg]    139651 checks, 0 failures; 27/27 perturbations detected (2 loopbacks)
+    quad4_s1..s3     [quad4]   83201 checks, 0 failures; 52/52 perturbations detected (each)
+    casc2_s1..s3     [casc2]   10049 checks, 0 failures; 24/24 perturbations detected (each, 1 loopback)
+    casc_fan_s1..s3  [casc_fan] 64705 checks, 0 failures; 54/54 perturbations detected (each, 3 loopbacks)
+    regcasc_s1,s3    [regcasc] 313273 checks, 0 failures; 36/36 perturbations detected (each, 3 loopbacks)
+    fan4_distinct_s1..s3 [fan4] 61697 checks, 0 failures; 38/38 perturbations detected (each)
+  Composition mutations (scratch LOGIC4.v copies; each compiled, ConfigBits readback still == recorded):
+    belcfg : BEL A <-> BEL B ConfigBits slices swapped -> functional FAIL on 15/16 fixtures
+             (unaffected: casc2_s3, which places on BELs C/D), e.g.
+             top_io[comb] 16 failures / 257 checks; top_reg[reg] 2397 / 6385; regcasc_s1 3371 / 10945
+    ensr_A : BEL A EN/SR swapped -> functional FAIL on 1/16: top_reg[reg] 3326 failures / 6385 checks
+    ensr_B : BEL B EN/SR swapped -> functional FAIL on 2/16: regcasc_s1, regcasc_s3 [regcasc]
+             5969 failures / 10945 checks each
+    (EN/SR defects are only observable on a BEL whose flop a fixture uses: top_reg = BEL A,
+     regcasc = BEL B; other fixtures PASS, which the script accepts as long as >= 1 oracle fails
+     and no run is an infrastructure failure.)
+  Finding during bring-up (simulation-only, recorded for reviewers):
+    - The generated sources have no `timescale and the matrix uses FABulous placeholder
+      `assign #80` delays; compiled first they defaulted to 1 s units and every output was X.
+      They are now compiled under `timescale 1ps/1ps (80 ps per mux). Not a timing model.
+    - Configuring the live tile frame by frame let the X ConfigBits of the first writes push an
+      X into a CAP loopback of a don't-care cycle; casc_fan_s3 then failed every baseline check
+      (1536/1537) on the generated tile while the repository composition (cfg valid from t=0)
+      passed. The bench now forces the loopbacks to 0 once after configuration, the same
+      flush_loops mechanism used between perturbations; the belcfg mutant still fails
+      casc_fan_s3 (506 failures) with it in place.
