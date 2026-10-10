@@ -236,8 +236,14 @@ all-ones/all-zero clearing cases) through the existing assembler, and
 `sim/tb_lut_basis.v` checks every BEL output against the selected address on
 both compositions, with three scratch mutants (LUT-input permutation, BEL
 INIT-bit swap, BEL A/B slice swap) that must fail on the predicted cases.
-Unit tests: `flow/test_lut_basis.py` (run by `sim/run.sh`). Takes about
-3 minutes, iverilog only, run serially. EXPERIMENTAL; details and non-claims
+Then the LUT-input route diagnostic (issue #176): `flow/route_diag.py`
+assembles 64 streams (4 BELs x 4 input pins x 4 edges, the required set read
+from the frozen pip model) and `sim/tb_route_diag.v` drives each selected
+boundary track against the disagreeing unselected tracks on both compositions,
+with three scratch matrix source-permutation mutants that must fail on the
+predicted routes. Unit tests: `flow/test_lut_basis.py`, `flow/test_route_diag.py`
+(run by `sim/run.sh`). Takes about
+4 minutes, iverilog only, run serially. EXPERIMENTAL; details and non-claims
 are in `sim/README.md`, evidence in `sim/generated_tile_replay.txt`.
 
 ### `flow/nextpnr.sh` - nextpnr on the generated LOGIC4 model (G1, issue #87)

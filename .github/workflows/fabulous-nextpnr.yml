@@ -36,6 +36,8 @@ on:
       - 'sim/tb_logic_tile_bitstream.v'
       - 'sim/tb_lut_basis.v'
       - 'flow/lut_basis.py'
+      - 'sim/tb_route_diag.v'
+      - 'flow/route_diag.py'
       - 'flow/nextpnr.sh'
       - 'flow/nextpnr_io_overlay.py'
       - 'flow/bitstream.sh'

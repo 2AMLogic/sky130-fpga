@@ -109,3 +109,30 @@
   Not covered (G5 stays OPEN): ratified fabric (ADR-0004/0005 remain Proposed), inter-tile routing across
     the demo grid, timing, the real frame-loader/pad hardware, mapper correctness for arbitrary truth tables,
     LUT input routes other than the same-index S1END tracks, registered-mode address coverage.
+
+2026-10-10  flow/generated_tile_replay.sh step 6 (run by hand on a copy of the flow/fabulous.sh generated run) @ issue #176 (EXPERIMENTAL, zero delay, single tile)
+  LUT-input directional route diagnostic: every existing matrix source of every LUT input, selected through frame programming.
+  Scope: 64 DIAGNOSTIC streams assembled by flow/route_diag.py through the existing assembler (flow/fasm_to_bitstream.py
+    assemble + pack, decoded back) against sim/bitstream/fabric_spec.json. NOT mapper output; no routing widening, no mapper-policy
+    decision, no timing and no ratified-fabric claim (ADR-0004/0005/0006 remain Proposed). Distinct from the component select
+    sweeps (design/fabulous/tb_switch_matrix_equiv.v drives cfg directly) and from the #172 LUT address basis (S edge only).
+  Required set: read from the frozen pip model (pips N/E/S/W1END<p> -> L<X>_I<p>): 4 BELs x 4 pins x 4 edges = 64; the generator
+    fails if a case is missing or duplicated, and the bench/script coverage report must list the same 64 keys exactly once.
+  Cases R_<X>_I<p>_<E>, edge-major order, loaded into ONE live tile with no reset (every stream differs from its predecessor):
+    pip <E>1END<p> -> L<X>_I<p>; L{A,B,C,D}_O -> S1BEG{0,1,2,3}; BEL X INIT = projection of pin p; other BELs INIT 0.
+  DUT: the generated LOGIC4 (+ConfigMem, matrix, BEL) configured only by FrameData/FrameStrobe (1280 frame writes = 64 streams x 20
+    frames), and design/rtl/logic_tile_routed.v through its cfg port. Bench sim/tb_route_diag.v.
+  Oracle (from the case identifier and applied stimulus only; no cfg/map/ConfigBits/internal LUT-input net): BEL X output == value
+    on the selected boundary track, the other three BEL outputs == 0; selected track 0 and 1 x all 8 combinations of the three
+    unselected directional tracks of that pin (768 adversarial checks where all three disagree) x 6 patterns of all other input tracks.
+  Result: PASS on both compositions (24576 checks, 0 failures; 64/64 cases), identical summaries;
+    COVERAGE: 64/64 routes (4 BELs x 4 pins x 4 edges); 64 cases loaded in sequence into one live tile; 768 adversarial checks; 0 duplicates.
+    Per-case readback (generated ConfigBits / repository cfg) == python decode of the stream, 64/64 on both.
+  Scratch generated-matrix source-selection permutations (compiled; completed functional FAIL; failing set == predicted; readback intact):
+    C2_ES : BEL C pin I2, E <-> S exchanged   96 failures / 24576 checks; R_C_I2_E R_C_I2_S
+    A0_NW : BEL A pin I0, N <-> W exchanged   96 failures / 24576 checks; R_A_I0_N R_A_I0_W
+    D3_NE : BEL D pin I3, N <-> E exchanged   96 failures / 24576 checks; R_D_I3_E R_D_I3_N
+  Unchanged in the same run: 20/20 fixtures PASS, 5/5 composition mutations, LUT basis 64/64 and 3/3 basis mutants.
+  Not covered (G5 stays OPEN): ratified fabric, inter-tile routing, timing, the real frame-loader/pad hardware, mapper correctness,
+    sources other than the same-index N/E/S/W tracks, registered-mode behaviour, the N edge being select 0 (default) so an N case alone
+    does not prove a programmed select (the E/S/W cases and the N<->W mutant do).

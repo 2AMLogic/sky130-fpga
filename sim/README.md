@@ -537,6 +537,38 @@ instances wired together by the generator (unmodified, in gitignored
   yosys/nextpnr map every truth table correctly. The bench has no
   perturbation phase; its FAIL summary uses the shared verdict format with
   `0 perturbations survived`.
+- **LUT-input directional route diagnostic (issue #176, EXPERIMENTAL)**: after
+  the basis diagnostic, `flow/route_diag.py` assembles 64 streams, one per
+  (BEL A..D, LUT input pin 0..3, edge N/E/S/W): the pip `<edge>1END<p> ->
+  L<X>_I<p>`, the output pip `L<X>_O -> S1BEG<j>`, and BEL X INIT set to the
+  projection of pin p; the other BELs stay at INIT 0. The required set is read
+  from the frozen pip model (the current same-index matrix offers each pin
+  exactly four sources), and the generator fails if a route is missing or
+  duplicated. `sim/tb_route_diag.v` loads the streams in sequence into one
+  live tile without reset (generated LOGIC4 only through FrameData/FrameStrobe;
+  and the repository composition), so every case changes matrix select fields
+  of the previous one. Per case it drives the selected boundary track to 0 and
+  1 against all 8 combinations of the three unselected edges' tracks of that
+  pin (including the cases where all three disagree with the selected track)
+  under six patterns of every other input track. The oracle is the BEL output
+  == the selected track, and the other three BEL outputs == 0, from the case
+  identifier and applied stimulus only (no cfg, map, ConfigBits or internal
+  LUT-input net). The script requires PASS on both compositions, a coverage
+  report whose 64 `COVERAGE: ROUTE <BEL> <pin> <edge>` lines equal the
+  generator's required set exactly once each, and readback == Python decode.
+  Three scratch permutations of the generated `LOGIC4_switch_matrix.v` (two
+  sources of one sink exchanged: C/I2 E<->S, A/I0 N<->W, D/I3 N<->E) must
+  each compile and give a completed functional FAIL on exactly the two
+  predicted route cases. A timeout, compile error or simulator error is never a
+  detection (shared verdict classifier and `SIM_TIMEOUT_SECONDS` budget).
+  What this is not: it is not the component select sweep of
+  `design/fabulous/tb_switch_matrix_equiv.v` (which drives matrix cfg fields
+  directly, not through frame programming), and not LUT truth-table address
+  coverage (the #172 basis uses the S edge only). Note that the N edge is the
+  default (select 0) source, so an N case alone cannot show a select was
+  programmed; the other three edges of the same pin and the N/W-type mutant
+  cover that. Not mapper output, no routing widening, no timing or
+  ratified-fabric claim; G5 stays open for inter-tile verification.
 - **Simulation conventions** (not timing): the generated sources carry no
   `timescale`, and the matrix has FABulous's placeholder `assign #80` mux
   delays. They are compiled under `timescale 1ps/1ps`, so each mux takes 80 ps,
