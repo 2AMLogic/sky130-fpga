@@ -18,6 +18,8 @@ on:
     paths:
       - 'flow/**'
       - 'design/rtl/logic_tile.v'
+      - 'design/bitstream-format.md'
+      - 'sim/bitstream/**'
       - 'layout/**'
       - 'measurements/**'
       - 'README.md'
