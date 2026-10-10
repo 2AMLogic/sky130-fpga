@@ -11,6 +11,13 @@
 # The klt-driven check modes (layout.sh, drc.sh, lvs.sh, layout_routed.sh) and
 # the heavy sta-sweep.sh / sdf-resim.sh legs are deliberately NOT run here; see
 # flow/README.md "Continuous integration" for the specific blockers.
+#
+# The sim/ ledger append-only guard (issue #183, flow/audit_sim_ledgers.py)
+# compares the merge base of the event's base/head SHAs with the actual PR
+# head SHA -- never the synthetic merge commit actions/checkout leaves at
+# HEAD -- so it needs full history (fetch-depth: 0) and both event SHAs.
+# The SHAs reach the shell only through env vars, quoted. `sim/**` selects
+# ledger-only edits, deletions and newly named ledgers.
 name: flow-evidence
 
 on:
@@ -19,7 +26,7 @@ on:
       - 'flow/**'
       - 'design/rtl/logic_tile.v'
       - 'design/bitstream-format.md'
-      - 'sim/bitstream/**'
+      - 'sim/**'
       - 'layout/**'
       - 'measurements/**'
       - 'README.md'
@@ -37,6 +44,25 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check sim/ ledgers are append-only
+        env:
+          LEDGER_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          LEDGER_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          python3 -I flow/test_audit_sim_ledgers.py
+          for sha in "$LEDGER_BASE_SHA" "$LEDGER_HEAD_SHA"; do
+            if [ -z "$sha" ]; then
+              echo "ERROR: pull_request base/head SHA missing from the event" >&2
+              exit 2
+            fi
+            git cat-file -e "$sha^{commit}" 2>/dev/null \
+              || git fetch --no-tags origin "$sha"
+          done
+          python3 -I flow/audit_sim_ledgers.py \
+            --base "$LEDGER_BASE_SHA" --head "$LEDGER_HEAD_SHA"
 
       - name: Audit claim-to-harness evidence
         run: |
