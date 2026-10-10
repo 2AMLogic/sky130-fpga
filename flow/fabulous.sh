@@ -117,7 +117,8 @@ cm_run() {  # $1 = ConfigMem file, $2 = output prefix, $3 = models file (default
         vvp "$2_tb" +map="$REPO/sim/bitstream/logic4_configmem.map" +vec="$CM_VEC"
 }
 cm_run "$CM_V" "$BUILD/cm" || { echo "error: ConfigMem equivalence run failed (see $BUILD/cm.out)" >&2; exit 1; }
-grep -q '^PASS: configmem_fabulous_equiv' "$BUILD/cm.out"
+[[ "$(gs_classify_configmem 0 "$BUILD/cm.out")" == PASS ]] \
+    || { echo "error: ConfigMem baseline is not a single completed PASS summary (see $BUILD/cm.out)" >&2; exit 1; }
 grep -q 'transparent-open: [1-9][0-9]* frames, 158/158 mapped bits changed under asserted strobe' "$BUILD/cm.out" \
     || { echo "error: transparent-open phase did not report full mapped-bit coverage (see $BUILD/cm.out)" >&2; exit 1; }
 # the pinned generated config_latch must be level-sensitive (always @(*) if (E)), not edge-triggered
@@ -129,6 +130,23 @@ b = m.group(0)
 assert re.search(r"always\s*@\(\s*\*\s*\)", b) and not re.search(r"posedge|negedge", b), \
     "generated config_latch is not a level-sensitive latch"
 PYEOF
+# (issue #196 / PR #198 review) broken bench inputs against the UNMODIFIED
+# ConfigMem must be setup ERRORs classified INFRA -- never a functional FAIL
+# that a mutant run could count as a kill.
+echo "--- ConfigMem bench input failures (each must be INFRA, not a kill) ---"
+: > "$BUILD/cm_vec_empty.txt"
+awk '/^S/{n++} n<2' "$CM_VEC" > "$BUILD/cm_vec_one.txt"
+for c in "missing:$BUILD/cm_vec_nonexistent.txt" "empty:$BUILD/cm_vec_empty.txt" "one-stream:$BUILD/cm_vec_one.txt"; do
+    rm -f "$BUILD/cm_vec_nonexistent.txt"
+    rc=0; gs_run_bounded "ConfigMem input ${c%%:*}" "$BUILD/cm_in_${c%%:*}.out" \
+        vvp "$BUILD/cm_tb" +map="$REPO/sim/bitstream/logic4_configmem.map" +vec="${c#*:}" || rc=$?
+    verdict="$(gs_classify_configmem "$rc" "$BUILD/cm_in_${c%%:*}.out")"
+    if [[ "$verdict" != INFRA ]] || ! grep -q '^ERROR: configmem_fabulous_equiv setup:' "$BUILD/cm_in_${c%%:*}.out"; then
+        echo "error: ConfigMem bench with ${c%%:*} vector file gave '$verdict', not a setup ERROR / INFRA (see $BUILD/cm_in_${c%%:*}.out)" >&2
+        exit 1
+    fi
+    echo "input '${c%%:*}' vector file -> $verdict: $(grep '^ERROR: configmem' "$BUILD/cm_in_${c%%:*}.out")"
+done
 echo "--- scratch mutations of the generated ConfigMem (each must be caught) ---"
 # (1) frame select: bit of frame 2 latched by frame 3's strobe
 python3 - "$CM_V" "$BUILD/cm_mut_select.v" "$BUILD/cm_mut_map.v" <<'PYEOF'
@@ -166,12 +184,17 @@ for m in select map rise fall; do
         echo "ConfigMem mutation '$m': run did not complete (rc=$rc; infrastructure failure, not a caught mutation; see $BUILD/cm_mut_$m.out)" >&2
         exit 1
     fi
-    if grep -q '^PASS' "$BUILD/cm_mut_$m.out"; then
-        echo "ConfigMem mutation '$m' was NOT caught" >&2; exit 1; fi
-    grep -q '^FAIL' "$BUILD/cm_mut_$m.out" || { echo "mutation '$m' did not produce a bench FAIL" >&2; exit 1; }
+    # (issue #196) only a completed functional FAIL summary is a kill; setup
+    # errors, missing/duplicate/conflicting summaries are infrastructure failures
+    verdict="$(gs_classify_configmem "$rc" "$BUILD/cm_mut_$m.out")"
+    case "$verdict" in
+        FUNC_FAIL) ;;
+        PASS) echo "ConfigMem mutation '$m' was NOT caught" >&2; exit 1 ;;
+        *) echo "ConfigMem mutation '$m': no completed functional summary (infrastructure failure, not a caught mutation; see $BUILD/cm_mut_$m.out)" >&2; exit 1 ;;
+    esac
     if [[ "$m" == rise || "$m" == fall ]]; then
         # must be caught by the transparent-open phase specifically (completed functional verdict)
-        grep -Eq '\([1-9][0-9]* transparent-open failures' "$BUILD/cm_mut_$m.out" \
+        grep -Eq '^FAIL: configmem_fabulous_equiv -- .*\([1-9][0-9]* transparent-open failures' "$BUILD/cm_mut_$m.out" \
             || { echo "ConfigMem mutation '$m' not caught by the transparent-open phase" >&2; exit 1; }
     fi
     echo "mutation '$m' caught: $(grep '^FAIL: configmem' "$BUILD/cm_mut_$m.out")"

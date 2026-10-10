@@ -9,6 +9,13 @@
 // Issue #195: a transparent-open phase holds one-hot FrameStrobe high while FrameData
 // changes, so edge-triggered storage cannot pass.
 //
+// Output contract (flow/gate_sim_verdict.sh gs_classify_configmem, issue #196):
+// setup/input problems print "ERROR: configmem_fabulous_equiv setup: ..." and finish
+// with NO terminal summary; per-check mismatches print "FAIL <what>: ..." (no colon
+// directly after FAIL); exactly one terminal summary ends a completed run:
+// "PASS: configmem_fabulous_equiv -- N checks, S baseline streams, 0 failures; transparent-open: ..."
+// or "FAIL: configmem_fabulous_equiv -- M failures / N checks (T transparent-open failures / C checks)".
+//
 // Plusargs: +map=<file> +vec=<baseline vector file from flow/configmem_frames.py>
 `timescale 1ns/1ps
 module tb;
@@ -122,18 +129,20 @@ module tb;
 
     initial begin
         if (!$value$plusargs("map=%s", mapf) || !$value$plusargs("vec=%s", vecf)) begin
-            $display("FAIL: need +map= and +vec="); $finish;
+            $display("ERROR: configmem_fabulous_equiv setup: need +map= and +vec="); $finish;
         end
         for (i = 0; i < NF*FB; i = i + 1) pos2cb[i] = -1;
         fh = $fopen(mapf, "r");
+        if (fh == 0) begin
+            $display("ERROR: configmem_fabulous_equiv setup: cannot open map file %0s", mapf); $finish; end
         n = 0;
         while ($fscanf(fh, "%d %d\n", a, b) == 2) begin
             if (a < 0 || a >= NB || b < 0 || b >= NF*FB || pos2cb[b] >= 0) begin
-                $display("FAIL: bad map entry %0d %0d", a, b); $finish; end
+                $display("ERROR: configmem_fabulous_equiv setup: bad map entry %0d %0d", a, b); $finish; end
             pos2cb[b] = a; n = n + 1;
         end
         $fclose(fh);
-        if (n != NB) begin $display("FAIL: map has %0d entries", n); $finish; end
+        if (n != NB) begin $display("ERROR: configmem_fabulous_equiv setup: map has %0d entries", n); $finish; end
 
         FrameData = 0; FrameStrobe = 0; exp = {NB{1'b0}};
         // Initial fill: zero every frame so all storage is defined.
@@ -191,7 +200,7 @@ module tb;
         for (i = 0; i < NB; i = i + 1) if (tmoved[i]) tbits = tbits + 1;
         if (tbits != NB || tframes < 1) begin
             fails = fails + 1; tfails = tfails + 1;
-            $display("FAIL: transparent-open coverage %0d/%0d mapped bits, %0d frames", tbits, NB, tframes);
+            $display("FAIL transparent-open-coverage: %0d/%0d mapped bits, %0d frames", tbits, NB, tframes);
         end
         // Randomized frame-write sequences against the map model.
         for (i = 0; i < 5000; i = i + 1) begin write($unsigned($random) % NF, $random); check("random"); end
@@ -199,6 +208,8 @@ module tb;
         // Baseline streams: replay frame payloads in stream order; final ConfigBits
         // must equal the recorded .cfg vector.
         fh = $fopen(vecf, "r");
+        if (fh == 0) begin
+            $display("ERROR: configmem_fabulous_equiv setup: cannot open vector file %0s", vecf); $finish; end
         n = 0;
         while (!$feof(fh)) begin
             r = $fscanf(fh, " %c", tag);
@@ -213,7 +224,13 @@ module tb;
         end
         if (n > 0) check_final;
         $fclose(fh);
-        if (n < 2) begin fails = fails + 1; $display("FAIL: only %0d baseline streams replayed", n); end
+        // Fewer than 2 streams means a missing/empty/truncated vector file or a
+        // broken adapter -- an input problem, never a storage mismatch: setup
+        // ERROR and no terminal summary, so it can never count as a kill (#196).
+        if (n < 2) begin
+            $display("ERROR: configmem_fabulous_equiv setup: only %0d baseline streams in vector file %0s", n, vecf);
+            $finish;
+        end
         if (fails == 0) $display("PASS: configmem_fabulous_equiv -- %0d checks, %0d baseline streams, 0 failures; transparent-open: %0d frames, %0d/%0d mapped bits changed under asserted strobe, %0d settled changes, %0d checks, 0 failures", checks, n, tframes, tbits, NB, topen, tchecks);
         else $display("FAIL: configmem_fabulous_equiv -- %0d failures / %0d checks (%0d transparent-open failures / %0d checks)", fails, checks, tfails, tchecks);
         $finish;
