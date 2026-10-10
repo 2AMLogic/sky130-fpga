@@ -97,3 +97,82 @@
     exported to sim/bitstream/pin_experiment/ (index.json, fan4_distinct.netlist.json, fan4_distinct_s{1,2,3}.
     {fasm,mapped.json,bin,wiring,cfg}). Baseline and variant-consistent trials are never exported. Outcomes
     reproduce the earlier record in this file: baseline and consistent route_nonconvergent, distinct success, seeds 1-3.
+
+2026-10-10  flow/pin_experiment.sh @ 897f227  case regcasc  (completed)
+  Tools   : yosys Yosys 0.69+260, nextpnr-0.11.1-54-g861c57be (pins: flow/tool_versions.sh)
+  Fixed   : source sha256 60a207f371d49758, pcf sha256 81076d0fe8eb62e5, router nextpnr default, seeds/budget as corpus.json
+  Baseline netlist sha256 1a227aed0c6a48e9
+  Mode    : reg -- one-register transition model (issue #160): per-cell INIT, structural FF/control/state invariants, exhaustive (state x input/control) next-state + output check
+  Negative control wrong-INIT: REJECTED (completed) -- cell $abc$282$lut$aiger$o2._lut: I0<->I1 connections swapped, INIT unchanged
+      cells: MISMATCH: cell $abc$282$lut$aiger$o2._lut: output 1 != baseline 0 at nets {11: 0, 12: 1}, pin values {'I2': 0, 'I3': 0}
+      structural: UNCHANGED: ports, IO cells, FF/SR/EN/O nets, non-INIT parameters, I-pin net multisets, register interface
+      transition: MISMATCH at q=0, a=0, b=0, c=0, d=0, e=0, en=1, rst=0: baseline next_q=0, outputs q=0 vs variant next_q=1, outputs q=0
+  Negative control control-swap: REJECTED (completed) -- register $auto$ff.cc:337:slice$87._ff: SR and EN nets exchanged
+      cells: EQUIVALENT: 3 BEL LUTs (incl. register $auto$ff.cc:337:slice$87._ff data LUT) over all connected-net assignments and every unconnected/undriven pin value
+      structural: MISMATCH: cell $auto$ff.cc:337:slice$87._ff: EN net [20] -> [22]; cell $auto$ff.cc:337:slice$87._ff: SR net [22] -> [20]; register interface sr: 22 -> 20; register interface en: 20 -> 22
+      transition: MISMATCH at q=0, a=0, b=0, c=0, d=1, e=1, en=0, rst=1: baseline next_q=0, outputs q=0 vs variant next_q=1, outputs q=0
+  Negative control state-interface: REJECTED (completed) -- output reconnected from state net 21 to the register's data-input net 15 (FF bypassed)
+      cells: EQUIVALENT: 3 BEL LUTs (incl. register $auto$ff.cc:337:slice$87._ff data LUT) over all connected-net assignments and every unconnected/undriven pin value
+      structural: MISMATCH: cell $iopadmap$top.q._io (IO_1_bidirectional_frame_config_pass): connections/parameters changed
+      transition: MISMATCH at q=0, a=0, b=0, c=0, d=1, e=1, en=0, rst=0: baseline next_q=0, outputs q=0 vs variant next_q=0, outputs q=1
+  Variant consistent: netlist sha256 1a227aed0c6a48e9
+    Equivalence: EQUIVALENT
+      cells: EQUIVALENT: 3 BEL LUTs (incl. register $auto$ff.cc:337:slice$87._ff data LUT) over all connected-net assignments and every unconnected/undriven pin value
+      structural: UNCHANGED: ports, IO cells, FF/SR/EN/O nets, non-INIT parameters, I-pin net multisets, register interface
+      transition: EQUIVALENT: next state and 1 output(s) identical over 2 states x 2^7 input/control vectors (256 transitions)
+    Transformation log:
+      cell $abc$282$lut$aiger$o2._lut: identity (already aligned); $abc$282$iopadmap$e:I0->I0, $abc$282$aiger281$33:I1->I1; unconnected I2->I2, I3->I3; INIT 0010001000100010 -> 0010001000100010
+      cell $abc$282$lut$aiger281$33._lut: identity (already aligned); $abc$282$iopadmap$a:I0->I0, $abc$282$iopadmap$b:I1->I1, $abc$282$iopadmap$c:I2->I2, $abc$282$iopadmap$d:I3->I3; INIT 1001011001101001 -> 1001011001101001
+      cell $auto$ff.cc:337:slice$87._ff: identity (already aligned); $abc$282$aiger$o2:I0->I0; unconnected I1->I1, I2->I2, I3->I3; INIT 1010101010101010 -> 1010101010101010
+      net $abc$282$iopadmap$e (id 11, LUT fanout 1) -> pin index I0
+      net $abc$282$aiger281$33 (id 12, LUT fanout 1) -> pin index I1
+      net $abc$282$aiger$o2 (id 15, LUT fanout 1) -> pin index I0
+      net $abc$282$iopadmap$a (id 16, LUT fanout 1) -> pin index I0
+      net $abc$282$iopadmap$b (id 17, LUT fanout 1) -> pin index I1
+      net $abc$282$iopadmap$c (id 18, LUT fanout 1) -> pin index I2
+      net $abc$282$iopadmap$d (id 19, LUT fanout 1) -> pin index I3
+      negative control (permuted connections, INIT unchanged): not applicable (no planned permutation changes an INIT)
+  Variant distinct: netlist sha256 fd171e32634c603c
+    Equivalence: EQUIVALENT
+      cells: EQUIVALENT: 3 BEL LUTs (incl. register $auto$ff.cc:337:slice$87._ff data LUT) over all connected-net assignments and every unconnected/undriven pin value
+      structural: UNCHANGED: ports, IO cells, FF/SR/EN/O nets, non-INIT parameters, I-pin net multisets, register interface
+      transition: EQUIVALENT: next state and 1 output(s) identical over 2 states x 2^7 input/control vectors (256 transitions)
+    Transformation log:
+      cell $abc$282$lut$aiger$o2._lut: identity (already aligned); $abc$282$iopadmap$e:I0->I0, $abc$282$aiger281$33:I1->I1; unconnected I2->I2, I3->I3; INIT 0010001000100010 -> 0010001000100010
+      cell $abc$282$lut$aiger281$33._lut: $abc$282$iopadmap$a:I0->I3, $abc$282$iopadmap$b:I1->I0, $abc$282$iopadmap$c:I2->I1, $abc$282$iopadmap$d:I3->I2; INIT 1001011001101001 -> 1001011001101001
+      cell $auto$ff.cc:337:slice$87._ff: $abc$282$aiger$o2:I0->I2; unconnected I1->I0, I2->I1, I3->I3; INIT 1010101010101010 -> 1111000011110000
+      net $abc$282$iopadmap$e (id 11, LUT fanout 1) -> pin index I0
+      net $abc$282$aiger281$33 (id 12, LUT fanout 1) -> pin index I1
+      net $abc$282$aiger$o2 (id 15, LUT fanout 1) -> pin index I2
+      net $abc$282$iopadmap$a (id 16, LUT fanout 1) -> pin index I3
+      net $abc$282$iopadmap$b (id 17, LUT fanout 1) -> pin index I0
+      net $abc$282$iopadmap$c (id 18, LUT fanout 1) -> pin index I1
+      net $abc$282$iopadmap$d (id 19, LUT fanout 1) -> pin index I2
+      negative control (permuted connections, INIT unchanged): rejected: REJECTED (cells: MISMATCH: cell $auto$ff.cc:337:slice$87._ff: output 1 != baseline 0 at nets {15: 0}, pin values {'I0': 1, 'I1': 0, 'I3': 0} | structural: UNCHANGED: ports, IO cells, FF/SR/EN/O nets, non-INIT parameters, I-pin net multisets, register interface | transition: MISMATCH at q=0, a=0, b=0, c=0, d=1, e=1, en=1, rst=0: baseline next_q=1, outputs q=0 vs variant next_q=0, outputs q=0)
+  baseline            seed 1: success   (corpus.json recorded expectation: success)
+      BELs X1Y1/B=FF, X1Y1/C=LUT, X1Y1/D=LUT
+      fasm 0228ff7af5ed65bb  bin 214b94bab72ef40f
+      functional oracle: 313273 checks, 0 failures; 36/36 perturbations detected
+  variant-consistent  seed 1: success
+      BELs X1Y1/B=FF, X1Y1/C=LUT, X1Y1/D=LUT
+      fasm 0228ff7af5ed65bb  bin 214b94bab72ef40f
+      functional oracle: 313273 checks, 0 failures; 36/36 perturbations detected
+  variant-distinct    seed 1: success
+      BELs X1Y1/B=FF, X1Y1/C=LUT, X1Y1/D=LUT
+      fasm 13eb076bfa452f81  bin 6435908e5d95bc77
+      functional oracle: 313273 checks, 0 failures; 36/36 perturbations detected
+  baseline            seed 2: route_nonconvergent [router did not converge within the wall-clock budget; 1 arcs still unrouted at the last progress report]   (corpus.json recorded expectation: route_nonconvergent)
+  variant-consistent  seed 2: route_nonconvergent [router did not converge within the wall-clock budget; 1 arcs still unrouted at the last progress report]
+  variant-distinct    seed 2: route_nonconvergent [router did not converge within the wall-clock budget; 1 arcs still unrouted at the last progress report]
+  baseline            seed 3: success   (corpus.json recorded expectation: success)
+      BELs X1Y1/B=FF, X1Y1/C=LUT, X1Y1/D=LUT
+      fasm 84fef6112c96e758  bin 4794739d629b2d40
+      functional oracle: 313273 checks, 0 failures; 36/36 perturbations detected
+  variant-consistent  seed 3: success
+      BELs X1Y1/B=FF, X1Y1/C=LUT, X1Y1/D=LUT
+      fasm 84fef6112c96e758  bin 4794739d629b2d40
+      functional oracle: 313273 checks, 0 failures; 36/36 perturbations detected
+  variant-distinct    seed 3: success
+      BELs X1Y1/B=FF, X1Y1/C=LUT, X1Y1/D=LUT
+      fasm 40bb6c28417288dc  bin 28db06c9f02dd3be
+      functional oracle: 313273 checks, 0 failures; 36/36 perturbations detected
