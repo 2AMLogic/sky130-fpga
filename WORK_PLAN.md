@@ -25,7 +25,7 @@ _None._
 
 Issues currently being built (`loom:building`).
 
-- **#140**: G5: replay committed streams through the integrated FABulous-generated tile
+_None._
 
 ## PRs Awaiting Review
 
@@ -47,7 +47,9 @@ _None._
 
 ## Proposed (Architect / Hermit)
 
-_None._
+- **#160**: Routability: test whether the LUT pin-index confounder also explains the regcasc seed-2 non-convergence *(architect)*
+- **#161**: Spec: draft ADR-0006 (Proposed) for mapper-side LUT pin-assignment policy *(architect)*
+- **#164**: Verification: distinguish RTL mutation kills from simulator infrastructure failures *(architect)*
 
 ## Epics
 
@@ -60,10 +62,10 @@ _None._
 | Operator merge-risk holds | 1 |
 | Operator priority | 0 |
 | Ready (`loom:issue`) | 0 |
-| In Progress (`loom:building`) | 1 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 0 |
-| Architect / Hermit proposals | 0 |
+| Architect / Hermit proposals | 3 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->

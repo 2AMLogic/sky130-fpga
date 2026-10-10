@@ -2,7 +2,18 @@
 
 Chronological record of merged pull requests and closed issues, maintained by the Loom Guide role. Newest entries appear first.
 
+### 2026-10-10
+
+- **PR #159**: Bound simulator processes; timeouts are infrastructure failures (#157)
+- **PR #158**: G5: exercise registered control wiring on every generated-tile BEL (#156)
+- **PR #155**: G5: replay committed streams through the integrated FABulous-generated tile
+- **Issue #157** (closed): Verification: bound simulator processes and reject timeouts as infrastructure failures
+- **Issue #156** (closed): G5: exercise registered control wiring on every generated-tile BEL
+- **Issue #140** (closed): G5: replay committed streams through the integrated FABulous-generated tile
+
 ### 2026-10-09
+
+- **Issue #148** (closed): Guard telemetry: retain unresolved worktree write confinement check
 
 - **PR #151**: Evidence audit: validate supersession graphs before exempting stale hashes
 - **PR #152**: fix(flow): audit nested layout reports for PDK provenance (#149)
