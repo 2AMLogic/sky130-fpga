@@ -49,3 +49,23 @@
       passed. The bench now forces the loopbacks to 0 once after configuration, the same
       flush_loops mechanism used between perturbations; the belcfg mutant still fails
       casc_fan_s3 (506 failures) with it in place.
+
+2026-10-10  flow/generated_tile_replay.sh (via ./flow/bitstream.sh toolchain, run by hand on flow/build/fabulous-run) @ issue #156 (EXPERIMENTAL, zero delay, single tile)
+  Extends the #140 replay to registered control wiring on every BEL. Four new fixtures
+    regbel_{a,b,c,d}_s1 [regbel] (sim/bitstream/corpus/, one registered LUT4 BEL pinned by NEXTPNR_BEL to
+    X1Y1/A, /B, /C, /D; flow/check_regbel_fixtures.py proves ff=1, placement, routed EN/SR/O from the
+    committed metadata). Fixtures: 20 (2 baseline + 15 corpus + 3 pin-experiment).
+  Result: generated-tile replay: 20/20 fixtures PASS on the generated LOGIC4 and the repository composition
+    regbel_a_s1  131671 checks, 0 failures; 20/20 perturbations detected (1 loopback)
+    regbel_b_s1, regbel_c_s1, regbel_d_s1  113851 checks, 0 failures; 17/17 perturbations detected (each)
+    (all 4 control oracles: capture, hold, sync reset with enable low, reset priority with enable high)
+  Composition mutations (5/5 caught; each compiled; ConfigBits readback == recorded on all fixtures):
+    belcfg : functional FAIL on 17/20 fixtures
+    ensr_A : 2/20 -- top_reg[reg], regbel_a_s1 (7921 checks, 5382 failures)
+    ensr_B : 3/20 -- regcasc_s1, regcasc_s3, regbel_b_s1 (5382 failures / 7921 checks)
+    ensr_C : 1/20 -- regbel_c_s1 (5382 failures / 7921 checks)   [new]
+    ensr_D : 1/20 -- regbel_d_s1 (5382 failures / 7921 checks)   [new]
+    The script now additionally requires each ensr_X to FAIL on its matching regbel_x_s1 fixture, so a
+    swap that compiles but is not sensitized on that BEL fails the run. No infrastructure failures.
+  Not covered: ratified fabric (ADR-0004/0005 remain Proposed), inter-tile routing, timing, the real
+    frame-loader/pad hardware, any BEL combination beyond one registered BEL per fixture.

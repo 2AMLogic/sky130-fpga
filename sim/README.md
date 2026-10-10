@@ -355,7 +355,8 @@ pinned yosys/nextpnr flow routed. `./sim/run.sh` re-assembles each from its
 FASM (`flow/fasm_to_bitstream.py check sim/bitstream/corpus --snapshot-dir
 sim/bitstream`), loads it through the same frame-loader model and runs
 `tb_logic_tile_bitstream.v` with the case's oracle (`quad4`, `casc2`,
-`casc_fan`, `regcasc`) and perturbation checks. Probes that did not route have
+`casc_fan`, `regcasc`, and since issue #156 `regbel`) and perturbation checks. Probes that
+did not route have
 no fixture and no PASS. Mapping/regeneration, outcome classification and the
 decision table are in `design/fabulous/corpus/README.md` (`flow/corpus.sh`).
 Recorded append-only in `sim/logic_tile_bitstream_results.txt`. Same scope
@@ -416,10 +417,19 @@ instances wired together by the generator (unmodified, in gitignored
   streams. A missing index or file, a compile error, a simulator error, or a
   missing or conflicting terminal verdict (`flow/gate_sim_verdict.sh`) fails
   the run.
+- **Registered-BEL coverage (issue #156, EXPERIMENTAL)**: `regbel_{a,b,c,d}_s1`
+  (`design/fabulous/corpus/regbel_*.v`) each place one registered LUT4 BEL on
+  exactly BEL A, B, C or D, pinned with `NEXTPNR_BEL` and checked against
+  `corpus.json` `placement` by `flow/corpus_run.py`. The `regbel` oracle checks
+  capture, hold, synchronous reset with enable low and reset priority with enable
+  high (exhaustive state x vector plus a random sequence). `flow/check_regbel_fixtures.py`
+  proves from the committed metadata that each BEL is registered with routed EN/SR/O.
+  Zero-delay, single-tile, same-index harness fabric only.
 - **Composition mutations** (scratch copies of `LOGIC4.v`): BEL A/B
-  `ConfigBits` slices swapped, EN/SR swapped on BEL A, and EN/SR swapped on
-  BEL B. Each must compile and then give a completed functional FAIL from at
-  least one oracle. The readback `ConfigBits` still equal the recorded `.cfg`,
+  `ConfigBits` slices swapped, and EN/SR swapped on each of BEL A, B, C and D.
+  Each must compile and then give a completed functional FAIL from at
+  least one oracle; each EN/SR swap must also FAIL on its matching `regbel_<x>_s1`
+  fixture. The readback `ConfigBits` still equal the recorded `.cfg`,
   so storage-level checks cannot see these defects.
 - **Simulation conventions** (not timing): the generated sources carry no
   `timescale`, and the matrix has FABulous's placeholder `assign #80` mux
