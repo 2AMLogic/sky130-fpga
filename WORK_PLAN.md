@@ -25,7 +25,7 @@ _None._
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#169**: Verification: reject malformed streams in the ConfigMem frame adapter
 
 ## PRs Awaiting Review
 
@@ -47,9 +47,9 @@ _None._
 
 ## Proposed (Architect / Hermit)
 
-- **#160**: Routability: test whether the LUT pin-index confounder also explains the regcasc seed-2 non-convergence *(architect)*
-- **#161**: Spec: draft ADR-0006 (Proposed) for mapper-side LUT pin-assignment policy *(architect)*
-- **#164**: Verification: distinguish RTL mutation kills from simulator infrastructure failures *(architect)*
+- **#180**: G5: verify every boundary output-track source through generated-tile frame programming *(architect)*
+- **#181**: G5: verify every directional reset and enable source through generated-tile frame programming *(architect)*
+- **#183**: Evidence: enforce append-only on sim/*results.txt ledgers at PR time *(architect)*
 
 ## Epics
 
@@ -62,7 +62,7 @@ _None._
 | Operator merge-risk holds | 1 |
 | Operator priority | 0 |
 | Ready (`loom:issue`) | 0 |
-| In Progress (`loom:building`) | 0 |
+| In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 0 |
