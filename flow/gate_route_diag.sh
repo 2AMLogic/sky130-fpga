@@ -165,7 +165,6 @@ rd_negative() {
         *) echo "error: negative $nid [$s] did not complete with a recognised functional verdict (infrastructure failure; see $nlog)" >&2
            tail -n 8 "$nlog" >&2 || true; return 1 ;;
     esac
-    echo "negative $nid ($s case $ncase: $nold -> $nnew) OK: completed functional rejection -> $(grep -m1 -E '^FAIL' "$nlog")"
     got="$(rd_failing_cases "$nlog")"
     if [[ "$got" != "$ncase" ]]; then
         echo "error: negative $nid [$s] failing cases [$got] != predicted [$ncase]" >&2; return 1
@@ -173,5 +172,6 @@ rd_negative() {
     if ! rd_cov_ok "$s" "$nd" "$nlog" || ! rd_cfg_ok "$s" "$nd" "$nlog"; then
         echo "error: negative $nid [$s] coverage/readback not intact on the altered streams" >&2; return 1
     fi
+    echo "negative $nid ($s case $ncase: $nold -> $nnew) OK: completed functional rejection -> $(grep -m1 -E '^FAIL' "$nlog")"
     echo "negative $nid [$s] failing cases == predicted ($ncase only, 1/${RD_N[$s]}); cfg == decode of the altered streams"
 }
