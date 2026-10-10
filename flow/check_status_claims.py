@@ -9,7 +9,8 @@ Markdown carries explicit markers, one per machine-checkable fact:
 Each marker is compared with the committed source of truth. Prose is never
 parsed beyond these enumerated facts. Keys:
 
-  adr-0004, adr-0005   first word of the ADR's `- **Status**:` line
+  adr-0004, adr-0005, adr-0006
+                       first word of the ADR's `- **Status**:` line
   drc, lvs             `status` in layout/logic_tile.{drc,lvs}.json
   corner-count         N in "setup/hold-clean at all N corners"
                        (measurements/characterization-summary.md)
@@ -57,6 +58,7 @@ def truth(root):
     return {
         "adr-0004": lambda: _adr_status(root, 4, "0004-g1-tile-description-discrepancies.md"),
         "adr-0005": lambda: _adr_status(root, 5, "0005-nextpnr-io-and-constant-handling.md"),
+        "adr-0006": lambda: _adr_status(root, 6, "0006-lut-pin-assignment-policy.md"),
         "drc": lambda: str(_json(root, "layout/logic_tile.drc.json")["status"]),
         "lvs": lambda: str(_json(root, "layout/logic_tile.lvs.json")["status"]),
         "corner-count": lambda: _summary_re(root, r"setup/hold-clean at all (\d+) corners"),

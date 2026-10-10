@@ -163,6 +163,12 @@ population, no inter-tile or timing content) is recorded in
 `design/fabulous/corpus/README.md`, with an append-only result record in
 `design/fabulous/corpus/results.txt`. Reproduce with `flow/corpus.sh`.
 
+*Related record (informational; added by #161, does not alter the status,
+options, recommendation or disposition above).* Whether a mapper-side LUT
+pin-assignment step is a separate remedy from the switch-matrix population is
+drafted, as Proposed, in
+[ADR-0006](0006-lut-pin-assignment-policy.md). Nothing there is adopted.
+
 ## Item 4: BEL behaviour follows ratified RTL, not stock FABulous
 
 **Departure.** The stock FABulous `LUT4c_frame_config_dffesr` has a carry
