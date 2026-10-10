@@ -42,6 +42,8 @@ on:
       - 'flow/route_diag.py'
       - 'sim/tb_ctrl_route.v'
       - 'flow/ctrl_route.py'
+      - 'sim/tb_output_route.v'
+      - 'flow/output_route.py'
       - 'flow/nextpnr.sh'
       - 'flow/nextpnr_io_overlay.py'
       - 'flow/bitstream.sh'

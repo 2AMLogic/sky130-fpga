@@ -55,6 +55,24 @@
 #      generated-matrix source-selection permutations must each compile and give a
 #      completed functional FAIL on exactly the predicted route cases.
 #
+#   7. (issue #181) control-jump directional route diagnostic (flow/ctrl_route.py,
+#      sim/tb_ctrl_route.v): 20 routes (16 enable + 4 shared reset), own mutants.
+#
+#   8. (issue #180) boundary output-track source diagnostic: flow/output_route.py
+#      assembles one stream per legal (output edge, track, source) tuple -- 16
+#      tracks x 7 sources = 112, the required set read from the frozen pip model --
+#      and sim/tb_output_route.v loads them in sequence into one live tile
+#      (generated LOGIC4 via FrameData/FrameStrobe, and the repository composition).
+#      The tile boundary is observed directly (no CAP loopbacks): every stream
+#      routes all 16 output tracks, the selected source is toggled against every
+#      combination of the unselected candidates and the four BELs (distinguishable
+#      functions, both polarities), and all 16 outputs are checked each pattern.
+#      The coverage report must list exactly the required tuples, each once; a
+#      missing or duplicate tuple fails. Scratch generated-matrix source
+#      permutations and output-sink select-field aliases must each compile and give
+#      a completed functional FAIL on exactly the cases an independent model
+#      (flow/output_route.py predict) derives from the case list.
+#
 # Missing fixture/index, compile error, simulator error, a missing or
 # conflicting terminal verdict, or an undetected mutation fails the script.
 # Every vvp run is bounded by the SIM_TIMEOUT_SECONDS wall-clock budget
@@ -654,8 +672,143 @@ for m in EN1_ES EN3_NW SR_ES ALIAS_BA ALIAS_DC; do
 done
 [[ "$n_crm" -eq 5 ]] || status=1
 
+# ---- 8. boundary output-track source diagnostic (issue #180) ----------------
+# Diagnostic assembler-generated streams, NOT mapper output: proves that every
+# existing source of every boundary output track (4 BEL outputs + 3 incoming
+# same-index tracks, 16 tracks) is selected through frame programming and
+# reaches the tile boundary, observed directly. Not the fixed output routes of
+# step 5, not the routes into the BELs of steps 6/7, not a component select
+# sweep; no inter-tile, timing or ratified-fabric claim.
+echo "=== boundary output-route diagnostic (issue #180): 16 output tracks x 7 sources through the integrated tile ==="
+OR="$OUT/output_route"; OR_TB="$REPO/sim/tb_output_route.v"; OR_NAME=tb_output_route
+[[ -s "$OR_TB" ]] || die "missing $OR_TB"
+python3 -I "$REPO/flow/output_route.py" "$OR" --snapshot "$BS/fabric_spec.json" || die "output-route stream generation failed"
+[[ "$(wc -l < "$OR/cases.txt")" -eq 112 && "$(wc -l < "$OR/required.txt")" -eq 112 ]] || die "expected 112 output-route cases and 112 required routes"
+OR_GEN="$OUT/outroute_gen.vvp"; OR_RTL="$OUT/outroute_rtl.vvp"
+gen_compile "$GEN_TILE_V" "$OR_GEN" "$OR_TB" \
+    || { cat "$OR_GEN.compile.log" >&2; die "compile of the generated-tile output-route bench failed"; }
+iverilog -g2012 -Wall -o "$OR_RTL" "$REPO/design/rtl/lut4_slice.v" \
+    "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
+    "$OR_TB" >"$OR_RTL.compile.log" 2>&1 \
+    || { cat "$OR_RTL.compile.log" >&2; die "compile of the repository-composition output-route bench failed"; }
+outroute_run() {   # <vvp> <log>; prints the verdict
+    local rc=0
+    gs_run_bounded "$(basename "$1" .vvp)[outroute]" "$2" vvp "$1" +dir="$OR" +list="$OR/cases.txt" \
+        +wiring="$OR/out.wiring" +map="$MAP" || rc=$?
+    gs_classify "$rc" "$2" "$OR_NAME" outroute
+}
+outroute_cfg_ok() {   # <log>: per-case ConfigBits/cfg readback == python decode of the stream
+    local id got
+    while read -r id _; do
+        got="$(grep -m1 "^CFG $id " "$1" | cut -d' ' -f3)"
+        if [[ -z "$got" || "$got" != "$(tr -d '\n' < "$OR/$id.cfg")" ]]; then
+            echo "  output-route case $id: readback '$got' != decoded $(tr -d '\n' < "$OR/$id.cfg")" >&2; return 1
+        fi
+    done < "$OR/cases.txt"
+}
+outroute_cov_ok() {   # <log>: the coverage report must equal the required set, each tuple exactly once
+    local got
+    got="$(sed -n 's/^COVERAGE: ROUTE \([NESW]\) \([0-3]\) \([NESWA-D]\): selected source toggled.*$/\1 \2 \3/p' "$1" | sort)"
+    [[ "$got" == "$(sort "$OR/required.txt")" ]] \
+        && [[ "$(echo "$got" | wc -l)" -eq 112 && "$(echo "$got" | uniq -d | wc -l)" -eq 0 ]] \
+        && grep -qE '^COVERAGE: 112/112 routes \(4 edges x 4 tracks x 7 sources\); 112 cases loaded in sequence into one live tile; [0-9]+ adversarial .* 0 duplicate case ids$' "$1"
+}
+outroute_ok=1
+for comp in gen rtl; do
+    vvp_f="$OR_GEN"; [[ "$comp" == rtl ]] && vvp_f="$OR_RTL"
+    log="$OUT/outroute_${comp}.log"
+    v="$(outroute_run "$vvp_f" "$log")"
+    if [[ "$v" != PASS ]] || ! outroute_cov_ok "$log"; then
+        echo "  output-route diagnostic [$comp]: FAIL (verdict $v or coverage differs from the required route set; see $log)" >&2
+        tail -n 8 "$log" >&2; outroute_ok=0; status=1; continue
+    fi
+    outroute_cfg_ok "$log" || { echo "  output-route diagnostic [$comp]: readback mismatch" >&2; outroute_ok=0; status=1; }
+done
+if [[ "$outroute_ok" -eq 1 ]]; then
+    gsum="$(grep -m1 '^PASS' "$OUT/outroute_gen.log" | sed 's/^PASS: [^ ]* //')"
+    rsum="$(grep -m1 '^PASS' "$OUT/outroute_rtl.log" | sed 's/^PASS: [^ ]* //')"
+    if [[ "$gsum" != "$rsum" ]]; then
+        echo "  output-route diagnostic: compositions disagree (generated $gsum vs repository $rsum)" >&2; status=1
+    else
+        grep -m1 '^COVERAGE: 112/112' "$OUT/outroute_gen.log" | sed 's/^/  generated: /'
+        grep -m1 '^COVERAGE: 112/112' "$OUT/outroute_rtl.log" | sed 's/^/  repository: /'
+        echo "  generated: $(grep -m1 '^GEN_TILE:' "$OUT/outroute_gen.log")"
+        echo "  output-route diagnostic: PASS on both $gsum; 112/112 routes, readback == python decode for all 112 streams on both"
+    fi
+fi
+
+echo "--- scratch generated-matrix output-source permutations and output-sink select aliases vs the output-route diagnostic (each must give a completed functional FAIL on the predicted cases) ---"
+python3 -I - "$T/LOGIC4_switch_matrix.v" "$OUT" <<'PYEOF' || die "could not build output-route mutants"
+import re, sys
+sm, out = open(sys.argv[1]).read(), sys.argv[2]
+def swap(sink, i, j):   # exchange the sources at mux positions i, j of one output-track mux (position 0 = rightmost)
+    m = re.findall(r"^assign %s_input = \{([^}]*)\};$" % sink, sm, re.M)
+    assert len(m) == 1, sink
+    mem = m[0].split(",")[::-1]
+    mem[i], mem[j] = mem[j], mem[i]
+    new = "assign %s_input = {%s};" % (sink, ",".join(mem[::-1]))
+    return sm.replace("assign %s_input = {%s};" % (sink, m[0]), new)
+def alias(sink, other):  # `sink` selects with the select field of `other`
+    pat = re.compile(r"^(assign #80 %s = %s_input\[)(ConfigBits\[[0-9:]+\])(\];)$" % (sink, sink), re.M)
+    pat_o = re.compile(r"^assign #80 %s = %s_input\[(ConfigBits\[[0-9:]+\])\];$" % (other, other), re.M)
+    mo = pat_o.search(sm)
+    assert len(pat.findall(sm)) == 1 and mo, (sink, other)
+    return pat.sub(lambda m: m.group(1) + mo.group(1) + m.group(3), sm)
+open(f"{out}/matrix_mut_out_N0_AB.v", "w").write(swap("N1BEG0", 3, 4))
+open(f"{out}/matrix_mut_out_W3_SD.v", "w").write(swap("W1BEG3", 2, 6))
+open(f"{out}/matrix_mut_out_ALIAS_S2S1.v", "w").write(alias("S1BEG2", "S1BEG1"))
+open(f"{out}/matrix_mut_out_ALIAS_N3E3.v", "w").write(alias("N1BEG3", "E1BEG3"))
+PYEOF
+# Predicted failing cases: derived by flow/output_route.py predict from the case list, the stimulus
+# set and the source order of the committed switch-matrix .list (never from the generated RTL or the DUT).
+declare -A ORM_DESC=(
+    [N0_AB]="output N1BEG0: BEL A and BEL B sources exchanged in a scratch LOGIC4_switch_matrix.v"
+    [W3_SD]="output W1BEG3: S and BEL D sources exchanged"
+    [ALIAS_S2S1]="sink alias: S1BEG2 uses S1BEG1's select field"
+    [ALIAS_N3E3]="sink alias: N1BEG3 uses E1BEG3's select field (cross-edge)"
+)
+declare -A ORM_ARGS=(
+    [N0_AB]="swap N1BEG0 3 4"
+    [W3_SD]="swap W1BEG3 2 6"
+    [ALIAS_S2S1]="alias S1BEG2 S1BEG1"
+    [ALIAS_N3E3]="alias N1BEG3 E1BEG3"
+)
+n_orm=0
+for m in N0_AB W3_SD ALIAS_S2S1 ALIAS_N3E3; do
+    mvvp="$OUT/outroute_mut_${m}.vvp"; mlog="$OUT/outroute_mut_${m}.log"
+    mt="$OUT/matrix_mut_out_${m}.v"; crc=0
+    [[ -s "$mt" && "$(diff <(cat "$T/LOGIC4_switch_matrix.v") "$mt" | grep -c '^>')" -eq 1 ]] \
+        || { echo "output-route mutant '$m': scratch matrix is not a one-line mutation" >&2; status=1; continue; }
+    iverilog -g2012 -Wall -DGEN_TILE -I "$REPO/sim" -o "$mvvp" \
+        "$TS" "$RUN/Fabric/models_pack.v" "$TS" "$T/lut4_ff_bel.v" "$TS" "$T/LOGIC4_ConfigMem.v" \
+        "$TS" "$mt" "$TS" "$GEN_TILE_V" "$OR_TB" >"$mvvp.compile.log" 2>&1 || crc=$?
+    if [[ "$crc" -ne 0 ]]; then
+        cat "$mvvp.compile.log" >&2
+        echo "output-route mutant '$m': FAIL (did not compile; a mutation must compile and fail functionally)" >&2
+        status=1; continue
+    fi
+    # shellcheck disable=SC2086
+    want="$(python3 -I "$REPO/flow/output_route.py" predict "$OR" ${ORM_ARGS[$m]})" || { echo "output-route mutant '$m': prediction failed" >&2; status=1; continue; }
+    want="$(echo "$want" | tr ' ' '\n' | sort | xargs)"
+    [[ -n "$want" ]] || { echo "output-route mutant '$m': empty prediction (the mutant would be invisible to the diagnostic)" >&2; status=1; continue; }
+    v="$(outroute_run "$mvvp" "$mlog")"
+    if [[ "$v" != FUNC_FAIL ]]; then
+        echo "output-route mutant '$m' (${ORM_DESC[$m]}): NOT caught (verdict $v; a timeout, simulator error or missing verdict never counts; see $mlog)" >&2
+        status=1; continue
+    fi
+    got="$(sed -n 's/^  case \(O_[A-Z0-9_]*\): [0-9]* mismatches$/\1/p' "$mlog" | sort | xargs)"
+    if [[ "$got" != "$want" ]]; then
+        echo "output-route mutant '$m' (${ORM_DESC[$m]}): failing cases [$got] != predicted [$want]" >&2
+        status=1; continue
+    fi
+    outroute_cov_ok "$mlog" && outroute_cfg_ok "$mlog" || { echo "output-route mutant '$m': coverage/readback not intact" >&2; status=1; continue; }
+    n_orm=$((n_orm + 1))
+    echo "output-route mutant '$m' (${ORM_DESC[$m]}) caught: compiled; $(grep -m1 '^FAIL' "$mlog" | sed 's/^FAIL: //'); failing cases == predicted ($(echo "$got" | wc -w)/112): $got; ConfigBits == decoded on all"
+done
+[[ "$n_orm" -eq 4 ]] || status=1
+
 if [[ "$status" -eq 0 ]]; then
-    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught; LUT basis 64/64 (BEL, address) cases on both compositions, 3/3 basis mutants caught; LUT-input routes 64/64 (BEL, pin, edge) cases on both compositions, 3/3 route mutants caught; control-jump routes 20/20 (16 enable + 4 reset) cases on both compositions, 5/5 control mutants caught)"
+    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught; LUT basis 64/64 (BEL, address) cases on both compositions, 3/3 basis mutants caught; LUT-input routes 64/64 (BEL, pin, edge) cases on both compositions, 3/3 route mutants caught; control-jump routes 20/20 (16 enable + 4 reset) cases on both compositions, 5/5 control mutants caught; output-track sources 112/112 (edge, track, source) cases on both compositions, 4/4 output mutants caught)"
 else
     echo "generated-tile replay: FAIL" >&2
 fi

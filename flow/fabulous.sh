@@ -155,7 +155,9 @@ done
 # diagnostic (issue #172: every truth-table address of every BEL, assembler-
 # generated streams, sim/tb_lut_basis.v) with its own scratch mutants.
 # The control-jump route diagnostic (issue #181: every enable/reset directional
-# source through frame programming, sim/tb_ctrl_route.v) follows the same pattern.
+# source through frame programming, sim/tb_ctrl_route.v) follows the same pattern,
+# as does the boundary output-track source diagnostic (issue #180: every output
+# edge/track/source tuple, sim/tb_output_route.v).
 # EXPERIMENTAL; see sim/README.md.
 echo "=== generated-tile integrated replay (iverilog) ==="
 if [[ "${FABULOUS_SKIP_TILE_REPLAY:-0}" == 1 ]]; then
