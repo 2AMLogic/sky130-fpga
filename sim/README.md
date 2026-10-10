@@ -489,7 +489,8 @@ instances wired together by the generator (unmodified, in gitignored
   (inputs) and `N/E/S/W1BEG[3:0]` (outputs), `UserCLK`, and the configuration
   ports `FrameData[31:0]` / `FrameStrobe[19:0]`. `UserCLKo`, `FrameData_O` and
   `FrameStrobe_O` (pass-through to neighbouring tiles) are connected but not
-  checked; no inter-tile chaining is exercised. The script first checks that
+  checked by this bench; they are checked by the separate forwarding diagnostic
+  below. No inter-tile chaining is exercised. The script first checks that
   the generated header declares exactly these ports and that the module
   composes the ConfigMem, the matrix and the four BELs. The adapter is the
   `ifdef GEN_TILE` block of `sim/tb_logic_tile_bitstream.v`: ports are joined
@@ -668,6 +669,38 @@ instances wired together by the generator (unmodified, in gitignored
   the same way it does between perturbations. Without that step `casc_fan_s3`
   fails with an X on every check. The repository composition does not need it
   because its `cfg` is valid from time 0.
+
+- **Tile clock and frame forwarding diagnostic** (issue #188, EXPERIMENTAL):
+  `sim/tb_boundary_fwd.v` (generated tile only; the repository composition has
+  no pass-through ports) checks the three pass-through outputs against the
+  contract in the pinned generated `LOGIC4.v`, which the script first verifies
+  assignment by assignment: `UserCLKo = UserCLK` (one `clk_buf`),
+  `FrameData_O[i] = FrameData[i]` (32 `my_buf` chains) and
+  `FrameStrobe_O[i] = FrameStrobe[i]` (20 chains). These are pure logical
+  copies; the bench claims nothing about their delay (the settle time is a
+  simulation convention, not a timing model). The expected value is the bench's
+  own driven input, compared with `!==` so X/Z fails, and `ConfigBits` are never
+  read, so forwarding is checked independently of the local configuration
+  readback. Stimulus: both clock levels and 16+ repeated full periods, walking
+  one/zero over all 32 data bits and all 20 strobe bits (the walking-zero strobe
+  patterns are forwarding-only, not frame writes), idle strobes with changing
+  data, and normal legal frame writes (one-hot strobe, release, data change,
+  clock toggling) for all 20 frames. The coverage lines require at least 16
+  UserCLKo rising and falling edges followed (an edge is counted only when the
+  clock level really changed), `FrameData_O` 32/32 and `FrameStrobe_O` 20/20
+  bits forwarded at both levels. If a run has 0 failures but incomplete
+  coverage, the bench prints a non-summary `FAIL` line, which the classifier
+  reports as an infrastructure error (the run still fails, but not as a
+  functional result). The bench always prints a
+  `PORTFAIL: UserCLKo=<n> FrameData_O=<n> FrameStrobe_O=<n>` line that counts
+  every failure per port, not only the printed mismatch lines. The unmodified
+  tile must report all zeros. Scratch mutants (clock output open, clock
+  inverted, `FrameData_O[9]` aliased to bit 8, `FrameStrobe_O[13]` tied low)
+  must each compile, give a completed functional FAIL (existing bounded-run
+  classifier; timeouts, simulator errors and missing/conflicting verdicts are
+  infrastructure errors), and show a nonzero `PORTFAIL` count on their own port
+  and exactly 0 on the other two. Single tile: this is not an inter-tile or
+  chaining test.
 
 Evidence: `sim/generated_tile_replay.txt` (append-only). Scope: one generated
 tile with the harness's same-index matrix, CAP loopbacks and pad overlay. The

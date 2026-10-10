@@ -207,3 +207,30 @@
   Not covered (G5 stays OPEN): ratified fabric, inter-tile routing, timing, the real frame-loader/pad hardware, mapper correctness, sources other
     than the same-index N/E/S/W tracks and the four BEL outputs, registered BEL outputs, and the select-0 default (a never-programmed sink also
     selects position 0, so a tested position-0 source relies on the other 15 sinks and neighbouring cases for programming evidence).
+
+2026-10-10  flow/generated_tile_replay.sh step 9  (issue #188; bench: sim/tb_boundary_fwd.v -DGEN_TILE; base 6a54e8c)
+  LABEL : EXPERIMENTAL single generated LOGIC4 tile; logical forwarding only. No timing, no inter-tile, no ratified-fabric claim
+          (ADR-0004/0005/0006 Proposed). Generated-tile only: the repository composition has no pass-through ports.
+  DUT   : unmodified FABulous-generated LOGIC4.v, sha256 = f285e4b9f9326a8671ffdb5e18898b17c10b363411a51c4ac776cb1b53cfecce
+  Contract (verified assignment by assignment by the script from the pinned LOGIC4.v): UserCLKo = UserCLK (clk_buf);
+    FrameData_O[i] = FrameData[i] x32 and FrameStrobe_O[i] = FrameStrobe[i] x20 (my_buf chains). Pure logical copies; delays are not
+    modelled or claimed.
+  Oracle: the bench's own driven inputs, four-state (!==) compare; ConfigBits/cfg/map never read.
+  Stimulus: clock both levels, repeated edges; walking one/zero over 32 data bits and 20 strobe bits; idle strobes with changing data;
+    legal one-hot frame writes for all 20 frames (x2) with the clock toggling.
+  Result: PASS (1554 checks, 0 failures); COVERAGE: UserCLKo 106 rising and 106 falling edges followed (only real clock level changes
+    are counted); FrameData_O 32/32 bits and FrameStrobe_O 20/20 bits forwarded at both levels; PORTFAIL: UserCLKo=0 FrameData_O=0
+    FrameStrobe_O=0 (required all zero).
+  Scratch generated-tile mutants (compiled; completed functional FAIL; attribution from the bench's unconditional per-port failure
+    counters (PORTFAIL line, every failure counted, not only the printed mismatch lines): mutated port >0, the other two exactly 0):
+    clk_open    : UserCLKo output left unconnected         518 failures / 1554 checks; PORTFAIL UserCLKo=518 FrameData_O=0   FrameStrobe_O=0
+    clk_inv     : UserCLKo driven from the inverted clock  518 failures / 1554 checks; PORTFAIL UserCLKo=518 FrameData_O=0   FrameStrobe_O=0
+    data_alias  : FrameData_O[9] aliased to FrameData_O[8] 203 failures / 1554 checks; PORTFAIL UserCLKo=0   FrameData_O=203 FrameStrobe_O=0
+    strobe_drop : FrameStrobe_O[13] tied low                43 failures / 1554 checks; PORTFAIL UserCLKo=0   FrameData_O=0   FrameStrobe_O=43
+  Attribution check of the check (manual, not part of the script): a two-fault scratch tile (clock inverted AND FrameData_O[9] aliased to
+    bit 8) gives FUNC_FAIL with 721 failures and PORTFAIL UserCLKo=518 FrameData_O=203 FrameStrobe_O=0, so it is rejected as a
+    UserCLKo-only mutant; its first 20 printed mismatch lines are all UserCLKo, which the earlier printed-line attribution would have accepted.
+  Unchanged in the same run: all earlier steps PASS (20/20 fixtures, 5/5 composition mutations, LUT basis, LUT-input, control-jump and
+    output-track diagnostics with their mutants). Final line: generated-tile replay: PASS (... tile forwarding UserCLKo + FrameData_O 32/32
+    + FrameStrobe_O 20/20 on the generated tile, 4/4 forwarding mutants caught).
+  Not covered (G5 stays OPEN): inter-tile chaining, timing of the forwarding paths, ratified fabric, hardware frame loader.

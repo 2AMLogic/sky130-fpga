@@ -73,6 +73,16 @@
 #      a completed functional FAIL on exactly the cases an independent model
 #      (flow/output_route.py predict) derives from the case list.
 #
+#   9. (issue #188) tile clock and frame forwarding diagnostic (sim/tb_boundary_fwd.v,
+#      generated tile only): UserCLKo = UserCLK, FrameData_O = FrameData (32 bits),
+#      FrameStrobe_O = FrameStrobe (20 bits) as pure logical copies, per the pinned
+#      generated assignments (checked by this script). Both clock levels and repeated
+#      edges, walking one/zero over all data and strobe bits, idle strobes with
+#      changing data, legal frame writes; four-state compares, independent of
+#      ConfigBits. Scratch mutants (clock open, clock inverted, data bit alias,
+#      strobe bit dropped) must each compile and give a completed functional FAIL
+#      naming only the mutated port. Logical forwarding only: no timing claim.
+#
 # Missing fixture/index, compile error, simulator error, a missing or
 # conflicting terminal verdict, or an undetected mutation fails the script.
 # Every vvp run is bounded by the SIM_TIMEOUT_SECONDS wall-clock budget
@@ -807,8 +817,126 @@ for m in N0_AB W3_SD ALIAS_S2S1 ALIAS_N3E3; do
 done
 [[ "$n_orm" -eq 4 ]] || status=1
 
+# ---- 9. tile clock and frame forwarding diagnostic (issue #188) ---------------
+# Generated-tile-only companion bench (sim/tb_boundary_fwd.v): the repository
+# composition has no pass-through ports. Contract read from the pinned LOGIC4.v:
+# UserCLKo = UserCLK, FrameData_O = FrameData, FrameStrobe_O = FrameStrobe, each
+# a pure logical copy (generator buffers; no timing is modelled or claimed). The
+# expected values are the bench's own driven inputs, compared four-state, never
+# ConfigBits. Single tile: no inter-tile chaining, timing or ratified-fabric claim.
+echo "=== generated-tile forwarding diagnostic (issue #188): UserCLKo, FrameData_O[31:0], FrameStrobe_O[19:0] ==="
+FW_TB="$REPO/sim/tb_boundary_fwd.v"; FW_NAME=tb_boundary_fwd
+[[ -s "$FW_TB" ]] || die "missing $FW_TB"
+python3 -I - "$GEN_TILE_V" <<'PYEOF' || die "generated LOGIC4 forwarding assignments differ from the contract the diagnostic checks"
+import re, sys
+src = open(sys.argv[1]).read()
+def need(pat, n, what):
+    if len(re.findall(pat, src, re.M)) != n:
+        sys.exit(f"expected {n} x {what} ({pat})")
+need(r"^assign FrameData_O_i = FrameData_i;$", 1, "FrameData_O_i = FrameData_i")
+need(r"^assign FrameStrobe_O_i = FrameStrobe_i;$", 1, "FrameStrobe_O_i = FrameStrobe_i")
+need(r"^clk_buf inst_clk_buf \(\s*\.A\(UserCLK\),\s*\.X\(UserCLKo\)\s*\);$", 1, "UserCLK -> UserCLKo clk_buf")
+for i in range(32):
+    need(rf"^my_buf data_inbuf_{i} \(\s*\.A\(FrameData\[{i}\]\),\s*\.X\(FrameData_i\[{i}\]\)\s*\);$", 1, f"data in {i}")
+    need(rf"^my_buf data_outbuf_{i} \(\s*\.A\(FrameData_O_i\[{i}\]\),\s*\.X\(FrameData_O\[{i}\]\)\s*\);$", 1, f"data out {i}")
+for i in range(20):
+    need(rf"^my_buf strobe_inbuf_{i} \(\s*\.A\(FrameStrobe\[{i}\]\),\s*\.X\(FrameStrobe_i\[{i}\]\)\s*\);$", 1, f"strobe in {i}")
+    need(rf"^my_buf strobe_outbuf_{i} \(\s*\.A\(FrameStrobe_O_i\[{i}\]\),\s*\.X\(FrameStrobe_O\[{i}\]\)\s*\);$", 1, f"strobe out {i}")
+print("forwarding contract: UserCLKo=UserCLK (clk_buf); FrameData_O[i]=FrameData[i] x32, FrameStrobe_O[i]=FrameStrobe[i] x20 (my_buf chains)")
+PYEOF
+FW_GEN="$OUT/fwd_gen.vvp"
+gen_compile "$GEN_TILE_V" "$FW_GEN" "$FW_TB" \
+    || { cat "$FW_GEN.compile.log" >&2; die "compile of the generated-tile forwarding bench failed"; }
+fwd_run() {   # <vvp> <log>; prints the verdict
+    local rc=0
+    gs_run_bounded "$(basename "$1" .vvp)[fwd]" "$2" vvp "$1" || rc=$?
+    gs_classify "$rc" "$2" "$FW_NAME" fwd
+}
+fwd_cov_ok() {   # <log>: every forwarded port and bit exercised at both levels
+    grep -qE '^COVERAGE: UserCLKo ([1-9][0-9]+) rising and ([1-9][0-9]+) falling edges followed$' "$1" \
+        && [[ "$(sed -n 's/^COVERAGE: UserCLKo \([0-9]*\) rising and \([0-9]*\) falling.*$/\1 \2/p' "$1" | awk '$1>=16 && $2>=16' | wc -l)" -eq 1 ]] \
+        && [[ "$(grep -c '^COVERAGE: FrameData_O 32/32 bits forwarded at both levels$' "$1")" -eq 1 ]] \
+        && [[ "$(grep -c '^COVERAGE: FrameStrobe_O 20/20 bits forwarded at both levels$' "$1")" -eq 1 ]]
+}
+fwd_portfail() {   # <log>: prints "<UserCLKo> <FrameData_O> <FrameStrobe_O>" from the one
+    # unconditional PORTFAIL summary line (every failure, not only printed mismatch lines)
+    [[ "$(grep -c '^PORTFAIL: ' "$1")" -eq 1 ]] || return 1
+    sed -n 's/^PORTFAIL: UserCLKo=\([0-9][0-9]*\) FrameData_O=\([0-9][0-9]*\) FrameStrobe_O=\([0-9][0-9]*\)$/\1 \2 \3/p' "$1" | grep -E '^[0-9]+ [0-9]+ [0-9]+$'
+}
+log="$OUT/fwd_gen.log"
+v="$(fwd_run "$FW_GEN" "$log")"
+pf="$(fwd_portfail "$log" || true)"
+if [[ "$v" != PASS ]] || ! fwd_cov_ok "$log" || [[ "$pf" != "0 0 0" ]]; then
+    echo "  forwarding diagnostic: FAIL (verdict $v, per-port failures '${pf:-missing}' or incomplete coverage; see $log)" >&2
+    tail -n 8 "$log" >&2; status=1
+else
+    sed -n 's/^COVERAGE: /  generated: /p' "$log"
+    echo "  generated: per-port failures UserCLKo=0 FrameData_O=0 FrameStrobe_O=0"
+    echo "  forwarding diagnostic: PASS - $(grep -m1 '^PASS' "$log" | sed 's/^PASS: [^ ]* //'); UserCLKo, FrameData_O 32/32, FrameStrobe_O 20/20"
+fi
+
+echo "--- scratch generated-tile forwarding mutants (each must give a completed functional FAIL on its own port only) ---"
+python3 -I - "$GEN_TILE_V" "$OUT" <<'PYEOF' || die "could not build forwarding mutants"
+import re, sys
+src, out = open(sys.argv[1]).read(), sys.argv[2]
+def sub1(a, b):
+    assert src.count(a) == 1, a
+    return src.replace(a, b)
+muts = {
+    "clk_open":   sub1(".A(UserCLK),\n    .X(UserCLKo)", ".A(UserCLK),\n    .X()"),
+    "clk_inv":    sub1(".A(UserCLK),\n    .X(UserCLKo)", ".A(~UserCLK),\n    .X(UserCLKo)"),
+    "data_alias": sub1(".A(FrameData_O_i[9]),\n    .X(FrameData_O[9])", ".A(FrameData_O_i[8]),\n    .X(FrameData_O[9])"),
+    "strobe_drop": sub1(".A(FrameStrobe_O_i[13]),\n    .X(FrameStrobe_O[13])", ".A(1'b0),\n    .X(FrameStrobe_O[13])"),
+}
+for k, v in muts.items():
+    open(f"{out}/LOGIC4_mut_fwd_{k}.v", "w").write(v)
+PYEOF
+declare -A FWM_DESC=(
+    [clk_open]="UserCLKo output left unconnected (clk_buf X open)"
+    [clk_inv]="UserCLKo driven from the inverted clock"
+    [data_alias]="FrameData_O[9] aliased to FrameData_O[8]"
+    [strobe_drop]="FrameStrobe_O[13] dropped (tied low)"
+)
+declare -A FWM_PORT=([clk_open]="UserCLKo" [clk_inv]="UserCLKo" [data_alias]="FrameData_O" [strobe_drop]="FrameStrobe_O")
+n_fwm=0
+for m in clk_open clk_inv data_alias strobe_drop; do
+    mt="$OUT/LOGIC4_mut_fwd_${m}.v"; mvvp="$OUT/fwd_mut_${m}.vvp"; mlog="$OUT/fwd_mut_${m}.log"
+    [[ -s "$mt" && "$(diff "$GEN_TILE_V" "$mt" | grep -c '^>')" -ge 1 && "$(diff "$GEN_TILE_V" "$mt" | grep -c '^>')" -le 2 ]] \
+        || { echo "forwarding mutant '$m': scratch tile is not a minimal mutation" >&2; status=1; continue; }
+    if ! gen_compile "$mt" "$mvvp" "$FW_TB"; then
+        cat "$mvvp.compile.log" >&2
+        echo "forwarding mutant '$m': FAIL (did not compile; a mutation must compile and fail functionally)" >&2
+        status=1; continue
+    fi
+    v="$(fwd_run "$mvvp" "$mlog")"
+    if [[ "$v" != FUNC_FAIL ]]; then
+        echo "forwarding mutant '$m' (${FWM_DESC[$m]}): NOT caught (verdict $v; a timeout, simulator error or missing verdict never counts; see $mlog)" >&2
+        status=1; continue
+    fi
+    # attribution from the bench's unconditional per-port failure counters (all
+    # failures, not only the printed mismatch lines): mutated port >0, others exactly 0
+    pf="$(fwd_portfail "$mlog" || true)"
+    bad=0
+    if [[ -z "$pf" ]]; then
+        bad=1
+    else
+        read -r c_clk c_data c_strobe <<<"$pf"
+        declare -A pfc=([UserCLKo]="$c_clk" [FrameData_O]="$c_data" [FrameStrobe_O]="$c_strobe")
+        for port in UserCLKo FrameData_O FrameStrobe_O; do
+            if [[ "$port" == "${FWM_PORT[$m]}" ]]; then [[ "${pfc[$port]}" -ge 1 ]] || bad=1; else [[ "${pfc[$port]}" -eq 0 ]] || bad=1; fi
+        done
+    fi
+    if [[ "$bad" -ne 0 ]]; then
+        echo "forwarding mutant '$m' (${FWM_DESC[$m]}): per-port failures '${pf:-missing}' (UserCLKo FrameData_O FrameStrobe_O) differ from the predicted ${FWM_PORT[$m]}-only (see $mlog)" >&2
+        status=1; continue
+    fi
+    n_fwm=$((n_fwm + 1))
+    echo "forwarding mutant '$m' (${FWM_DESC[$m]}) caught: compiled; $(grep -m1 '^FAIL' "$mlog" | sed 's/^FAIL: //'); per-port failures UserCLKo=$c_clk FrameData_O=$c_data FrameStrobe_O=$c_strobe, only ${FWM_PORT[$m]} mismatched"
+done
+[[ "$n_fwm" -eq 4 ]] || status=1
+
 if [[ "$status" -eq 0 ]]; then
-    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught; LUT basis 64/64 (BEL, address) cases on both compositions, 3/3 basis mutants caught; LUT-input routes 64/64 (BEL, pin, edge) cases on both compositions, 3/3 route mutants caught; control-jump routes 20/20 (16 enable + 4 reset) cases on both compositions, 5/5 control mutants caught; output-track sources 112/112 (edge, track, source) cases on both compositions, 4/4 output mutants caught)"
+    echo "generated-tile replay: PASS (${pass}/${n_fix} fixtures, 5/5 composition mutations caught; LUT basis 64/64 (BEL, address) cases on both compositions, 3/3 basis mutants caught; LUT-input routes 64/64 (BEL, pin, edge) cases on both compositions, 3/3 route mutants caught; control-jump routes 20/20 (16 enable + 4 reset) cases on both compositions, 5/5 control mutants caught; output-track sources 112/112 (edge, track, source) cases on both compositions, 4/4 output mutants caught; tile forwarding UserCLKo + FrameData_O 32/32 + FrameStrobe_O 20/20 on the generated tile, 4/4 forwarding mutants caught)"
 else
     echo "generated-tile replay: FAIL" >&2
 fi
