@@ -13,6 +13,13 @@
 # (flow/lut_basis.py -> sim/tb_lut_basis.v; consumes flow/fasm_to_bitstream.py and
 # sim/bitstream/fabric_spec.json + logic4_configmem.map) against the same netlist.
 #
+# Since issue #189 it also replays the three route diagnostic suites against the same
+# netlist (flow/gate_route_diag.sh): flow/route_diag.py -> sim/tb_route_diag.v,
+# flow/ctrl_route.py -> sim/tb_ctrl_route.v, flow/output_route.py -> sim/tb_output_route.v,
+# with legal-other-source negative controls (flow/route_diag_negative.py); every one of
+# those files is a path trigger below. Their logs (flow/build/gate-sim-bitstream/*.log)
+# are uploaded by the last step whether the job passes or fails.
+#
 # Label: experimental same-index switch matrix (ADR-0004/0005 Proposed),
 # zero-delay, functional only. No SDF/timing and no ratified-fabric claim;
 # this workflow only schedules checks that already exist.
@@ -49,6 +56,16 @@ on:
       - 'sim/tb_lut_basis.v'
       - 'flow/lut_basis.py'
       - 'flow/fasm_to_bitstream.py'
+      - 'sim/tb_route_diag.v'
+      - 'sim/tb_ctrl_route.v'
+      - 'sim/tb_output_route.v'
+      - 'flow/route_diag.py'
+      - 'flow/ctrl_route.py'
+      - 'flow/output_route.py'
+      - 'flow/route_diag_negative.py'
+      - 'flow/test_route_diag_negative.py'
+      - 'flow/gate_route_diag.sh'
+      - 'flow/test_gate_route_diag.sh'
       - 'flow/check_regbel_fixtures.py'
       - 'sim/bitstream/**'
       - 'flow/gate-sim-bitstream.sh'
@@ -130,12 +147,20 @@ jobs:
       - name: Simulation wall-clock budget regression (stub simulators, issue #157)
         run: ./flow/test_sim_budget.sh
 
+      - name: Route-diagnostic negative-control assembler unit tests (no simulator needed)
+        run: python3 -I flow/test_route_diag_negative.py
+
+      - name: Route-diagnostic gate replay failure-mode regression (issue #189)
+        run: ./flow/test_gate_route_diag.sh
+
       - name: Gate-level bitstream re-sim (with negative checks)
         run: ./flow/gate-sim-bitstream.sh --negative
 
       - name: Gate-level routed re-sim
         run: ./flow/gate-sim-routed.sh
 
+      # always(): includes failure, so the route-diagnostic and other gate logs are
+      # available exactly when a step fails
       - name: Upload simulation logs
         if: always()
         uses: actions/upload-artifact@v4

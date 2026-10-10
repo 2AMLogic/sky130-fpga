@@ -115,3 +115,41 @@
     generated ConfigMem/frame storage is NOT in the gate netlist. Diagnostic streams, not mapper output.
     Existing fixtures and N1-N5 unchanged and passing. Not covered: timing/SDF, ratified fabric, inter-tile.
 
+
+2026-10-10  ./flow/gate-sim-bitstream.sh --negative @ aec505e + issue #189 (EXPERIMENTAL, zero delay, functional observation only)
+  Simulator: Icarus Verilog 13.0 (stable) (v13_0). Netlist layout/experimental/logic_tile_routed.synth.v
+    sha256 0e7d4c702b06c7f4a3272cc60a95f4e1ec96c2fec7d74da66727738534a99f22; sky130_fd_sc_hd.v sha256
+    12d5d6448ccf265c544d88402d5c10ab6de9bee8b8cde48eee1f31ea8c3c3e45 (primitives.v pinned in gate-sim.yml).
+  Added the three route diagnostic suites (flow/gate_route_diag.sh), each replayed by its UNMODIFIED bench
+    in one live instance of the synthesized netlist with that bench's independent identifier/stimulus-
+    derived oracle. Required coverage is each suite's own manifest (cases.txt == required.txt, derived by
+    the generator from the frozen pip model); the bench's per-route coverage report must equal it exactly.
+    Reported separately:
+    LUT-input directional routes  flow/route_diag.py -> sim/tb_route_diag.v
+      PASS: tb_route_diag[route] (24576 checks, 0 failures; 64/64 cases)
+      coverage 64/64 routes (4 BELs x 4 pins x 4 edges), 768 adversarial selected-vs-all-unselected checks,
+      0 duplicate case ids; loaded cfg == python decode for all 64 streams.
+    Control-jump routes           flow/ctrl_route.py -> sim/tb_ctrl_route.v
+      PASS: tb_ctrl_route[ctrl] (1296 checks, 0 failures; 20/20 cases)
+      coverage 20/20 routes (16 enable = 4 BELs x 4 edges, 4 shared-reset edges), 172 phases, 140 full-
+      disagreement phases, 0 duplicate case ids; loaded cfg == python decode for all 20 streams.
+    Boundary output-track sources flow/output_route.py -> sim/tb_output_route.v
+      PASS: tb_output_route[outroute] (1376256 checks, 0 failures; 112/112 cases)
+      coverage 112/112 routes (4 edges x 4 tracks x 7 sources), 1344 adversarial patterns, 0 duplicate case
+      ids; loaded cfg == python decode for all 112 streams.
+  Negatives (one valid stream re-pointed to a different LEGAL source of the same sink and re-assembled by
+    flow/route_diag_negative.py; case list/oracle unchanged; each a completed functional FAIL on exactly
+    the altered case, coverage intact, cfg == decode of the altered streams):
+      N7 route    R_C_I2_E  X1Y1.E1END2.LC_I2 -> X1Y1.S1END2.LC_I2      FAIL (24576 checks, 48 failures), 1/64 cases
+      N8 ctrl     C_EN_B_E  X1Y1.E1END1.J_EN_BEG1 -> X1Y1.S1END1.J_EN_BEG1  FAIL (1296 checks, 5 failures), 1/20 cases
+      N9 outroute O_W3_D    X1Y1.LD_O.W1BEG3 -> X1Y1.S1END3.W1BEG3      FAIL (1376256 checks, 384 failures), 1/112 cases
+  Failure modes (flow/test_gate_route_diag.sh, route suite + stub simulators): missing/duplicate case,
+    case list != required set, missing stream, readback mismatch, compile error, simulator error, timeout,
+    missing/conflicting/repeated verdict, coverage-report gaps/duplicates, missing/duplicate readback, an
+    accepted / wrong-case / setup-failed negative control: each fails the replay.
+  Existing baseline, 15/15 corpus, 3/3 pin-experiment, 73-stream LUT basis and N1-N6 unchanged and passing.
+  Scope: functional only, zero delay (the benches' `#1` settle steps are a simulation convention, not
+    timing); experimental same-index hardware (ADR-0004/0005 Proposed); the netlist has the flat cfg port,
+    driven by the benches' simulation-only stream-to-cfg loader -- generated ConfigMem/frame storage is NOT
+    in the gate netlist. Diagnostic streams, not mapper output. Not covered: timing/SDF, ratified fabric,
+    inter-tile routing, the real frame loader/pad hardware.
