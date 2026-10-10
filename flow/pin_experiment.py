@@ -30,7 +30,7 @@ to design/fabulous/corpus/pin_experiment_results.txt on request.
 The pure transform/equivalence functions need only the stdlib (unit-tested by
 flow/test_pin_experiment.py). The runner needs the flow/corpus.sh toolchain.
 Usage (via flow/pin_experiment.sh):
-    pin_experiment.py [--append-record FILE] [--case fan4] [--export-fixtures [DIR]]
+    pin_experiment.py [--append-record FILE] [--case fan4|regcasc] [--export-fixtures [DIR]]
 
 `--export-fixtures` (issue #145, opt-in, off by default) additionally preserves the
 successful `variant-distinct` trials as a separate committed experimental fixture set
@@ -40,6 +40,19 @@ refuses unless the distinct variant is proven equivalent, no experiment problem
 occurred, and EVERY seed's distinct trial succeeded (nextpnr route, assembly, byte
 identity with FABulous bit_gen, independent oracle with all perturbations detected).
 Baseline and consistent trials are never exported.
+
+Registered cases (issue #160, `--case regcasc`): the same two policies are also applied
+to the combinational LUTs feeding the single register and to the registered BEL's data
+LUT (its I0..I3 + INIT only; FF, SR, EN, O and the implicit UserCLK are never touched).
+Equivalence is then a bounded one-register TRANSITION check (check_registered_equivalence):
+per-cell INIT truth tables, structural invariants on the FF/control/state interface and
+every non-transformed connection, and exhaustive enumeration of current state x every
+primary-input/control vector comparing next state (next_q = rst ? 0 : (en ? d : q)) and
+the observable outputs. Shapes outside that model (several state elements, a combinational
+cycle, a control net that is not a primary input, unknown pins/parameters) fail closed
+with an `unsupported sequential shape` diagnostic before anything is routed. Three
+negative controls (wrong INIT permutation, SR/EN swap, output moved off the state net)
+must each be a completed rejection or nothing is routed.
 """
 import argparse
 import hashlib
@@ -65,12 +78,22 @@ def _load_corpus_run():
 
 
 # ------------------------------------------------------------------ netlist helpers
-def lut_cells(mod):
-    """(name, cell) of the LUT BELs; the experiment is combinational-only."""
+class Unsupported(ValueError):
+    """The netlist is outside the bounded model; the check fails closed (nothing is routed)."""
+
+
+def is_registered(c):
+    return c["type"] == "lut4_ff_bel" and c["parameters"]["FF"].strip("0") != ""
+
+
+def lut_cells(mod, registered=False):
+    """(name, cell) of the LUT BELs. By default the experiment is combinational-only and a
+    registered BEL is refused; registered=True (issue #160) also returns registered BELs,
+    whose data LUT (I0..I3 + INIT) is then transformable like any other LUT."""
     out = []
     for name, c in sorted(mod["cells"].items()):
         if c["type"] == "lut4_ff_bel":
-            if c["parameters"]["FF"].strip("0") != "":
+            if is_registered(c) and not registered:
                 raise ValueError(f"cell {name}: registered LUT not supported by this experiment")
             out.append((name, c))
     return out
@@ -88,13 +111,14 @@ def init_str(bits):
     return "".join(str(b) for b in reversed(bits))
 
 
-def live_nets(mod):
-    """Nets that actually carry a signal: driven by an IO cell (primary input) or a LUT output.
+def live_nets(mod, registered=False):
+    """Nets that actually carry a signal: driven by an IO cell (primary input) or a LUT output
+    (with registered=True also a register's state net).
     The mapper leaves dangling, undriven nets on the padded upper inputs of narrow LUTs
     (ADR-0005 replicated INIT); they are don't-care pins, exactly like unconnected ones."""
     pi, _ = io_nets(mod)
     live = set(pi)
-    for _, c in lut_cells(mod):
+    for _, c in lut_cells(mod, registered):
         b = c["connections"]["O"][0]
         if isinstance(b, int):
             live.add(b)
@@ -102,11 +126,15 @@ def live_nets(mod):
 
 
 def pin_nets(c, live=None):
-    """Per pin index: the net id (int) or None for an unconnected/constant pin
-    (and, when `live` is given, for an undriven dangling net)."""
+    """Per pin index: the net id (int) or None for an unconnected/absent/constant pin
+    (and, when `live` is given, for an undriven dangling net). The mapper omits I1..I3
+    entirely on a registered BEL's pass-through data LUT (ff_map.v)."""
     res = []
     for k in range(NPINS):
-        b = c["connections"][f"I{k}"]
+        b = c["connections"].get(f"I{k}")
+        if b is None:
+            res.append(None)
+            continue
         if len(b) != 1:
             raise ValueError(f"pin I{k} width {len(b)}")
         res.append(b[0] if isinstance(b[0], int) and (live is None or b[0] in live) else None)
@@ -134,7 +162,7 @@ def net_names(mod):
 
 
 # ------------------------------------------------------------------ alignment policy
-def alignment_plan(mod, policy="consistent"):
+def alignment_plan(mod, policy="consistent", registered=False):
     """Deterministic pin-alignment policy derived from observed net connectivity.
 
     Every net that feeds a LUT input gets one global pin index (a colour);
@@ -149,9 +177,12 @@ def alignment_plan(mod, policy="consistent"):
     `quad4` corpus case has), falling back to the "consistent" rule when none is
     left.
 
+    registered=True (issue #160) includes registered BELs' data LUTs; their FF, SR, EN
+    and O are not pins of the plan and are never moved.
+
     Returns (plan, log): plan[cell] = new_of_old (list), log = list of strings."""
-    cells = lut_cells(mod)
-    live = live_nets(mod)
+    cells = lut_cells(mod, registered)
+    live = live_nets(mod, registered)
     names = net_names(mod)
     nm = lambda b: names.get(b, f"net{b}")
     fan, nbr = {}, {}
@@ -205,17 +236,23 @@ def alignment_plan(mod, policy="consistent"):
     return plan, log
 
 
-def apply_plan(mod, plan, permute_init_too=True):
+def apply_plan(mod, plan, permute_init_too=True, registered=False):
     """Return a deep copy of `mod` with each planned permutation applied.
-    permute_init_too=False deliberately breaks the INIT (negative control)."""
+    permute_init_too=False deliberately breaks the INIT (negative control).
+    Only I0..I3 (connections + directions) and INIT are touched; an absent pin (registered
+    BEL data LUT) moves as an absent pin."""
     new = json.loads(json.dumps(mod))
-    for name, c in lut_cells(new):
+    for name, c in lut_cells(new, registered):
         p = plan[name]
-        old_conn = {f"I{k}": list(c["connections"][f"I{k}"]) for k in range(NPINS)}
-        old_dir = {f"I{k}": c["port_directions"][f"I{k}"] for k in range(NPINS)}
+        old_conn = {f"I{k}": c["connections"].get(f"I{k}") for k in range(NPINS)}
+        old_dir = {f"I{k}": c["port_directions"].get(f"I{k}") for k in range(NPINS)}
         for k in range(NPINS):
-            c["connections"][f"I{p[k]}"] = old_conn[f"I{k}"]
-            c["port_directions"][f"I{p[k]}"] = old_dir[f"I{k}"]
+            for d, old in ((c["connections"], old_conn), (c["port_directions"], old_dir)):
+                if old[f"I{k}"] is None:
+                    if old[f"I{p[k]}"] is not None:
+                        del d[f"I{p[k]}"]
+                else:
+                    d[f"I{p[k]}"] = list(old[f"I{k}"]) if isinstance(old[f"I{k}"], list) else old[f"I{k}"]
         if permute_init_too:
             c["parameters"]["INIT"] = init_str(permute_init(init_bits(c), p))
     return new
@@ -309,6 +346,308 @@ def check_equivalence(base, var):
                   f"input vectors")
 
 
+# ------------------------------------------------------------------ registered (one-register) model, issue #160
+BEL_PINS = {"I0", "I1", "I2", "I3", "SR", "EN", "O"}
+BEL_PARAMS = {"INIT", "FF"}
+IPINS = tuple(f"I{k}" for k in range(NPINS))
+
+
+def _drivers(mod):
+    drv = {}
+    for name, c in mod["cells"].items():
+        for pin, bits in c["connections"].items():
+            if pin == "PAD" or c["port_directions"].get(pin) != "output":
+                continue
+            for b in bits:
+                if isinstance(b, int):
+                    drv.setdefault(b, []).append(f"{name}.{pin}")
+    return drv
+
+
+def seq_shape(mod):
+    """The single-register interface of a registered netlist, or Unsupported.
+
+    Supported shape (the corpus `regcasc`/top_reg register rule, ff_map.v): IO harness
+    cells plus lut4_ff_bel BELs with only I0..I3/SR/EN/O pins and INIT/FF parameters;
+    exactly ONE registered BEL (FF=1, implicit UserCLK, synchronous reset over enable,
+    reset value 0: next_q = SR ? 0 : (EN ? LUT(I) : q)); SR and EN each a primary-input net;
+    every net with at most one driver. Anything else fails closed."""
+    for name, c in sorted(mod["cells"].items()):
+        if c["type"].startswith("IO_1_"):
+            continue
+        if c["type"] != "lut4_ff_bel":
+            raise Unsupported(f"cell {name}: cell type {c['type']} is outside the one-register model")
+        extra = set(c["connections"]) - BEL_PINS
+        if extra:
+            raise Unsupported(f"cell {name}: pins {sorted(extra)} have no modelled clock/control semantics")
+        extra = set(c["parameters"]) - BEL_PARAMS
+        if extra:
+            raise Unsupported(f"cell {name}: parameters {sorted(extra)} are outside the model")
+    multi = {b: d for b, d in _drivers(mod).items() if len(d) > 1}
+    if multi:
+        raise Unsupported(f"nets with several drivers: {multi}")
+    ffs = [(n, c) for n, c in sorted(mod["cells"].items()) if is_registered(c)]
+    if not ffs:
+        raise Unsupported("no state element (a combinational netlist; use the combinational check)")
+    if len(ffs) > 1:
+        raise Unsupported(f"{len(ffs)} state elements ({', '.join(n for n, _ in ffs)}); "
+                          "the transition model supports exactly one register")
+    name, c = ffs[0]
+    ff = c["parameters"]["FF"]
+    if set(ff) - {"0", "1"} or int(ff, 2) != 1:
+        raise Unsupported(f"register {name}: FF parameter {ff!r} is not the single-bit register enable")
+    pi, _ = io_nets(mod)
+    ctl = {}
+    for pin in ("SR", "EN"):
+        b = c["connections"].get(pin)
+        if not b or len(b) != 1 or not isinstance(b[0], int):
+            raise Unsupported(f"register {name}: {pin} unconnected or constant; reset/enable semantics unknown")
+        if b[0] not in pi:
+            raise Unsupported(f"register {name}: {pin} net {b[0]} is not a primary input "
+                              "(logic-driven control is outside the model)")
+        ctl[pin] = b[0]
+    o = c["connections"].get("O")
+    if not o or len(o) != 1 or not isinstance(o[0], int):
+        raise Unsupported(f"register {name}: output O is not a single net")
+    return dict(cell=name, state=o[0], sr=ctl["SR"], en=ctl["EN"], ff=ff)
+
+
+def io_ports(mod):
+    """(inputs, outputs): sorted [(label, net)] keyed by harness IO cell + pin, so baseline and
+    variant are compared port by port even if a mutation reconnects a port to another net."""
+    pi, po = [], []
+    for name, c in sorted(mod["cells"].items()):
+        if not c["type"].startswith("IO_1_"):
+            continue
+        for pin, bits in sorted(c["connections"].items()):
+            if pin == "PAD":
+                continue
+            for i, b in enumerate(bits):
+                lab = f"{name}.{pin}" + (f"[{i}]" if len(bits) > 1 else "")
+                (pi if c["port_directions"][pin] == "output" else po).append((lab, b))
+    return pi, po
+
+
+def port_label(lab):
+    """Short display name of an IO port label ('$iopadmap$top.en._io.O' -> 'en')."""
+    import re
+    m = re.search(r"top\.([^.]+)\._io\.", lab)
+    return m.group(1) if m else lab
+
+
+def transition_table(mod):
+    """(shape, input labels, output labels, table) with
+    table[(q, input vector)] = (next_q, output vector), enumerated exhaustively over both
+    current-state values and every primary-input/control vector."""
+    shp = seq_shape(mod)
+    pi, po = io_ports(mod)
+    if len(pi) > MAX_PI:
+        raise Unsupported(f"{len(pi)} primary inputs exceed the exhaustive-check cap {MAX_PI}")
+    if any(not isinstance(b, int) for _, b in pi):
+        raise Unsupported("a primary-input pad drives no net")
+    live = live_nets(mod, registered=True)
+    comb = [(init_bits(c), pin_nets(c, live), c["connections"]["O"][0])
+            for _, c in lut_cells(mod, registered=True) if not is_registered(c)]
+    ffc = mod["cells"][shp["cell"]]
+    ff_init, ff_pins = init_bits(ffc), pin_nets(ffc, live)
+    table = {}
+    for q in (0, 1):
+        for vals in itertools.product((0, 1), repeat=len(pi)):
+            v = {b: x for (_, b), x in zip(pi, vals)}
+            v[shp["state"]] = q
+            pending = comb
+            while pending:
+                rest = [x for x in pending if not all(n is None or n in v for n in x[1])]
+                for init, pins, o in pending:
+                    if all(n is None or n in v for n in pins):
+                        v[o] = init[sum((v[n] if n is not None else 0) << k for k, n in enumerate(pins))]
+                if len(rest) == len(pending):
+                    raise Unsupported("combinational cycle or undriven LUT input in the register's cone")
+                pending = rest
+            if any(n is not None and n not in v for n in ff_pins):
+                raise Unsupported("register data input is undriven")
+            d = ff_init[sum((v[n] if n is not None else 0) << k for k, n in enumerate(ff_pins))]
+            nq = 0 if v[shp["sr"]] else (d if v[shp["en"]] else q)
+            missing = [lab for lab, b in po if b not in v]
+            if missing:
+                raise Unsupported(f"primary output(s) {missing} undriven")
+            table[(q, vals)] = (nq, tuple(v[b] for _, b in po))
+    return shp, [l for l, _ in pi], [l for l, _ in po], table
+
+
+def cell_mismatch(bc, vc, lb, lv):
+    """None if the variant cell computes the baseline cell's function for every assignment of
+    its connected nets AND every value of its unconnected/undriven pins; else a witness string
+    (a completed rejection). A baseline cell that is itself ill-formed raises Unsupported."""
+    try:
+        nets, fn = cell_function(bc, lb)
+    except ValueError as e:
+        raise Unsupported(f"baseline cell: {e}")
+    vpins = pin_nets(vc, lv)
+    if sorted(n for n in vpins if n is not None) != list(nets):
+        return "connected input nets differ from baseline (not a pin permutation)"
+    init = init_bits(vc)
+    for vals in itertools.product((0, 1), repeat=len(nets)):
+        val = dict(zip(nets, vals))
+        for dc in itertools.product((0, 1), repeat=NPINS):
+            idx = sum(((val[n] if n is not None else dc[k]) & 1) << k for k, n in enumerate(vpins))
+            if init[idx] != fn[vals]:
+                return (f"output {init[idx]} != baseline {fn[vals]} at nets {dict(zip(nets, vals))}, "
+                        f"pin values {dict((f'I{k}', dc[k]) for k in range(NPINS) if vpins[k] is None)}")
+    return None
+
+
+def structural_diff(base, var):
+    """Differences in everything the transform must NOT change: module ports, the cell set
+    and types, every IO cell, every BEL's FF and non-INIT parameters, SR/EN/O nets and
+    directions, the I-pin net multiset (only a permutation is legal), and the register's
+    state/control interface (seq_shape)."""
+    diffs = []
+    if base.get("ports") != var.get("ports"):
+        diffs.append("module ports differ")
+    bn, vn = set(base["cells"]), set(var["cells"])
+    if bn != vn:
+        diffs.append(f"cell set differs (only baseline: {sorted(bn - vn)}, only variant: {sorted(vn - bn)})")
+    for name in sorted(bn & vn):
+        b, v = base["cells"][name], var["cells"][name]
+        if b["type"] != v["type"]:
+            diffs.append(f"cell {name}: type {b['type']} -> {v['type']}")
+            continue
+        if b["type"] != "lut4_ff_bel":
+            if b != v:
+                diffs.append(f"cell {name} ({b['type']}): connections/parameters changed")
+            continue
+        for k in sorted((set(b["parameters"]) | set(v["parameters"])) - {"INIT"}):
+            if b["parameters"].get(k) != v["parameters"].get(k):
+                diffs.append(f"cell {name}: parameter {k} {b['parameters'].get(k)!r} -> {v['parameters'].get(k)!r}")
+        for pin in sorted((set(b["connections"]) | set(v["connections"])) - set(IPINS)):
+            if b["connections"].get(pin) != v["connections"].get(pin):
+                diffs.append(f"cell {name}: {pin} net {b['connections'].get(pin)} -> {v['connections'].get(pin)}")
+            if b["port_directions"].get(pin) != v["port_directions"].get(pin):
+                diffs.append(f"cell {name}: {pin} direction changed")
+        ms = lambda c: sorted(json.dumps(c["connections"].get(p)) for p in IPINS)
+        if ms(b) != ms(v):
+            diffs.append(f"cell {name}: input-pin nets are not a permutation of the baseline's")
+        if any(v["port_directions"].get(p, "input") != "input" for p in IPINS):
+            diffs.append(f"cell {name}: an I-pin is no longer an input")
+    try:
+        sb, sv = seq_shape(base), seq_shape(var)
+        for k in ("cell", "state", "sr", "en", "ff"):
+            if sb[k] != sv[k]:
+                diffs.append(f"register interface {k}: {sb[k]} -> {sv[k]}")
+    except Unsupported as e:
+        diffs.append(f"register interface not comparable: {e}")
+    return diffs
+
+
+def check_registered_equivalence(base, var):
+    """Bounded sequential equivalence for the one-register model. Returns a dict:
+    status   EQUIVALENT | REJECTED (a completed check found a difference) | UNSUPPORTED
+    cells, structural, transition  per-check verdict strings; verdict  one-line summary."""
+    r = dict(status="UNSUPPORTED", cells="not run", structural="not run", transition="not run")
+    try:
+        sb = seq_shape(base)
+        _, pi, po, tb = transition_table(base)
+        lb, lv = live_nets(base, True), live_nets(var, True)
+        bad = []
+        bcells = lut_cells(base, True)
+        for n, c in bcells:
+            vc = var["cells"].get(n)
+            if vc is None or vc["type"] != "lut4_ff_bel":
+                bad.append(f"cell {n}: missing in variant")
+                continue
+            w = cell_mismatch(c, vc, lb, lv)
+            if w:
+                bad.append(f"cell {n}: {w}")
+    except Unsupported as e:
+        r["verdict"] = r["cells"] = f"UNSUPPORTED baseline shape: {e}"
+        return r
+    r["cells"] = ("MISMATCH: " + "; ".join(bad)) if bad else         (f"EQUIVALENT: {len(bcells)} BEL LUTs (incl. register {sb['cell']} data LUT) over all connected-net "
+         "assignments and every unconnected/undriven pin value")
+    sd = structural_diff(base, var)
+    r["structural"] = ("MISMATCH: " + "; ".join(sd)) if sd else         "UNCHANGED: ports, IO cells, FF/SR/EN/O nets, non-INIT parameters, I-pin net multisets, register interface"
+    tmis = None
+    try:
+        _, vpi, vpo, tv = transition_table(var)
+        if (vpi, vpo) != (pi, po):
+            tmis = "MISMATCH: harness IO port sets differ"
+        else:
+            for key in sorted(tb):
+                if tb[key] != tv[key]:
+                    q, vals = key
+                    ins = ", ".join(f"{port_label(b)}={x}" for b, x in zip(pi, vals))
+                    fmt = lambda t: f"next_q={t[0]}, outputs " + ",".join(f"{port_label(b)}={x}"
+                                                                          for b, x in zip(po, t[1]))
+                    tmis = f"MISMATCH at q={q}, {ins}: baseline {fmt(tb[key])} vs variant {fmt(tv[key])}"
+                    break
+        r["transition"] = tmis or (f"EQUIVALENT: next state and {len(po)} output(s) identical over 2 states x "
+                                   f"2^{len(pi)} input/control vectors ({2 << len(pi)} transitions)")
+    except Unsupported as e:
+        r["transition"] = f"variant not evaluable: {e}"
+    if not bad and not sd and tmis is None and r["transition"].startswith("EQUIVALENT"):
+        r["status"] = "EQUIVALENT"
+    elif bad or sd or tmis:
+        r["status"] = "REJECTED"
+    r["verdict"] = f"{r['status']} (cells: {r['cells']} | structural: {r['structural']} | transition: {r['transition']})"
+    return r
+
+
+def registered_negative_controls(base):
+    """The three required mutation classes, built deterministically from the baseline:
+    [(class, description, mutated module)]. Each must be a completed REJECTED verdict."""
+    out = []
+    live = live_nets(base, True)
+    for name, c in lut_cells(base, True):
+        pins, init = pin_nets(c, live), init_bits(c)
+        swap = next(((k, j) for k in range(NPINS) if pins[k] is not None for j in range(NPINS)
+                     if j != k and permute_init(init, [j if i == k else k if i == j else i
+                                                       for i in range(NPINS)]) != init), None)
+        if swap:
+            k, j = swap
+            p = [j if i == k else k if i == j else i for i in range(NPINS)]
+            plan = {n: list(range(NPINS)) for n, _ in lut_cells(base, True)}
+            plan[name] = p
+            out.append(("wrong-INIT", f"cell {name}: I{k}<->I{j} connections swapped, INIT unchanged",
+                        apply_plan(base, plan, permute_init_too=False, registered=True)))
+            break
+    shp = seq_shape(base)
+    m = json.loads(json.dumps(base))
+    cc = m["cells"][shp["cell"]]["connections"]
+    cc["SR"], cc["EN"] = cc["EN"], cc["SR"]
+    out.append(("control-swap", f"register {shp['cell']}: SR and EN nets exchanged", m))
+    m = json.loads(json.dumps(base))
+    dnet = next((n for n in pin_nets(m["cells"][shp["cell"]], live) if n is not None), None)
+    for c in m["cells"].values():
+        if c["type"].startswith("IO_1_"):
+            for pin, bits in c["connections"].items():
+                if pin != "PAD" and c["port_directions"][pin] == "input":
+                    c["connections"][pin] = [dnet if b == shp["state"] else b for b in bits]
+    out.append(("state-interface", f"output reconnected from state net {shp['state']} to the register's "
+                f"data-input net {dnet} (FF bypassed)", m))
+    return out
+
+
+def run_negative_controls(base):
+    """[(class, description, result dict, passed)]: passed iff a COMPLETED rejection; for
+    control/state mutations the transition check itself must also produce a witness."""
+    res = []
+    for cls, desc, mut in registered_negative_controls(base):
+        r = check_registered_equivalence(base, mut)
+        ok = r["status"] == "REJECTED"
+        if cls == "wrong-INIT":
+            ok &= r["cells"].startswith("MISMATCH")
+        else:
+            ok &= r["transition"].startswith("MISMATCH")
+        res.append((cls, desc, r, ok))
+    return res
+
+
+def init_changed(mod, plan, registered=False):
+    """True if some planned permutation changes an INIT (otherwise a 'permute connections,
+    keep INIT' control is identical to the correct variant, e.g. a symmetric XOR LUT)."""
+    return any(permute_init(init_bits(c), plan[n]) != init_bits(c) for n, c in lut_cells(mod, registered))
+
+
 def sha_json(mod):
     return hashlib.sha256(json.dumps(mod).encode()).hexdigest()
 
@@ -336,7 +675,16 @@ def run_side(cr, side, case, seed, sd, env, model, budget, tb, snap_dir, fab_run
         r["outcome"], r["detail"] = "sim_fail", info
         return r
     r["sim"] = info
+    if not oracle_clean(info):
+        r["outcome"], r["detail"] = "sim_fail", f"oracle verdict not clean: {info!r}"
     return r
+
+
+def oracle_clean(info):
+    """'N checks, 0 failures; k/k perturbations detected' with N > 0 and k > 0."""
+    import re
+    m = re.match(r"^(\d+) checks, (\d+) failures; (\d+)/(\d+) perturbations detected$", info or "")
+    return bool(m) and m.group(2) == "0" and int(m.group(1)) > 0 and m.group(3) == m.group(4) != "0"
 
 
 def export_fixtures(cr, case, seeds, rows, variants, problems, base_sha, versions, dest):
@@ -398,8 +746,8 @@ def _load_pin_fixtures():
     return mod
 
 
-def record(case, versions, base_sha, variants, rows, problems, expect):
-    """variants: {name: dict(sha, log, verdict)}"""
+def record(case, versions, base_sha, variants, rows, problems, expect, controls=None):
+    """variants: {name: dict(sha, log, verdict[, checks])}; controls: run_negative_controls()"""
     import datetime
     import subprocess
     sha = subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=REPO, text=True,
@@ -411,9 +759,18 @@ def record(case, versions, base_sha, variants, rows, problems, expect):
          f"  Fixed   : source sha256 {h(case['src'])}, pcf sha256 {h(case['pcf'])}, router nextpnr default,"
          f" seeds/budget as corpus.json",
          f"  Baseline netlist sha256 {base_sha[:16]}"]
+    if case["mode"] == "reg":
+        L.append("  Mode    : reg -- one-register transition model (issue #160): per-cell INIT, structural "
+                 "FF/control/state invariants, exhaustive (state x input/control) next-state + output check")
+    for cls, desc, r, ok in controls or []:
+        L.append(f"  Negative control {cls}: {'REJECTED (completed)' if ok else 'NOT A COMPLETED REJECTION'} -- {desc}")
+        L += [f"      {k}: {r[k]}" for k in ("cells", "structural", "transition")]
     for name, v in variants.items():
         L.append(f"  Variant {name}: netlist sha256 {v['sha'][:16]}")
-        L.append(f"    Equivalence: {v['verdict']}")
+        L.append(f"    Equivalence: {v['verdict'] if 'checks' not in v else v['checks']['status']}")
+        for k in ("cells", "structural", "transition"):
+            if "checks" in v:
+                L.append(f"      {k}: {v['checks'][k]}")
         L.append("    Transformation log:")
         L += ["      " + l for l in v["log"]]
     for r in rows:
@@ -447,8 +804,11 @@ def main():
     model, fab_run, snap_dir = BUILD / "nextpnr-run" / "io-model", BUILD / "fabulous-run", cr.BSDIR
     cfgd = json.loads((cr.CORPUS / "corpus.json").read_text())
     case = next(c for c in cfgd["cases"] if c["name"] == a.case)
-    if case["mode"] != "comb":
-        sys.exit("error: only combinational cases are supported")
+    if case["mode"] not in ("comb", "reg"):
+        sys.exit(f"error: case mode {case['mode']!r} is not supported (comb, or reg via the one-register model)")
+    registered = case["mode"] == "reg"
+    if registered and a.export_fixtures is not None:
+        sys.exit("error: --export-fixtures is not defined for registered cases (issue #160: separate follow-up)")
     work = BUILD / "pin-experiment"
     shutil.rmtree(work, ignore_errors=True)
     work.mkdir(parents=True)
@@ -481,21 +841,46 @@ def main():
     base_sha = sha_json(base)
     sides = [("baseline", base_dir)]
     variants = {}
+    controls = None
     all_eq = True
+    if registered:
+        try:
+            seq_shape(base_mod)
+            transition_table(base_mod)
+        except Unsupported as e:
+            msg = f"unsupported sequential shape, NOTHING ROUTED: {e}"
+            if a.append_record:
+                with open(a.append_record, "a") as f:
+                    f.write(record(case, versions, base_sha, {}, [],
+                                   [msg], case["expect"]))
+            sys.exit("error: " + msg)
+        controls = run_negative_controls(base_mod)
+        for cls, desc, r, ok in controls:
+            print(f"[negative control {cls}] {'completed rejection' if ok else 'FAILED'}: {desc}\n  {r['verdict']}")
+            if not ok:
+                problems.append(f"negative control {cls} was not a completed rejection: {r['verdict']}")
     for policy in ("consistent", "distinct"):
-        plan, log = alignment_plan(base_mod, policy)
+        plan, log = alignment_plan(base_mod, policy, registered)
         var = json.loads(json.dumps(base))
-        var["modules"]["top"] = apply_plan(base_mod, plan)
-        ok_eq, verdict = check_equivalence(base_mod, var["modules"]["top"])
-        # negative control: the same plan WITHOUT the matching INIT permutation must be rejected
-        bad = apply_plan(base_mod, plan, permute_init_too=False)
-        ctrl_ok, ctrl = check_equivalence(base_mod, bad)
-        changed = any(p != list(range(NPINS)) for p in plan.values())
+        var["modules"]["top"] = apply_plan(base_mod, plan, registered=registered)
+        bad = apply_plan(base_mod, plan, permute_init_too=False, registered=registered)
+        checks = None
+        if registered:
+            checks = check_registered_equivalence(base_mod, var["modules"]["top"])
+            ok_eq, verdict = checks["status"] == "EQUIVALENT", checks["verdict"]
+            cr_ = check_registered_equivalence(base_mod, bad)
+            ctrl_ok, ctrl = cr_["status"] != "REJECTED", cr_["verdict"]
+        else:
+            ok_eq, verdict = check_equivalence(base_mod, var["modules"]["top"])
+            # negative control: the same plan WITHOUT the matching INIT permutation must be rejected
+            ctrl_ok, ctrl = check_equivalence(base_mod, bad)
+        changed = init_changed(base_mod, plan, registered)
         if changed and ctrl_ok:
             problems.append(f"{policy}: negative control (wrong INIT permutation) was NOT rejected")
         log.append("negative control (permuted connections, INIT unchanged): "
                    + ("ACCEPTED (check is broken)" if changed and ctrl_ok else
-                      "not applicable (plan is the identity)" if not changed else "rejected: " + ctrl))
+                      "not applicable (no planned permutation changes an INIT)" if not changed
+                      else "rejected: " + ctrl))
         var_dir = work / f"variant-{policy}"
         var_dir.mkdir()
         (var_dir / f"{case['name']}.json").write_text(json.dumps(var))
@@ -506,6 +891,8 @@ def main():
             problems.append(f"{policy}: variant NOT equivalent to baseline; not routed: {verdict}")
         all_eq &= ok_eq
         variants[policy] = dict(sha=sha_json(var), log=log, verdict=verdict, equivalent=ok_eq)
+        if checks:
+            variants[policy]["checks"] = checks
         sides.append((f"variant-{policy}", var_dir))
         print(f"[{policy}] equivalence: {verdict}")
         print("\n".join("  " + l for l in log))
@@ -522,9 +909,12 @@ def main():
         if r["outcome"] not in cr.MEASURED:
             problems.append(f"{r['side']} seed {r['seed']}: {r['outcome']} ({r['detail']}) -- "
                             "setup/tool problem, not routability evidence")
+        elif r["side"] == "baseline" and r["outcome"] != expect.get(str(r["seed"])):
+            problems.append(f"baseline seed {r['seed']}: {r['outcome']} differs from the corpus.json "
+                            f"expectation {expect.get(str(r['seed']))} -- experiment problem, variants not interpretable")
     if a.append_record:
         with open(a.append_record, "a") as f:
-            f.write(record(case, versions, base_sha, variants, rows, problems, expect))
+            f.write(record(case, versions, base_sha, variants, rows, problems, expect, controls))
     if a.export_fixtures is not None:
         dest = a.export_fixtures or str(REPO / "sim" / "bitstream" / "pin_experiment")
         ok, msg = export_fixtures(cr, case, cfgd["seeds"], rows, variants, problems, base_sha, versions, dest)

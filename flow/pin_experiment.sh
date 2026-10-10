@@ -5,9 +5,12 @@
 # LUT-input-pin-aligned variant (INIT permuted identically, equivalence proven
 # exhaustively before routing) under the same pcf/seeds/budget/router. Separate
 # from flow/corpus.sh: it changes no corpus expectation and no committed fixture.
+# `--case regcasc` (issue #160) runs the registered case through the bounded
+# one-register transition-equivalence gate before routing; unsupported
+# sequential shapes stop before routing.
 # See design/fabulous/corpus/pin_experiment.md. Prerequisites as flow/corpus.sh.
 #
-# Usage: flow/pin_experiment.sh [--append-record FILE] [--case fan4] [--export-fixtures [DIR]]  (issue #145: opt-in fixture export)
+# Usage: flow/pin_experiment.sh [--append-record FILE] [--case fan4|regcasc] [--export-fixtures [DIR]]  (issue #145: opt-in fixture export, fan4 only)
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
