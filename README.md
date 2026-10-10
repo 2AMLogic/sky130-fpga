@@ -23,6 +23,7 @@ full per-issue narrative: ["Current position" in `spec/framework-gaps.md`](spec/
 | FABulous tile description / nextpnr | accepted by the pinned generator and nextpnr (not a bitstream-correctness or timing claim) | G1 in [`spec/framework-gaps.md`](spec/framework-gaps.md) |
 | [ADR-0004](spec/decisions/0004-g1-tile-description-discrepancies.md) (G1 discrepancies) | Proposed <!-- status-claim: adr-0004=Proposed --> | pending operator ratification |
 | [ADR-0005](spec/decisions/0005-nextpnr-io-and-constant-handling.md) (nextpnr IO/constants) | Proposed <!-- status-claim: adr-0005=Proposed --> | pending operator ratification |
+| [ADR-0006](spec/decisions/0006-lut-pin-assignment-policy.md) (LUT pin-assignment policy) | Proposed <!-- status-claim: adr-0006=Proposed --> | pending operator ratification |
 | Bitstream-level verification | experimental single-tile harness only; ratified fabric not verified (G5, G6 not closed) | `sim/README.md` |
 | klt T1 evidence tier | 9 <!-- status-claim: t1-met=9 --> of 11 <!-- status-claim: t1-items=11 --> items met | [`signoff/tier-report.json`](signoff/tier-report.json) |
 
