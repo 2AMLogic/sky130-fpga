@@ -858,13 +858,20 @@ fwd_cov_ok() {   # <log>: every forwarded port and bit exercised at both levels
         && [[ "$(grep -c '^COVERAGE: FrameData_O 32/32 bits forwarded at both levels$' "$1")" -eq 1 ]] \
         && [[ "$(grep -c '^COVERAGE: FrameStrobe_O 20/20 bits forwarded at both levels$' "$1")" -eq 1 ]]
 }
+fwd_portfail() {   # <log>: prints "<UserCLKo> <FrameData_O> <FrameStrobe_O>" from the one
+    # unconditional PORTFAIL summary line (every failure, not only printed mismatch lines)
+    [[ "$(grep -c '^PORTFAIL: ' "$1")" -eq 1 ]] || return 1
+    sed -n 's/^PORTFAIL: UserCLKo=\([0-9][0-9]*\) FrameData_O=\([0-9][0-9]*\) FrameStrobe_O=\([0-9][0-9]*\)$/\1 \2 \3/p' "$1" | grep -E '^[0-9]+ [0-9]+ [0-9]+$'
+}
 log="$OUT/fwd_gen.log"
 v="$(fwd_run "$FW_GEN" "$log")"
-if [[ "$v" != PASS ]] || ! fwd_cov_ok "$log"; then
-    echo "  forwarding diagnostic: FAIL (verdict $v or incomplete coverage; see $log)" >&2
+pf="$(fwd_portfail "$log" || true)"
+if [[ "$v" != PASS ]] || ! fwd_cov_ok "$log" || [[ "$pf" != "0 0 0" ]]; then
+    echo "  forwarding diagnostic: FAIL (verdict $v, per-port failures '${pf:-missing}' or incomplete coverage; see $log)" >&2
     tail -n 8 "$log" >&2; status=1
 else
     sed -n 's/^COVERAGE: /  generated: /p' "$log"
+    echo "  generated: per-port failures UserCLKo=0 FrameData_O=0 FrameStrobe_O=0"
     echo "  forwarding diagnostic: PASS - $(grep -m1 '^PASS' "$log" | sed 's/^PASS: [^ ]* //'); UserCLKo, FrameData_O 32/32, FrameStrobe_O 20/20"
 fi
 
@@ -906,18 +913,25 @@ for m in clk_open clk_inv data_alias strobe_drop; do
         echo "forwarding mutant '$m' (${FWM_DESC[$m]}): NOT caught (verdict $v; a timeout, simulator error or missing verdict never counts; see $mlog)" >&2
         status=1; continue
     fi
-    # the mismatch lines must name the mutated port and no other forwarded port
+    # attribution from the bench's unconditional per-port failure counters (all
+    # failures, not only the printed mismatch lines): mutated port >0, others exactly 0
+    pf="$(fwd_portfail "$mlog" || true)"
     bad=0
-    for port in UserCLKo FrameData_O FrameStrobe_O; do
-        c="$(grep -c "^  mismatch .*: $port=" "$mlog" || true)"
-        if [[ "$port" == "${FWM_PORT[$m]}" ]]; then [[ "$c" -ge 1 ]] || bad=1; else [[ "$c" -eq 0 ]] || bad=1; fi
-    done
+    if [[ -z "$pf" ]]; then
+        bad=1
+    else
+        read -r c_clk c_data c_strobe <<<"$pf"
+        declare -A pfc=([UserCLKo]="$c_clk" [FrameData_O]="$c_data" [FrameStrobe_O]="$c_strobe")
+        for port in UserCLKo FrameData_O FrameStrobe_O; do
+            if [[ "$port" == "${FWM_PORT[$m]}" ]]; then [[ "${pfc[$port]}" -ge 1 ]] || bad=1; else [[ "${pfc[$port]}" -eq 0 ]] || bad=1; fi
+        done
+    fi
     if [[ "$bad" -ne 0 ]]; then
-        echo "forwarding mutant '$m' (${FWM_DESC[$m]}): failing port(s) differ from the predicted ${FWM_PORT[$m]} (see $mlog)" >&2
+        echo "forwarding mutant '$m' (${FWM_DESC[$m]}): per-port failures '${pf:-missing}' (UserCLKo FrameData_O FrameStrobe_O) differ from the predicted ${FWM_PORT[$m]}-only (see $mlog)" >&2
         status=1; continue
     fi
     n_fwm=$((n_fwm + 1))
-    echo "forwarding mutant '$m' (${FWM_DESC[$m]}) caught: compiled; $(grep -m1 '^FAIL' "$mlog" | sed 's/^FAIL: //'); only ${FWM_PORT[$m]} mismatched"
+    echo "forwarding mutant '$m' (${FWM_DESC[$m]}) caught: compiled; $(grep -m1 '^FAIL' "$mlog" | sed 's/^FAIL: //'); per-port failures UserCLKo=$c_clk FrameData_O=$c_data FrameStrobe_O=$c_strobe, only ${FWM_PORT[$m]} mismatched"
 done
 [[ "$n_fwm" -eq 4 ]] || status=1
 

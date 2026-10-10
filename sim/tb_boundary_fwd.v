@@ -59,6 +59,8 @@ module tb_boundary_fwd;
 
     integer checks = 0, failures = 0, i, j, fr;
     integer clk_rise = 0, clk_fall = 0, nd, ns;
+    // per-port failure counters, always reported (not limited to printed lines)
+    integer pf_clk = 0, pf_data = 0, pf_strobe = 0;
     reg [31:0] d_seen0 = 32'b0, d_seen1 = 32'b0;
     reg [19:0] s_seen0 = 20'b0, s_seen1 = 20'b0;
     reg [31:0] lfsr = 32'hace1_1234;
@@ -74,15 +76,15 @@ module tb_boundary_fwd;
             #1;
             checks = checks + 3;
             if (UserCLKo !== clk) begin
-                failures = failures + 1;
+                failures = failures + 1; pf_clk = pf_clk + 1;
                 if (failures <= 20) $display("  mismatch %0s t=%0t: UserCLKo=%b expected %b", what, $time, UserCLKo, clk);
             end
             if (FrameData_O !== FrameData) begin
-                failures = failures + 1;
+                failures = failures + 1; pf_data = pf_data + 1;
                 if (failures <= 20) $display("  mismatch %0s t=%0t: FrameData_O=%b expected %b", what, $time, FrameData_O, FrameData);
             end
             if (FrameStrobe_O !== FrameStrobe) begin
-                failures = failures + 1;
+                failures = failures + 1; pf_strobe = pf_strobe + 1;
                 if (failures <= 20) $display("  mismatch %0s t=%0t: FrameStrobe_O=%b expected %b", what, $time, FrameStrobe_O, FrameStrobe);
             end
             for (b = 0; b < 32; b = b + 1) begin
@@ -96,12 +98,16 @@ module tb_boundary_fwd;
         end
     endtask
 
-    // clock edge, checked after the edge; counted only when UserCLKo followed it
+    // clock level set, checked after; an edge is counted only when the level
+    // actually changed (a same-level call is a check, not an edge) and
+    // UserCLKo followed it
     task automatic set_clk(input v, input [255:0] what);
+        reg prev;
         begin
+            prev = clk;
             clk = v;
             check(what);
-            if (UserCLKo === v) begin
+            if (prev !== v && UserCLKo === v) begin
                 if (v) clk_rise = clk_rise + 1; else clk_fall = clk_fall + 1;
             end
         end
@@ -178,6 +184,8 @@ module tb_boundary_fwd;
         $display("COVERAGE: UserCLKo %0d rising and %0d falling edges followed", clk_rise, clk_fall);
         $display("COVERAGE: FrameData_O %0d/32 bits forwarded at both levels", nd);
         $display("COVERAGE: FrameStrobe_O %0d/20 bits forwarded at both levels", ns);
+        // unconditional per-port attribution (deliberately not starting with FAIL)
+        $display("PORTFAIL: UserCLKo=%0d FrameData_O=%0d FrameStrobe_O=%0d", pf_clk, pf_data, pf_strobe);
         if (clk_rise < 16 || clk_fall < 16 || nd != 32 || ns != 20) begin
             // coverage is only meaningful for a forwarding that works; a gap
             // caused by a failing port is reported as the functional FAIL below

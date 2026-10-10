@@ -666,14 +666,22 @@ instances wired together by the generator (unmodified, in gitignored
   one/zero over all 32 data bits and all 20 strobe bits (the walking-zero strobe
   patterns are forwarding-only, not frame writes), idle strobes with changing
   data, and normal legal frame writes (one-hot strobe, release, data change,
-  clock toggling) for all 20 frames. The coverage lines require UserCLKo
-  rising/falling edges followed, `FrameData_O` 32/32 and `FrameStrobe_O` 20/20
-  bits forwarded at both levels. Scratch mutants (clock output open, clock
+  clock toggling) for all 20 frames. The coverage lines require at least 16
+  UserCLKo rising and falling edges followed (an edge is counted only when the
+  clock level really changed), `FrameData_O` 32/32 and `FrameStrobe_O` 20/20
+  bits forwarded at both levels. If a run has 0 failures but incomplete
+  coverage, the bench prints a non-summary `FAIL` line, which the classifier
+  reports as an infrastructure error (the run still fails, but not as a
+  functional result). The bench always prints a
+  `PORTFAIL: UserCLKo=<n> FrameData_O=<n> FrameStrobe_O=<n>` line that counts
+  every failure per port, not only the printed mismatch lines. The unmodified
+  tile must report all zeros. Scratch mutants (clock output open, clock
   inverted, `FrameData_O[9]` aliased to bit 8, `FrameStrobe_O[13]` tied low)
   must each compile, give a completed functional FAIL (existing bounded-run
   classifier; timeouts, simulator errors and missing/conflicting verdicts are
-  infrastructure errors) and mismatch only on their own port. Single tile: this
-  is not an inter-tile or chaining test.
+  infrastructure errors), and show a nonzero `PORTFAIL` count on their own port
+  and exactly 0 on the other two. Single tile: this is not an inter-tile or
+  chaining test.
 
 Evidence: `sim/generated_tile_replay.txt` (append-only). Scope: one generated
 tile with the harness's same-index matrix, CAP loopbacks and pad overlay. The
