@@ -108,3 +108,98 @@ harness. The gate-level replay is zero delay with simulation-model loader and
 pads. This is regression evidence for an experiment, not a verification of the
 ratified fabric, not general routability, and not a timing claim; ADR-0004 and
 ADR-0005 stay Proposed and no mapper policy is adopted.
+
+## Registered case: `regcasc` (issue #160)
+
+Question: does the pin-index confounder also explain the corpus's second,
+independent non-convergence, `regcasc` seed 2 (1 arc unrouted; seeds 1 and 3
+route)? Run: `./flow/pin_experiment.sh --case regcasc [--append-record design/fabulous/corpus/pin_experiment_results.txt]`.
+Held fixed exactly as for `fan4`: source, pcf, fabric model, router, seeds
+1-3, 60 s budget, FF placement behaviour; `corpus.json`, its expectations and
+every committed fixture are unchanged, and nothing is exported
+(`--export-fixtures` is refused for registered cases).
+
+### Method
+
+The same `consistent` / `distinct` policies are applied to the LUTs feeding
+the register *and* to the registered BEL's data LUT (`ff_map.v`'s
+pass-through, D on I0, I1..I3 absent). Only I0..I3 and INIT move; the
+register's `FF` parameter, `SR`, `EN`, its output/state net and the implicit
+UserCLK are never touched. Before anything is routed each variant must pass,
+in `flow/pin_experiment.py`:
+
+1. **Per-cell INIT check** for every BEL LUT (including the register's data
+   LUT): the variant computes the baseline function for every assignment of
+   its connected nets *and* every value of its unconnected/undriven pins.
+2. **Structural invariants**: module ports, the cell set and types, every IO
+   cell, every BEL's non-INIT parameters (incl. `FF`), its `SR`/`EN`/`O` nets
+   and directions, the multiset of I-pin nets (only a permutation is legal)
+   and the register interface (cell, state net, SR net, EN net, FF value) are
+   identical to the baseline.
+3. **One-step transition equivalence**: the register output is explicit
+   current state `q`; for both values of `q` and all 2^7 `{a,b,c,d,e,en,rst}`
+   vectors (256 transitions) the acyclic combinational cone is evaluated and
+   `next_q = rst ? 0 : (en ? d : q)` applied; next state and every observable
+   output must match the baseline. Outputs/inputs are compared per harness
+   IO port.
+
+The model is bounded and fails closed: more than one state element, no state
+element, a combinational cycle, a control net that is not a primary input
+(logic-driven or unconnected `SR`/`EN`), unknown BEL pins (e.g. an explicit
+clock) or parameters, multiply-driven nets, or more than 16 primary inputs
+stop the run with an `unsupported sequential shape` diagnostic before
+routing. Every run also builds three negative controls from the baseline and
+requires each to be a *completed* `REJECTED` verdict (not an unsupported
+shape or a crash): (a) a LUT's connections swapped with INIT unchanged
+(per-cell mismatch), (b) `SR` and `EN` exchanged on the register, and (c) the
+output reconnected from the state net to the register's data-input net (FF
+bypassed); (b) and (c) must also produce a transition-level witness, not only
+a structural difference. Unit tests (`python3 flow/test_pin_experiment.py`)
+cover the positive transform, these three classes, an FF-disable mutation,
+an inverted data LUT, and each unsupported shape. A routed success then needs
+assembly, byte identity with FABulous `bit_gen genBitstream`, and the
+independent `regcasc` oracle in `sim/tb_logic_tile_bitstream.v` (both
+starting states, all 128 vectors, hold-before-edge, 300-cycle reference
+sequence) with **every** perturbation detected; a baseline that diverges
+from `corpus.json` is reported as an experiment problem.
+
+### Outcome (record dated 2026-10-10 in `pin_experiment_results.txt`)
+
+| trial | seed 1 | seed 2 | seed 3 |
+|---|---|---|---|
+| baseline | success | route_nonconvergent (1 arc) | success |
+| variant-consistent | success | route_nonconvergent (1 arc) | success |
+| variant-distinct | success | route_nonconvergent (1 arc) | success |
+
+The baseline reproduces the corpus record. All six variant successes pass the
+oracle (313273 checks, 0 failures, 36/36 perturbations detected) and match
+FABulous `bit_gen`; the `distinct` successes are different streams from the
+baseline's (the transform reaches the bitstream). Both variants passed all
+three equivalence checks and all three negative controls were completed
+rejections. The run was performed twice (uncommitted and committed code)
+with identical outcomes and stream hashes; only the committed-code record is
+appended.
+
+Result category **(a)**: seed 2 still fails under every policy.
+
+### What this supports, and limits
+
+* The synthesized `regcasc` netlist already has every net at LUT-input
+  fanout 1, so the `consistent` plan is the identity (that variant is the
+  baseline netlist, sha-identical, a determinism check rather than a separate
+  treatment). `distinct` cannot give each of the 7 LUT-input nets its own
+  index with 4 pins; it falls back to the `consistent` rule and moved
+  `a,b,c,d` (XOR4 LUT, INIT unchanged by symmetry) and the register's data
+  pin (I0 -> I2, INIT `AAAA` -> `F0F0`).
+* Within this harness, pin-index assignment on the LUT inputs does not
+  explain the `regcasc` seed-2 non-convergence: the one unrouted arc persists
+  under both policies. This is a measured refutation of the pin-index
+  hypothesis *for this case*, not a general one, and it says nothing about
+  which arc or resource is the bottleneck (not isolated here).
+* Not interchangeable with the combinational `fan4` result: here the
+  `EN`/`SR` pad nets and the FF BEL path take part in routing and are, by
+  construction, not permuted, so a confounder on those pins is untested.
+  One design, one pad assignment, one router, three seeds; timeouts remain
+  bounded non-convergence, never infeasibility.
+* No fixture is exported, no corpus expectation, fabric population or ADR
+  status changes, and no mapper policy is adopted.
