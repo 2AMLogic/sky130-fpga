@@ -91,5 +91,54 @@ class Topology(unittest.TestCase):
         self.assertIsNone(t)
 
 
+class ShChildLifetime(unittest.TestCase):
+    """Issue #204: children of sh() must not outlive a SIGKILLed parent."""
+
+    def test_child_killed_with_parent(self):
+        import os
+        import signal
+        import subprocess
+        import time
+        with tempfile.TemporaryDirectory() as d:
+            pidfile = Path(d) / "child.pid"
+            code = ("import importlib.util,sys\n"
+                    "s=importlib.util.spec_from_file_location('cr',sys.argv[1])\n"
+                    "m=importlib.util.module_from_spec(s);s.loader.exec_module(m)\n"
+                    "m.sh(['sh','-c','echo $$ > '+sys.argv[2]+'; exec sleep 300'],timeout=600)\n")
+            parent = subprocess.Popen([sys.executable, "-c", code, str(Path(cr.__file__)), str(pidfile)])
+            try:
+                end = time.time() + 10
+                while time.time() < end and not (pidfile.exists() and pidfile.read_text().strip()):
+                    time.sleep(0.05)
+                child = int(pidfile.read_text())
+                os.kill(child, 0)  # alive
+                parent.kill()
+                parent.wait()
+                end = time.time() + 5
+                alive = True
+                while time.time() < end and alive:
+                    try:
+                        os.kill(child, 0)
+                        time.sleep(0.1)
+                    except ProcessLookupError:
+                        alive = False
+                self.assertFalse(alive, "child outlived its SIGKILLed parent")
+            finally:
+                parent.kill()
+                if pidfile.exists():
+                    try:
+                        os.kill(int(pidfile.read_text()), signal.SIGKILL)
+                    except (ProcessLookupError, ValueError):
+                        pass
+
+    def test_timeout_and_missing_binary_unchanged(self):
+        with tempfile.TemporaryDirectory() as d:
+            log = Path(d) / "l.log"
+            self.assertEqual(cr.sh(["sleep", "30"], timeout=0.5, log=log)[0], "timeout")
+            self.assertTrue(log.exists())
+            self.assertIsNone(cr.sh(["/nonexistent-binary-204"])[0])
+            self.assertEqual(cr.sh(["true"])[0], 0)
+
+
 if __name__ == "__main__":
     unittest.main(argv=[sys.argv[0]] + sys.argv[1:])

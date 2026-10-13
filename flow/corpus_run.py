@@ -70,12 +70,29 @@ def sha256(p):
     return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 
+def _die_with_parent():
+    """preexec_fn (Linux): SIGKILL this child if the spawning parent dies, so a
+    dead runner can't leave vvp/nextpnr spinning with nothing enforcing the
+    budget (issue #204)."""
+    import ctypes
+    import os
+    import signal
+    ctypes.CDLL(None, use_errno=True).prctl(1, signal.SIGKILL)  # PR_SET_PDEATHSIG
+    if os.getppid() == 1:  # parent already gone before prctl took effect
+        os.kill(os.getpid(), signal.SIGKILL)
+
+
+_PREEXEC = _die_with_parent if sys.platform.startswith("linux") else None
+
+
 def sh(cmd, env=None, cwd=None, log=None, timeout=None):
     """Run; returns (rc, combined output). rc None if the binary is missing,
-    "timeout" if the wall-clock budget expired (the process is killed)."""
+    "timeout" if the wall-clock budget expired (the process is killed).
+    Children get SIGKILL if this process dies (Linux PDEATHSIG)."""
     try:
         p = subprocess.run([str(c) for c in cmd], env=env, cwd=cwd, text=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout)
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT, timeout=timeout,
+                           preexec_fn=_PREEXEC)
     except FileNotFoundError as e:
         return None, str(e)
     except subprocess.TimeoutExpired as e:
