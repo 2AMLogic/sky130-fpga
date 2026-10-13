@@ -2,6 +2,11 @@
 
 Chronological record of merged pull requests and closed issues, maintained by the Loom Guide role. Newest entries appear first.
 
+### 2026-10-13
+
+- **PR #205**: fix(corpus_run): children of sh() die with the runner (#204)
+- **Issue #204** (closed): corpus_run: vvp/nextpnr outlive a dead runner — orphaned CPU-hours on a dispatch worker
+
 ### 2026-10-10
 
 - **PR #201**: verification: validate ConfigMem map and transaction input before functional verdicts (#200)

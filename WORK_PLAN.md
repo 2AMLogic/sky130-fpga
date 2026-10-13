@@ -9,9 +9,15 @@ Judge-approved PRs stuck under a `loom:operator` merge-risk hold — implementat
 
 - **#132**: ci: reproduce routability-corpus fixtures with flow/corpus.sh (#129)
 
-## Operator Priority
+## Very Important
 
-Issues the operator starred (`loom:operator-priority`); land these first.
+`loom:very-important` (one counts per workspace); every stage takes these first.
+
+_None._
+
+## Important
+
+`loom:important`; taken before unlabelled work.
 
 _None._
 
@@ -47,7 +53,7 @@ Issues carrying `loom:curated`.
 
 ## Proposed (Architect / Hermit)
 
-_None._
+- **#206**: Consolidate 13 duplicated _load() importers in flow/ and drop dead param *(hermit)*
 
 ## Epics
 
@@ -55,15 +61,16 @@ _None._
 
 ## Backlog Balance
 
-| Tier | Count |
+| Bucket | Count |
 |------|-------|
 | Operator merge-risk holds | 1 |
-| Operator priority | 0 |
+| Very important | 0 |
+| Important | 0 |
 | Ready (`loom:issue`) | 0 |
 | In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 1 |
 | Curated | 1 |
-| Architect / Hermit proposals | 0 |
+| Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
