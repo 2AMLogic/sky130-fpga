@@ -229,7 +229,7 @@ def generate(out_dir, snap_path):
 
 
 # ------------------------------------------------------------------ failure model
-def _value(tok, track, tin, edge, env_unused=None):
+def _value(tok, track, tin, edge):
     """Value of a source token at sink track `track` under stimulus tin (16 bits, tin[4*dir+idx])."""
     if tok in BELS:
         k = BELS.index(tok)
