@@ -9,6 +9,8 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-10-13
 
+- **PR #132**: ci: reproduce routability-corpus fixtures with flow/corpus.sh (#129)
+- **Issue #129** (closed): CI: reproduce the routability-corpus fixtures with flow/corpus.sh on pull requests
 - **PR #205**: fix(corpus_run): children of sh() die with the runner (#204)
 - **Issue #204** (closed): corpus_run: vvp/nextpnr outlive a dead runner — orphaned CPU-hours on a dispatch worker
 
