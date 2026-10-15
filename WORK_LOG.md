@@ -2,6 +2,11 @@
 
 Chronological record of merged pull requests and closed issues, maintained by the Loom Guide role. Newest entries appear first.
 
+### 2026-10-14
+
+- **PR #208**: refactor: drop unused env_unused parameter from _value
+- **Issue #206** (closed): Consolidate 13 duplicated _load() importers in flow/ and drop dead param
+
 ### 2026-10-13
 
 - **PR #205**: fix(corpus_run): children of sh() die with the runner (#204)
