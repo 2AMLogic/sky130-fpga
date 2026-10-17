@@ -30,8 +30,15 @@ Why this is a pure rename, and how that is checked rather than asserted
 Usage:
     sdf_sanitize_names.py netlist <in.v> <out.v> <map.json>
     sdf_sanitize_names.py sdf     <in.sdf> <out.sdf> <map.json>
+    sdf_sanitize_names.py lvs     <in.v> <out.v>
     sdf_sanitize_names.py check   <in.v> <out.v> <in.sdf> <out.sdf> \\
                                   <netlist-map.json> <sdf-map.json>
+
+`lvs` is the `klt lvs` reference-netlist variant (klayout-tools#1371, which
+misreads `[N]` inside an escaped identifier as a bit-select): the same shared
+`sanitize` rule and the same injectivity check, but applied to every escaped
+identifier containing `[`, `]`, `.` or `/` (so plain bus-indexed escaped names
+are rewritten too), with the map discarded.
 
 `netlist` / `sdf` write the sanitized file and a JSON map of
 `{original spelling: sanitized name}`. `check` exits non-zero on any
@@ -87,12 +94,19 @@ def _check_injective(mapping: dict[str, str], plain_ids: set[str]) -> None:
         )
 
 
-def sanitize_netlist(text: str) -> tuple[str, dict[str, str]]:
+def needs_lvs_rewrite(plain: str) -> bool:
+    """True for names `klt lvs`'s gate-level-verilog reader misparses."""
+    return any(c in plain for c in "[]./")
+
+
+def sanitize_netlist(
+    text: str, predicate=needs_rewrite
+) -> tuple[str, dict[str, str]]:
     mapping: dict[str, str] = {}
 
     def repl(m: re.Match) -> str:
         plain = unescape(m.group(1))
-        if not needs_rewrite(plain):
+        if not predicate(plain):
             return m.group(0)
         new = sanitize(plain)
         mapping[m.group(0)] = new
@@ -206,6 +220,11 @@ def main(argv: list[str]) -> int:
             _write(argv[3], out)
             _write(argv[4], json.dumps(mapping, indent=1, sort_keys=True) + "\n")
             print(f"{mode}: renamed {len(mapping)} distinct names")
+            return 0
+        if mode == "lvs" and len(argv) == 4:
+            out, mapping = sanitize_netlist(_read(argv[2]), needs_lvs_rewrite)
+            _write(argv[3], out)
+            print(f"lvs: renamed {len(mapping)} distinct names")
             return 0
         if mode == "check" and len(argv) == 8:
             nmap = json.loads(_read(argv[6]))

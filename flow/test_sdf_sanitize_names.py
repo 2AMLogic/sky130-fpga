@@ -40,8 +40,25 @@ SDF = (
     "  (DELAY (ABSOLUTE (IOPATH A X (0.1:0.1:0.1)))))\n)\n"
 )
 
+BUS_NETLIST = "module m (a);\n  wire \\x[3] ;\n  wire \\_keep_ ;\n  wire \\x_3_ ;\nendmodule\n"
+
 
 class SanitizeTest(unittest.TestCase):
+    def test_lvs_rewrites_bus_indexed_escaped_names(self):
+        out, m = S.sanitize_netlist(BUS_NETLIST.replace("\\x_3_ ", "\\y "), S.needs_lvs_rewrite)
+        self.assertIn("wire x_3_ ;", out)
+        self.assertIn("\\_keep_ ", out)
+        self.assertEqual(len(m), 1)
+
+    def test_lvs_collision_with_existing_name_is_an_error(self):
+        with self.assertRaises(ValueError):
+            S.sanitize_netlist("wire \\x[3] ;\nwire x_3_ ;\n", S.needs_lvs_rewrite)
+
+    def test_lvs_matches_netlist_rule_on_slash_dot_names(self):
+        a, _ = S.sanitize_netlist(NETLIST)
+        b, _ = S.sanitize_netlist(NETLIST, S.needs_lvs_rewrite)
+        self.assertEqual(a, b)
+
     def test_netlist_has_no_special_chars_in_renamed_ids(self):
         out, m = S.sanitize_netlist(NETLIST)
         self.assertIn("g_slice_0__u_slice___08_", out)
