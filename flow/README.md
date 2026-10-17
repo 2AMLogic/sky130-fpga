@@ -40,6 +40,7 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | `gate_route_diag.sh` | sourced by `gate-sim-bitstream.sh`; route diagnostic replay (feeds the same ledger) | `gate-sim.yml` |
 | `gate-sim-routed.sh` | `sim/logic_tile_routed_gate_results.txt` (EXPERIMENTAL, zero-delay) | `gate-sim.yml` |
 | `sdf-resim.sh`, `sdf_annotate_shim.py`, `sdf_canonicalize.py` | SDF-annotated gate-level re-simulation | - |
+| `sdf_sanitize_names.py`, `test_sdf_sanitize_names.py` | paired netlist + SDF escaped-identifier rename (issue #213; not wired into `sdf-resim.sh`) | `flow-evidence.yml` (unit test) |
 | `synth.sh` | generic-cell netlist | - |
 | `layout.sh`, `par_request.py`, `par_report_trim.py`, `gds_canonicalize.py` | `layout/logic_tile.gds`, `.def`, `.par.json` | - |
 | `drc.sh`, `drc_report_trim.py` | `layout/logic_tile.drc.json` | - |
@@ -949,6 +950,13 @@ to a minimal, from-scratch, non-sky130 15-line reproduction (any
 through `klt functional-verification`'s own `options.sdf` path, not just
 this repo's hand-wired mechanism — filed generically as
 [klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)). Note: klt >= 0.6.0 also moved stage artifacts under `.klt/<stage>/run-<id>/`; `flow/sdf-resim.sh` resolves both layouts, but under klt 0.6.0 / OpenROAD 26Q3-1510 its DEF-reproducibility gate fails (toolchain drift, see record `20261008-233733-23e6b5e`).
+Issue #213 tried the rename workaround: `flow/sdf_sanitize_names.py` rewrites
+the routed netlist and the SDF with one injective name map (checked by
+inverse round-trip), and `vvp` then no longer aborts. It is not wired into
+`sdf-resim.sh` (pinned, #162): the DEF gate still fails on the current
+toolchain, and an exploratory annotated run left 28 of 179 port-sourced
+`INTERCONNECT` entries unapplied, so item 7 stays uncited. See record
+`20261017-sdf-sanitize-d811bcd`.
 Not worked around with a fabricated SDF or a faked result:
 `flow/sdf-resim.sh` re-attempts this leg every run and treats *reproducing
 the cited crash* as the expected, checked-in outcome — a clean pass, a
