@@ -24,11 +24,11 @@
 # klt is pinned to the exact upstream commit the committed tier report was
 # graded with (its bundled copy of docs/design-evidence-tiers.md fixes the
 # item skeleton and its text, so a floating install would churn the record):
-# 3a75c3ae705b7ad3803625255de93bcd982e70c6, "feat(signoff): artifact-anchored
-# generic evidence for T1 items 1, 2, 9, 10" (klayout-tools#2718, PR #2843).
-# That grader re-hashes the artifact each item 1/2/9/10 envelope names in
-# provenance.input.path, which is what lets this repo cite those four rows
-# (see signoff/README.md). This pin is independent of
+# 7755612adb513f00ec61e7a77ff7091aee7630f5, "feat(signoff): item 6 not_applicable outcome"
+# (klayout-tools#2865, PR #3200). That grader re-hashes the artifact each item
+# 1/2/9/10 envelope names in provenance.input.path (klayout-tools#2718), which
+# is what lets this repo cite those four rows, and accepts the recorded item 6
+# not_applicable form (see signoff/README.md). This pin is independent of
 # flow/tool_versions.sh's RECORDED_KLT_VERSION, which governs the design-flow
 # evidence (see layout/README.md's "ERC scope, concretely" for the same
 # split); bump it deliberately, together with a regenerated
@@ -61,7 +61,7 @@ jobs:
 
       - name: Install the pinned klt (klayout-tools)
         run: |
-          uv tool install "klayout-tools @ git+https://github.com/2AMLogic/klayout-tools@3a75c3ae705b7ad3803625255de93bcd982e70c6"
+          uv tool install "klayout-tools @ git+https://github.com/2AMLogic/klayout-tools@7755612adb513f00ec61e7a77ff7091aee7630f5"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Verify every manifest pin against the live artifacts

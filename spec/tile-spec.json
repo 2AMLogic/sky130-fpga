@@ -1,0 +1,17 @@
+{
+  "status": "ratified",
+  "source": "spec/tile-spec.md",
+  "scope": "Only rows that spec/tile-spec.md itself marks ratified. The markdown spec's Status is Draft, and its other rows (LUT count, FF arrangement, carry, tile I/O, fabric size, bitstream) and the physical routing pitch (deferred, framework-gaps G3) carry no ratification stamp, so they are deliberately absent here.",
+  "rows": [
+    {
+      "id": "switch-matrix-routing-tracks",
+      "parameter": "Switch matrix routing (architectural target: 4 general-purpose routing tracks per tile edge)",
+      "ratified_by": "spec/tile-spec.md, 'Routing pitch' note, item 1: 'Architectural target (ratified here)'"
+    },
+    {
+      "id": "timing",
+      "parameter": "Timing (tile BEL logic only, 18 sky130_fd_sc_hd PVT corners)",
+      "ratified_by": "ADR-0002 (#28); WNS figure of record re-ratified by ADR-0003 (#42)"
+    }
+  ]
+}

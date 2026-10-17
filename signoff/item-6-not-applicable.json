@@ -1,0 +1,14 @@
+{
+  "rows": [
+    {
+      "id": "switch-matrix-routing-tracks",
+      "class": "architectural",
+      "reason": "The track count per tile edge is fixed by the tile description and read off it; it is a discrete architectural parameter, not a quantity that varies from die to die."
+    },
+    {
+      "id": "timing",
+      "class": "timing",
+      "reason": "Corner-bounded: the tile BEL logic is setup- and hold-clean at all 18 sky130_fd_sc_hd PVT corners by the klt sta sweep (signoff item 5), so the claim is a worst-case bound over the corner set, not a statistical figure."
+    }
+  ]
+}

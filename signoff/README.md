@@ -26,6 +26,11 @@ block's row is identified by the manifest's `block` field.
   multi-corner `klt sta` response (`pdk.corners`, all 18 ratified corners in
   one request) that `flow/sta-sweep.sh` writes and gates (issue #68; see the
   item-5 row below).
+- **`../spec/tile-spec.json`, `item-6-not-applicable.json`** — the recorded
+  item 6 `not_applicable` outcome (issue #212): a JSON rendering of the
+  ratified spec rows and the per-row statement of why none is statistical,
+  both content-hash-pinned in the manifest's `"6"` entry (see the item 6
+  row below).
 - **`item-1-design-sources.json`, `item-2-layout.json`,
   `item-9-testbenches.json`, `item-10-repo-hygiene.json`** — the
   artifact-anchored generic envelopes for T1 items 1, 2, 9 and 10 (see the
@@ -64,12 +69,19 @@ regenerate `tier-report.json` last.
 grader **cannot** check — the claim-side disclosures
 `docs/design-evidence-tiers.md` makes this repo's responsibility.
 
-**9 of 11 T1 items are `met`: items 1, 2, 3, 4, 5, 8, 9, 10, 11. Items 6
-and 7 render `unmet`/`no_evidence` and are deliberately uncited.** Item 11
+**9 of 11 T1 items are `met`: items 1, 2, 3, 4, 5, 8, 9, 10, 11. Item 6
+renders `not_applicable` (issue #212; counted apart in
+`t1_not_applicable_count`, never as `met`). Item 7 renders
+`unmet`/`no_evidence` and is deliberately uncited.** Item 11
 moved from `unmet`/`lvs_supply_unproven` to `met` in issue #69, when the LVS
 report gained `power_connectivity.status: "match"` (see its row below). The
 grader is pinned at klayout-tools
-`3a75c3ae705b7ad3803625255de93bcd982e70c6`. Moving to it changed no row for
+`7755612adb513f00ec61e7a77ff7091aee7630f5` (the commit that merged the item 6
+`not_applicable` outcome, klayout-tools#2865). Moving to it from
+`3a75c3ae705b7ad3803625255de93bcd982e70c6` changed no item's status except
+item 6 (`unmet`/`no_evidence` to `not_applicable`); item 10's citation hash
+moved with the workflow bytes and item 11's grader note text was reworded.
+Earlier, moving to the `3a75c3ae…` pin had changed no row for
 items 3, 4, 8 or 11 (item 11 kept reason `lvs_supply_unproven` until
 issue #69); the only
 other differences in `tier-report.json` are the grader's own metadata
@@ -250,11 +262,22 @@ byte-identical signoff code.
     is ratified);
   - the switch matrix and inter-tile routing, which have no
     implementation yet.
-- **Item 6 — uncited.** The tile's spec rows are functional and timing —
-  none is statistical (accuracy/offset/matching), so the Monte-Carlo item
-  has nothing to attach to. The tiers doc requires that absence be stated
-  explicitly rather than silently omitted: **this block's spec has no
-  statistical row.** No `klt yield` evidence exists or is owed.
+- **Item 6 — `not_applicable`.** The tile's spec rows are architectural and
+  timing; none is statistical (accuracy/offset/matching), so there is no
+  Monte-Carlo claim to evidence. The tiers doc requires that absence be
+  stated explicitly: **this block's spec has no statistical row. No
+  `klt yield` evidence exists or is owed.** The statement is now
+  machine-checkable (klayout-tools#2865): the manifest's `"6"` entry cites
+  `spec/tile-spec.json` and `signoff/item-6-not-applicable.json`, and editing
+  either file renders the item `unmet`/`stale_evidence`. What it does **not**
+  claim: `spec/tile-spec.md` is still **Draft**, and the JSON lists only the
+  rows the markdown itself marks ratified — the architectural routing-track
+  count and the ADR-0002/0003 timing row. The other rows (LUT count, FF
+  arrangement, carry, tile I/O, fabric size, bitstream) carry no ratification
+  stamp and the physical routing pitch is explicitly deferred (G3), so they
+  are absent from the JSON rather than overclaimed; none of them is
+  statistical either. Ratifying them is a spec change (decision record), not
+  part of this record.
 - **Item 7 — uncited.** The SDF-annotated gate-level re-simulation leg is
   blocked by a real upstream defect (`$sdf_annotate` crashes on escaped
   identifiers, klayout-tools#1890); the zero-delay leg passing is recorded

@@ -22,6 +22,18 @@
       "file": "measurements/timing-characterization/logic_tile.sta.json",
       "content_hash": "sha256:6e1bb79d924d42cd4debc48df534e7dabe20b0c0b46efbc7944c96d5b4f33be5"
     },
+    "6": {
+      "not_applicable": {
+        "spec": {
+          "file": "spec/tile-spec.json",
+          "content_hash": "sha256:87819c38e10d5c4beb44083c15b7754cf56a333af2f4db6af636ee46965bf0ee"
+        },
+        "statement": {
+          "file": "signoff/item-6-not-applicable.json",
+          "content_hash": "sha256:b42112f76cb1e49f20482a9ba5f968263e977e35bbe494d35fe8cd50bd39a4db"
+        }
+      }
+    },
     "8": {
       "file": "signoff/characterization-evidence.json",
       "content_hash": "sha256:9513ada8af48a8ce3924c9ed4523e2c413cfc9e94c12023e30076416a5f8c7d4"
@@ -32,7 +44,7 @@
     },
     "10": {
       "file": "signoff/item-10-repo-hygiene.json",
-      "content_hash": "sha256:4f93c5371fae319c657c919310a489c8a7941e2c432e0e0eea48f94b01692f18"
+      "content_hash": "sha256:fea257901e3a2fd0db9cb50e163239cd33373917b65cb68b99f9824848f51102"
     },
     "11": [
       {
