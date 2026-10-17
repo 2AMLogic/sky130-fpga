@@ -10,7 +10,7 @@ Why this is needed: `klt extract`'s flat extraction promotes *every* named
 net to a top-level pin by default (see docs/cli/extract.md), including the
 hundreds of internal, DEF-recovered hierarchical net names
 (`--def-net-names`) this design's `generate`-block RTL produces (see
-`flow/lvs_sanitize_verilog.py`'s header comment) -- so a `klt lvs
+`flow/sdf_sanitize_names.py`'s header comment) -- so a `klt lvs
 reference.form=gate-level-verilog` compare against the reference's genuine
 94 top-level pins (`clk`, `rst`, `ce[3:0]`, `in[15:0]`, `lut_init[63:0]`,
 `out[3:0]`, `reg_sel[3:0]`) fails outright (94 reference pins vs 137+

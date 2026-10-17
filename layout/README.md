@@ -323,7 +323,7 @@ topologically match a `sky130_fd_sc_hd`-built layout (see
   `reference.form = "gate-level-verilog"` converter misparses — a real,
   generically-filed tool gap
   ([`2AMLogic/klayout-tools#1371`](https://github.com/2AMLogic/klayout-tools/issues/1371)).
-  `flow/lvs_sanitize_verilog.py` works around it with a
+  `flow/sdf_sanitize_names.py` works around it with a
   connectivity-preserving, name-only rewrite before the compare — see that
   script's own header comment for why the rewrite cannot change the
   verdict.
