@@ -2,6 +2,12 @@
 
 Chronological record of merged pull requests and closed issues, maintained by the Loom Guide role. Newest entries appear first.
 
+### 2026-10-17
+
+- **PR #215**: feat: add paired netlist/SDF identifier sanitizer and item 7 retry record
+- **PR #214**: feat(signoff): record item 6 as not_applicable and bump klt grader pin
+- **Issue #212** (closed): T1 item 6: record the not_applicable outcome (klayout-tools#2865) instead of leaving the item uncited
+
 ### 2026-10-14
 
 - **PR #208**: refactor: drop unused env_unused parameter from _value
