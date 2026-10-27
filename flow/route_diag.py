@@ -37,22 +37,12 @@ Usage: flow/route_diag.py <out dir> [--snapshot sim/bitstream/fabric_spec.json]
 Writes <out>/<case>.fasm/.bin/.cfg, <out>/route.wiring, <out>/cases.txt and
 <out>/required.txt (the sorted required "<BEL> <pin> <edge>" coverage keys).
 """
-import argparse
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _modload import load_module as _load  # noqa: E402
+from _stream_gen import F, BELS, EDGES, LOGIC, manifest, model_pips, check_pips, roundtrip, check_reprogrammed, write_case, run_main  # noqa: E402
 
-
-F = _load("fasm_to_bitstream", REPO / "flow" / "fasm_to_bitstream.py")
-
-BELS = "ABCD"
-EDGES = "NESW"          # tin[4*dir + idx] order of the benches: 0=N 1=E 2=S 3=W
-LOGIC = "X1Y1"
 
 
 def required_routes(snap):
@@ -92,20 +82,9 @@ def fasm_text(case_id, bel, pin, edge):
 
 
 def check_model_pips(snap, lst):
-    model = {(sw, dw) for st, sw, dt, dw in snap["pips"] if st == LOGIC and dt == LOGIC}
+    model = model_pips(snap)
     for _, bel, pin, edge in lst:
-        for sw, dw in [(f"{edge}1END{pin}", f"L{bel}_I{pin}")] + [(f"L{x}_O", f"S1BEG{j}") for j, x in enumerate(BELS)]:
-            if (sw, dw) not in model:
-                raise F.AsmError(f"pip {LOGIC}.{sw}.{dw} is not in the frozen fabric model")
-
-
-def manifest(snap, ltile):
-    cols, rows = snap["grid"]
-    _, lx, ly = ltile
-    out = [f"GRID {cols} {rows}", f"TILE {lx} {ly}"]
-    out += [f"OUT {x} {EDGES.index('S')} {j}" for j, x in enumerate(BELS)]   # S1BEG<j>
-    out.append("END")
-    return "\n".join(out) + "\n"
+        check_pips(model, [(f"{edge}1END{pin}", f"L{bel}_I{pin}")] + [(f"L{x}_O", f"S1BEG{j}") for j, x in enumerate(BELS)])
 
 
 def generate(out_dir, snap_path):
@@ -124,19 +103,12 @@ def generate(out_dir, snap_path):
     prev_cfg, rows = None, []
     for cid, bel, pin, edge in lst:
         text = fasm_text(cid, bel, pin, edge)
-        asm = F.assemble(text, snap, None)
-        data = F.pack(asm["positions"], snap)
-        cfg, _ = F.decode(data, snap)
-        if cfg != asm["cfg"]:
-            raise F.AsmError(f"{cid}: decode(pack()) != assembled cfg")
+        asm, data, cfg = roundtrip(cid, text, snap)
         if asm["bel_used"] != ["ABCD".index(bel)]:
             raise F.AsmError(f"{cid}: expected exactly one configured BEL")
-        if cfg == prev_cfg:
-            raise F.AsmError(f"{cid}: stream identical to its predecessor (no reprogramming)")
+        check_reprogrammed(cid, cfg, prev_cfg)
         prev_cfg = cfg
-        (out / f"{cid}.fasm").write_text(text)
-        (out / f"{cid}.bin").write_bytes(data)
-        (out / f"{cid}.cfg").write_text(f"{cfg:040x}\n")
+        write_case(out, cid, text, data, cfg)
         rows.append(f"{cid} {bel} {pin} {edge}")
     # distinct streams: no two cases share a configuration
     cfgs = {(out / f"{c[0]}.cfg").read_text() for c in lst}
@@ -151,16 +123,7 @@ def generate(out_dir, snap_path):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("out")
-    ap.add_argument("--snapshot", default=str(REPO / "sim" / "bitstream" / "fabric_spec.json"))
-    a = ap.parse_args(argv)
-    try:
-        generate(a.out, a.snapshot)
-    except (F.AsmError, F.BitstreamError) as e:
-        print(f"error: {e}", file=sys.stderr)
-        return 1
-    return 0
+    return run_main(generate, __doc__.split("\n")[0], argv)
 
 
 if __name__ == "__main__":

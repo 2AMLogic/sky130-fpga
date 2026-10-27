@@ -45,22 +45,14 @@ from the stream, cfg or map.
 Usage: flow/lut_basis.py <out dir> [--snapshot sim/bitstream/fabric_spec.json]
 Writes <out>/<case>.fasm/.bin/.cfg, <out>/basis.wiring and <out>/cases.txt.
 """
-import argparse
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _modload import load_module as _load  # noqa: E402
+from _stream_gen import F, BELS, LOGIC, roundtrip, write_case, run_main  # noqa: E402
 
-
-F = _load("fasm_to_bitstream", REPO / "flow" / "fasm_to_bitstream.py")
-
-BELS = "ABCD"
 PADS = "ABCD"
-IN_CAP, LOGIC, OUT_CAP = "X1Y0", "X1Y1", "X1Y2"
+IN_CAP, OUT_CAP = "X1Y0", "X1Y2"
 
 
 def route_lines():
@@ -142,11 +134,7 @@ def generate(out_dir, snap_path):
     blank_cfg, wiring_txt, lst = None, None, []
     for cid, bel, kind, addr in cases():
         text = fasm_text(cid, bel, kind, addr)
-        asm = F.assemble(text, snap, None)          # bit assembly through the existing assembler
-        data = F.pack(asm["positions"], snap)
-        cfg, _ = F.decode(data, snap)                # independent frame-stream reader
-        if cfg != asm["cfg"]:
-            raise F.AsmError(f"{cid}: decode(pack()) != assembled cfg")
+        asm, data, cfg = roundtrip(cid, text, snap)   # existing assembler, independent frame-stream reader
         if any(asm["bel_used"]) and kind == "zero":
             raise F.AsmError(f"{cid}: zero case configures a BEL")
         w = manifest(F.trace_wiring(pips_of(text), snap, ltile[0]), snap, ltile)
@@ -161,9 +149,7 @@ def generate(out_dir, snap_path):
         want = {"zero": 0, "ones": 16, "onehot": 1}[kind]
         if bin(cfg ^ blank_cfg).count("1") != want:
             raise F.AsmError(f"{cid}: {bin(cfg ^ blank_cfg).count('1')} bits differ from blank, want {want}")
-        (out / f"{cid}.fasm").write_text(text)
-        (out / f"{cid}.bin").write_bytes(data)
-        (out / f"{cid}.cfg").write_text(f"{cfg:040x}\n")
+        write_case(out, cid, text, data, cfg)
         lst.append(f"{cid} {bel} {kind} {addr}")
     (out / "basis.wiring").write_text(wiring_txt)
     (out / "cases.txt").write_text("\n".join(lst) + "\n")
@@ -176,16 +162,7 @@ def generate(out_dir, snap_path):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("out")
-    ap.add_argument("--snapshot", default=str(REPO / "sim" / "bitstream" / "fabric_spec.json"))
-    a = ap.parse_args(argv)
-    try:
-        generate(a.out, a.snapshot)
-    except (F.AsmError, F.BitstreamError) as e:
-        print(f"error: {e}", file=sys.stderr)
-        return 1
-    return 0
+    return run_main(generate, __doc__.split("\n")[0], argv)
 
 
 if __name__ == "__main__":
