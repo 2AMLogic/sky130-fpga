@@ -3,7 +3,7 @@
 
 Connectivity-preserving, name-only rewrites of a routed DEF and of a `klt
 extract --parasitics --spef` SPEF, so that a real, SPEF-annotated OpenSTA
-run is possible for this design. Sibling of `flow/lvs_sanitize_verilog.py`,
+run is possible for this design. Sibling of `flow/sdf_sanitize_names.py`,
 which does the analogous thing for `klt lvs`'s Verilog reference netlist
 and for the same underlying reason.
 

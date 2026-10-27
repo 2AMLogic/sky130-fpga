@@ -284,13 +284,13 @@
         "command": null,
         "kind": "generic",
         "check_status": "pass",
-        "content_hash": "sha256:1ab6fe1092a5fa8d330151122bbc17e72b98fd2ddd3690313d797cf33117bcc6",
+        "content_hash": "sha256:344ef15620b65fcea36e6e1322d40a716cc348258455fd705c7724e237d67fae",
         "input_verified": true,
         "exit_status": 0,
         "artifact_binding": {
           "t1_item": 9,
           "path": "../measurements/claim-traceability.md",
-          "content_hash": "sha256:1ab6fe1092a5fa8d330151122bbc17e72b98fd2ddd3690313d797cf33117bcc6",
+          "content_hash": "sha256:344ef15620b65fcea36e6e1322d40a716cc348258455fd705c7724e237d67fae",
           "input_verified": true,
           "summary": "T1 item 9 testbenches shipped: measurements/claim-traceability.md (issue #34 walk, re-audited post-PDN, for the issue #68 timing_status re-sweep, and for the issue #69 LVS power-connectivity re-enable) maps every published claim to a committed testbench or flow script and a pinned PDK; ./flow/audit-evidence.sh re-derives its machine half and passes clean. Cold-start: ./flow/audit-evidence.sh.",
           "source": "measurements/claim-traceability.md"

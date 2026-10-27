@@ -18,7 +18,7 @@
 #   DRC  klt drc  (same deck/flags as flow/drc.sh)         -> .drc.json
 #   LVS  klt extract + klt lvs against the committed as-built netlist
 #        layout/experimental/logic_tile_routed.v, same pipeline as
-#        flow/lvs.sh (flow/lvs_sanitize_verilog.py, lvs_declared_pins.py,
+#        flow/lvs.sh (flow/sdf_sanitize_names.py lvs, lvs_declared_pins.py,
 #        abstract non-filler sky130_fd_sc_hd cells)         -> .lvs.json
 #   ERC  klt erc with the existing flow/erc_supply_spec.json -> .erc.json
 #   pitch flow/routed_pitch.py on the committed DEF + par.json -> .pitch.json
@@ -90,7 +90,7 @@ python3 "$SCRIPT_DIR/drc_report_trim.py" "$BUILD_DIR/drc.raw" "$BUILD_DIR/${TOP}
 
 # --- LVS ------------------------------------------------------------------
 echo "=== klt extract + klt lvs ${TOP} (committed as-built netlist; experimental observation) ==="
-python3 "$SCRIPT_DIR/lvs_sanitize_verilog.py" "$NETLIST" "$BUILD_DIR/${TOP}.sanitized.v"
+python3 "$SCRIPT_DIR/sdf_sanitize_names.py" lvs "$NETLIST" "$BUILD_DIR/${TOP}.sanitized.v"
 DECLARED_PINS="$(python3 "$SCRIPT_DIR/lvs_declared_pins.py" "$NETLIST")"
 klt extract "$GDS" --deck sky130 \
     --abstract-cells "${STD_CELL_LIBRARY}__[!f]*" --def-net-names \

@@ -104,6 +104,14 @@ ALLOWED_INPUT_DRIFT = {
         "diffs are the SPEF *VERSION header / spef_sha256 from the installed "
         "klt build, which predate this change (toolchain drift)."
     ),
+    ("20261017-sdf-sanitize-d811bcd", "flow/sdf_sanitize_names.py"): (
+        "issue #216 added an `lvs` mode (and a `predicate` parameter on "
+        "sanitize_netlist, defaulting to the unchanged needs_rewrite) used "
+        "only by flow/lvs.sh and flow/routed_checks.sh. The `netlist`, `sdf` "
+        "and `check` modes this record exercises take the same code path "
+        "with the same rule, so its numbers cannot move; "
+        "flow/test_sdf_sanitize_names.py still passes."
+    ),
     ("20261008-234741-dc615b4", "flow/sta_envelope_check.py"): (
         "issue #113 added an opt-in --observation flag used only by --routed. Default (BEL-only) target is unchanged: same "
         "paths, requests, sanitizer mode and gate. Verified by re-running the "

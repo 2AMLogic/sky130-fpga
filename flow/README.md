@@ -44,7 +44,7 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | `synth.sh` | generic-cell netlist | - |
 | `layout.sh`, `par_request.py`, `par_report_trim.py`, `gds_canonicalize.py` | `layout/logic_tile.gds`, `.def`, `.par.json` | - |
 | `drc.sh`, `drc_report_trim.py` | `layout/logic_tile.drc.json` | - |
-| `lvs.sh`, `lvs_report_trim.py`, `lvs_declared_pins.py`, `lvs_sanitize_verilog.py` | `layout/logic_tile.lvs.json` | - |
+| `lvs.sh`, `lvs_report_trim.py`, `lvs_declared_pins.py`, `sdf_sanitize_names.py` | `layout/logic_tile.lvs.json` | - |
 | `erc.sh`, `erc_report_trim.py`, `erc_supply_spec.json` | `layout/logic_tile.erc.json` | - |
 | `sta-sweep.sh`, `sta_report_trim.py`, `sta_sanitize_names.py`, `sta_envelope_check.py` | `measurements/timing-characterization/logic_tile.sta.json` | - |
 | `layout_routed.sh`, `layout_routed_record.py`, `routed_checks.sh`, `routed_pitch.py` | `layout/experimental/` composed-tile canary (EXPERIMENTAL) | - |
@@ -678,7 +678,7 @@ Verilog *escaped* identifiers containing `[`, `]`, `.`, `/` — a real `klt
 lvs` parsing gap in its `reference.form = "gate-level-verilog"` converter,
 filed generically as
 [`2AMLogic/klayout-tools#1371`](https://github.com/2AMLogic/klayout-tools/issues/1371).
-`flow/lvs_sanitize_verilog.py` works around this with a
+`flow/sdf_sanitize_names.py` works around this with a
 connectivity-preserving, name-only rewrite before handing the netlist to
 `klt lvs`. `flow/lvs_declared_pins.py` derives the layout side's `--pins`
 allow-list from the same as-built netlist's own port declarations, since a
@@ -873,7 +873,7 @@ generically:
   Measured here: 40 of 152 `*D_NET` blocks, including every net on the
   critical path. Same family as
   [`#1371`](https://github.com/2AMLogic/klayout-tools/issues/1371), the
-  LVS-side gap `flow/lvs_sanitize_verilog.py` already works around.
+  LVS-side gap `flow/sdf_sanitize_names.py` already works around.
 - [`klayout-tools#1624`](https://github.com/2AMLogic/klayout-tools/issues/1624)
   — `klt sta` reported `spef_annotation.annotation_complete: true` for a
   SPEF whose annotation OpenSTA's `read_spef` then discarded entirely,
@@ -1116,7 +1116,7 @@ Runs the pinned `klt drc`, `klt extract` + `klt lvs`, and `klt erc` (existing
 `flow/erc_supply_spec.json`, unchanged) against the **committed**
 `layout/experimental/logic_tile_routed.gds` and its committed as-built
 netlist, reusing `flow/drc_report_trim.py`, `lvs_report_trim.py`,
-`erc_report_trim.py`, `lvs_sanitize_verilog.py`, `lvs_declared_pins.py`,
+`erc_report_trim.py`, `sdf_sanitize_names.py`, `lvs_declared_pins.py`,
 `pdk_root.sh` and `tool_versions.sh` (no copies). It never regenerates the
 layout. `flow/routed_pitch.py` additionally extracts the DEF track pitch,
 routed segments/length per layer, via counts and utilization.

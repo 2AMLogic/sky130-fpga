@@ -49,9 +49,10 @@
 # in its `reference.form = "gate-level-verilog"` converter, filed
 # generically at https://github.com/2AMLogic/klayout-tools/issues/1371.
 # This script works around that gap with a connectivity-preserving,
-# name-only rewrite (flow/lvs_sanitize_verilog.py) before handing the
-# netlist to `klt lvs` -- see that script's own header comment for why the
-# rewrite cannot change the compare's verdict. It also derives the layout
+# name-only rewrite (flow/sdf_sanitize_names.py `lvs`, the same shared rename
+# rule the STA/SDF flow uses) before handing the netlist to `klt lvs` -- see
+# that script's own header comment for why the rewrite cannot change the
+# compare's verdict. It also derives the layout
 # side's `--pins` allow-list from the same as-built netlist's own port
 # declarations (flow/lvs_declared_pins.py), since a flat `klt extract`
 # promotes every DEF-recovered internal net name to a top-level pin by
@@ -224,7 +225,7 @@ fi
 
 SANITIZED_NETLIST="$LVS_BUILD_DIR/${TOP_MODULE}.sanitized.v"
 echo "=== sanitizing escaped identifiers (klayout-tools#1371 workaround) ==="
-python3 "$SCRIPT_DIR/lvs_sanitize_verilog.py" "$AS_BUILT_NETLIST" "$SANITIZED_NETLIST"
+python3 "$SCRIPT_DIR/sdf_sanitize_names.py" lvs "$AS_BUILT_NETLIST" "$SANITIZED_NETLIST"
 
 DECLARED_PINS="$(python3 "$SCRIPT_DIR/lvs_declared_pins.py" "$AS_BUILT_NETLIST")"
 
