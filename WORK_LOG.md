@@ -4,6 +4,8 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-10-27
 
+- **PR #229**: build: pin signoff grader to klayout-tools 0.8.0 and regenerate tier report
+- **Issue #227** (closed): Bump klayout-tools pin 0.5.0, 0.7.0, 7755612adb51 → 0.8.0
 - **PR #226**: refactor: share one load_module helper across flow scripts and tests
 - **Issue #225** (closed): Dedupe 14 copies of the _load() module-loader helper in flow/
 - **PR #222**: docs(sim): document generated inputs and cold-clone runnability of benches
