@@ -19,7 +19,6 @@ Usage:
 Features are FASM pip lines, e.g. X1Y1.E1END2.LC_I2 -> X1Y1.S1END2.LC_I2.
 """
 import argparse
-import importlib.util
 import shutil
 import sys
 from pathlib import Path
@@ -27,11 +26,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent.parent
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
 
 
 F = _load("fasm_to_bitstream", REPO / "flow" / "fasm_to_bitstream.py")

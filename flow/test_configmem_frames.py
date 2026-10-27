@@ -5,7 +5,6 @@ ConfigMem equivalence step.
 
     python3 flow/test_configmem_frames.py
 """
-import importlib.util
 import shutil
 import subprocess
 import sys
@@ -18,11 +17,7 @@ FIX = REPO / "sim" / "bitstream"
 sys.path.insert(0, str(REPO / "flow"))
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+from _modload import load_module as _load  # noqa: E402
 
 
 M = _load("configmem_frames", REPO / "flow" / "configmem_frames.py")
