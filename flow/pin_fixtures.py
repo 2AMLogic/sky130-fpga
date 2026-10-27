@@ -27,7 +27,6 @@ Subcommands (stdlib only, no mapper needed):
 """
 import argparse
 import hashlib
-import importlib.util
 import json
 import shutil
 import sys
@@ -50,11 +49,8 @@ class FixtureError(Exception):
     pass
 
 
-def _load(name):
-    spec = importlib.util.spec_from_file_location(name, HERE / f"{name}.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
 
 
 def sha256_file(p):
@@ -154,7 +150,7 @@ def verify(d, snap_dir=SNAP_DIR):
 
 
 def _check_netlist_relation(d, nlf, cases):
-    pe = _load("pin_experiment")
+    pe = _load("pin_experiment", HERE / "pin_experiment.py")
     mod = json.loads(nlf.read_text())["modules"]["top"]
     luts = pe.lut_cells(mod)
     live = pe.live_nets(mod)
@@ -176,7 +172,7 @@ def _check_netlist_relation(d, nlf, cases):
 
 # ------------------------------------------------------------------ corrupt (negative test)
 def corrupt(src, dst, bel=0, snap_dir=SNAP_DIR):
-    fab = _load("fasm_to_bitstream")
+    fab = _load("fasm_to_bitstream", HERE / "fasm_to_bitstream.py")
     snap = fab.load_snapshot(Path(snap_dir) / "fabric_spec.json")
     src, dst = Path(src), Path(dst)
     if dst.exists():

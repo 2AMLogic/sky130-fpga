@@ -38,18 +38,14 @@ Writes <out>/<case>.fasm/.bin/.cfg, <out>/route.wiring, <out>/cases.txt and
 <out>/required.txt (the sorted required "<BEL> <pin> <edge>" coverage keys).
 """
 import argparse
-import importlib.util
 import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
 
 
 F = _load("fasm_to_bitstream", REPO / "flow" / "fasm_to_bitstream.py")

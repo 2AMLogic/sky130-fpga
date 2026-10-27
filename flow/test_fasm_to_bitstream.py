@@ -4,7 +4,6 @@ committed fixtures in sim/bitstream/, so it needs no mapping tool.
 
     python3 flow/test_fasm_to_bitstream.py
 """
-import importlib.util
 import json
 import random
 import sys
@@ -15,11 +14,8 @@ REPO = Path(__file__).resolve().parent.parent
 FIX = REPO / "sim" / "bitstream"
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
 
 
 F = _load("fasm_to_bitstream", REPO / "flow" / "fasm_to_bitstream.py")

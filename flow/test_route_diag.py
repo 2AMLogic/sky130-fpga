@@ -5,8 +5,8 @@ snapshot sim/bitstream/fabric_spec.json, no mapping tool or simulator.
     python3 -I flow/test_route_diag.py
 """
 import copy
-import importlib.util
 import tempfile
+import sys
 import unittest
 from pathlib import Path
 
@@ -14,11 +14,8 @@ REPO = Path(__file__).resolve().parent.parent
 SNAP_PATH = REPO / "sim" / "bitstream" / "fabric_spec.json"
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
 
 
 R = _load("route_diag", REPO / "flow" / "route_diag.py")

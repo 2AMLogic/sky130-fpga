@@ -3,18 +3,15 @@
 
     python3 -I flow/test_sdf_sanitize_names.py
 """
-import importlib.util
+import sys
 import unittest
 from pathlib import Path
 
 FLOW = Path(__file__).resolve().parent
 
 
-def _load(name, path):
-    spec = importlib.util.spec_from_file_location(name, path)
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
 
 
 S = _load("sdf_sanitize_names", FLOW / "sdf_sanitize_names.py")
