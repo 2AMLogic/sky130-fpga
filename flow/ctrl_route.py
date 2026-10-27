@@ -48,27 +48,17 @@ Usage: flow/ctrl_route.py <out dir> [--snapshot sim/bitstream/fabric_spec.json]
 Writes <out>/<case>.fasm/.bin/.cfg, <out>/ctrl.wiring, <out>/cases.txt and
 <out>/required.txt (the sorted required "<EN|SR> <bel|-> <edge>" coverage keys).
 """
-import argparse
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _modload import load_module as _load  # noqa: E402
+from _stream_gen import F, BELS, EDGES, LOGIC, manifest, model_pips, check_pips, roundtrip, check_reprogrammed, write_case, run_main  # noqa: E402
 
-
-F = _load("fasm_to_bitstream", REPO / "flow" / "fasm_to_bitstream.py")
-
-BELS = "ABCD"
-EDGES = "NESW"          # tin[4*dir + idx] order of the benches: 0=N 1=E 2=S 3=W
-LOGIC = "X1Y1"
 
 
 def required_routes(snap):
     """-> set of ('EN', bel, edge) / ('SR', '-', edge) read from the frozen pip model."""
-    pips = {(sw, dw) for st, sw, dt, dw in snap["pips"] if st == LOGIC and dt == LOGIC}
+    pips = model_pips(snap)
     req = set()
     for sw, dw in pips:
         if len(sw) != 6 or sw[0] not in EDGES or sw[1:5] != "1END" or sw[5] not in "0123":
@@ -152,22 +142,11 @@ def pips_of_case(text):
 
 
 def check_model_pips(snap, rows):
-    model = {(sw, dw) for st, sw, dt, dw in snap["pips"] if st == LOGIC and dt == LOGIC}
+    model = model_pips(snap)
     for cid, kind, bel, edge, redge, en in rows:
         wanted = [(f"{redge}1END0", "J_SR_BEG0")] + [(f"{en[k]}1END{k}", f"J_EN_BEG{k}") for k in range(4)]
         wanted += [(f"L{x}_O", f"S1BEG{j}") for j, x in enumerate(BELS)]
-        for sw, dw in wanted:
-            if (sw, dw) not in model:
-                raise F.AsmError(f"{cid}: pip {LOGIC}.{sw}.{dw} is not in the frozen fabric model")
-
-
-def manifest(snap, ltile):
-    cols, rows = snap["grid"]
-    _, lx, ly = ltile
-    out = [f"GRID {cols} {rows}", f"TILE {lx} {ly}"]
-    out += [f"OUT {x} {EDGES.index('S')} {j}" for j, x in enumerate(BELS)]   # S1BEG<j>
-    out.append("END")
-    return "\n".join(out) + "\n"
+        check_pips(model, wanted, f"{cid}: ")
 
 
 def generate(out_dir, snap_path):
@@ -195,20 +174,13 @@ def generate(out_dir, snap_path):
         text = fasm_text(cid, kind, bel, edge, redge, en)
         if pips_of_case(text) != {"en": list(en), "sr": redge}:
             raise F.AsmError(f"{cid}: rendered FASM does not route the recorded role edges")
-        asm = F.assemble(text, snap, None)
-        data = F.pack(asm["positions"], snap)
-        cfg, _ = F.decode(data, snap)
-        if cfg != asm["cfg"]:
-            raise F.AsmError(f"{cid}: decode(pack()) != assembled cfg")
+        asm, data, cfg = roundtrip(cid, text, snap)
         if sorted(asm["bel_used"]) != [0, 1, 2, 3]:
             raise F.AsmError(f"{cid}: expected all four BELs configured")
-        if cfg == prev_cfg:
-            raise F.AsmError(f"{cid}: stream identical to its predecessor (no reprogramming)")
+        check_reprogrammed(cid, cfg, prev_cfg)
         prev_cfg = cfg
         cfgs.add(cfg)
-        (out / f"{cid}.fasm").write_text(text)
-        (out / f"{cid}.bin").write_bytes(data)
-        (out / f"{cid}.cfg").write_text(f"{cfg:040x}\n")
+        write_case(out, cid, text, data, cfg)
         lst.append(f"{cid} {kind} {bel} {edge} {redge} {en}")
     if len(cfgs) != len(rows):
         raise F.AsmError("two control-route cases assemble to the same configuration")
@@ -221,16 +193,7 @@ def generate(out_dir, snap_path):
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("out")
-    ap.add_argument("--snapshot", default=str(REPO / "sim" / "bitstream" / "fabric_spec.json"))
-    a = ap.parse_args(argv)
-    try:
-        generate(a.out, a.snapshot)
-    except (F.AsmError, F.BitstreamError) as e:
-        print(f"error: {e}", file=sys.stderr)
-        return 1
-    return 0
+    return run_main(generate, __doc__.split("\n")[0], argv)
 
 
 if __name__ == "__main__":

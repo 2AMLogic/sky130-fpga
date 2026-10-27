@@ -64,22 +64,12 @@ Usage: flow/output_route.py <out dir> [--snapshot sim/bitstream/fabric_spec.json
 Writes <out>/<case>.fasm/.bin/.cfg, <out>/out.wiring, <out>/cases.txt and
 <out>/required.txt (the sorted required "<E> <i> <tok>" coverage keys).
 """
-import argparse
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _modload import load_module as _load  # noqa: E402
+from _stream_gen import F, BELS, EDGES, LOGIC, manifest, model_pips, check_pips, roundtrip, check_reprogrammed, write_case, run_main  # noqa: E402
 
-
-F = _load("fasm_to_bitstream", REPO / "flow" / "fasm_to_bitstream.py")
-
-BELS = "ABCD"
-EDGES = "NESW"          # tin[4*dir + idx] order of the benches: 0=N 1=E 2=S 3=W
-LOGIC = "X1Y1"
 INVERT = {"A": False, "B": True, "C": False, "D": True}    # BEL polarity (both appear)
 ENV = (0x0000, 0xFFFF, 0xAAAA, 0xCCCC, 0xF0F0, 0xFF00)      # same set as sim/tb_output_route.v
 
@@ -165,19 +155,11 @@ def sink_sources_of(text):
 
 
 def check_model_pips(snap, rows):
-    model = {(sw, dw) for st, sw, dt, dw in snap["pips"] if st == LOGIC and dt == LOGIC}
+    model = model_pips(snap)
     for cid, e, t, tok, bg in rows:
         wanted = [(f"{e}1END{k}", f"L{x}_I{k}") for k, x in enumerate(BELS)]
         wanted += [(src_name(bg[n], n % 4), sink_name(n)) for n in range(16)]
-        for sw, dw in wanted:
-            if (sw, dw) not in model:
-                raise F.AsmError(f"{cid}: pip {LOGIC}.{sw}.{dw} is not in the frozen fabric model")
-
-
-def manifest(snap, ltile):
-    cols, rows = snap["grid"]
-    _, lx, ly = ltile
-    return "\n".join([f"GRID {cols} {rows}", f"TILE {lx} {ly}", "END"]) + "\n"
+        check_pips(model, wanted, f"{cid}: ")
 
 
 def generate(out_dir, snap_path):
@@ -198,24 +180,17 @@ def generate(out_dir, snap_path):
         text = fasm_text(cid, e, t, tok, bg)
         if sink_sources_of(text) != {n: bg[n] for n in range(16)} or bg[4 * EDGES.index(e) + t] != tok:
             raise F.AsmError(f"{cid}: rendered FASM does not route the recorded sink sources")
-        asm = F.assemble(text, snap, None)
-        data = F.pack(asm["positions"], snap)
-        cfg, _ = F.decode(data, snap)
-        if cfg != asm["cfg"]:
-            raise F.AsmError(f"{cid}: decode(pack()) != assembled cfg")
+        asm, data, cfg = roundtrip(cid, text, snap)
         if sorted(asm["bel_used"]) != [0, 1, 2, 3]:
             raise F.AsmError(f"{cid}: expected all four BELs configured")
-        if cfg == prev_cfg:
-            raise F.AsmError(f"{cid}: stream identical to its predecessor (no reprogramming)")
+        check_reprogrammed(cid, cfg, prev_cfg)
         prev_cfg = cfg
         cfgs.add(cfg)
-        (out / f"{cid}.fasm").write_text(text)
-        (out / f"{cid}.bin").write_bytes(data)
-        (out / f"{cid}.cfg").write_text(f"{cfg:040x}\n")
+        write_case(out, cid, text, data, cfg)
         lst.append(f"{cid} {e} {t} {tok} {bg}")
     if len(cfgs) != len(rows):
         raise F.AsmError("two output-route cases assemble to the same configuration")
-    (out / "out.wiring").write_text(manifest(snap, ltile))
+    (out / "out.wiring").write_text(manifest(snap, ltile, outs=False))
     (out / "cases.txt").write_text("\n".join(lst) + "\n")
     (out / "required.txt").write_text("\n".join(sorted(f"{e} {t} {tok}" for e, t, tok in req)) + "\n")
     print(f"output_route: {len(lst)} streams = 16 output tracks x 7 sources, every one a pip of the frozen model, "
@@ -288,16 +263,7 @@ def main(argv=None):
         got = predict([(r[0], r[1], int(r[2]), r[3], r[4]) for r in rows], mutant)
         print(" ".join(got))
         return 0
-    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("out")
-    ap.add_argument("--snapshot", default=str(REPO / "sim" / "bitstream" / "fabric_spec.json"))
-    a = ap.parse_args(argv)
-    try:
-        generate(a.out, a.snapshot)
-    except (F.AsmError, F.BitstreamError) as e:
-        print(f"error: {e}", file=sys.stderr)
-        return 1
-    return 0
+    return run_main(generate, __doc__.split("\n")[0], argv)
 
 
 if __name__ == "__main__":
