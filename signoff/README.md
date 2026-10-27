@@ -207,7 +207,7 @@ byte-identical signoff code.
   item-10 envelope hash and the manifest pin (`verify-pins.sh` fails until
   you do), then regenerating `tier-report.json` last. Native DRC or LVS
   envelopes are deliberately not cited for these rows.
-- **Item 5 (corner verification against a ratified spec) — met, STA half
+- **Item 5 (corner verification against a ratified spec) — `unmet`, STA half
   only** (issue #68). Cited envelope:
   `measurements/timing-characterization/logic_tile.sta.json`, the trimmed
   response of **one** `klt sta` request with `pdk.corners` listing all 18
@@ -263,9 +263,10 @@ byte-identical signoff code.
   timing-correct functional leg, the SDF-annotated gate-level
   re-simulation, is still blocked. That is item 7: klayout-tools#1890
   closed only as a fail-loud guard; re-tried 2026-10-08 under #72, the
-  gap is now klayout-tools#2897 (record `20261008-233733-23e6b5e`). The
-  grader marks item 5 `met` on the STA envelope alone, so this paragraph
-  is the disclosure. Also not covered:
+  gap is now klayout-tools#2897 (record `20261008-233733-23e6b5e`). Under
+  the 0.8.0 grader item 5 is `unmet`/`partial_coverage` (`missing_kinds:
+  ["functional-verification"]`): the STA envelope alone no longer earns
+  `met`, and this paragraph records what is still missing. Also not covered:
   - propagated-clock timing (the clock is an ideal SDC clock);
   - any Fmax figure (`fmax_mhz` is a `1/(T-WNS)` extrapolation, and none
     is ratified);
