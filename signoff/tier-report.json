@@ -5,18 +5,18 @@
   "tier": null,
   "t1_item_count": 11,
   "build_t1_item_count": 11,
-  "t1_met_count": 9,
+  "t1_met_count": 8,
   "t1_not_applicable_count": 1,
   "source_doc": "docs/design-evidence-tiers.md",
-  "source_doc_content_hash": "sha256:43a8b74966522a29e8a1adf66bf02d7cc1e882455ac8f83144700d9748dd2319",
+  "source_doc_content_hash": "sha256:a26b90262320d0fbd32b3f549a02b6300832706041797a559d8bf6bdb62efdc7",
   "build": {
-    "version": "0.7.1.dev1312+g7755612adb51",
-    "package_version": "0.7.1.dev1312+g7755612adb51",
-    "git_commit": "7755612adb513f00ec61e7a77ff7091aee7630f5",
-    "git_tag": null,
+    "version": "0.8.0",
+    "package_version": "0.8.0",
+    "git_commit": "c572046be644e0407f693f2410f3abb799d68a3a",
+    "git_tag": "v0.8.0",
     "dirty": false,
-    "is_release": false,
-    "grading_ruleset_id": "sha256:af517243b40f0d84971b0c45f012b602769dbea07d355314ed8637ba9b2f9d55"
+    "is_release": true,
+    "grading_ruleset_id": "sha256:46c446d84423b7399ee1cf957b3d49801ae4f42a0bda53da92f435776cf977c4"
   },
   "items": [
     {
@@ -158,7 +158,7 @@
       "id": 4,
       "title": "LVS clean",
       "partition": null,
-      "text": "latest LVS report `status: match`, fresh, engine named, checked against the netlist from item 1 (schematic netlist for analog, synthesized/routed gate-level netlist for digital), **and that same report's `power_connectivity.status` not `\"mismatch\"`**. Those are two verdicts, not one: `klt lvs`'s top-level `status` is the *signal*- connectivity compare's own result, and since issue #1952 the power/ground half is reported beside it in its own `power_connectivity` block (`docs/cli/lvs.md` \u2192 \"Power/ground connectivity\"). `klt signoff` already grades this item on both \u2014 an `lvs`-kind check passes only on `status == \"match\"` **and** `power_connectivity.status != \"mismatch\"` (issue #1965) \u2014 so a claim resting on `status: match` alone is weaker than the tool that grades it. What the check verifies is per-standard-cell-instance *pin-to-net* correctness: on every abstracted instance, each pin the PDK library declares power/ground must reach the net the caller declared (`options.power_connectivity.expected_nets`) or, absent a declaration, the same net every other instance's same-named pin reaches; a disagreement renders `power.inconsistent_pin_net` / `power.unexpected_pin_net`, and a pin on no net at all renders `power.unconnected_pin`. **The check's reach is narrower than \"the power grid is verified\", and a claim must not say otherwise.** A `power_connectivity.status` of `\"unchecked\"` \u2014 every `reference.form` other than `gate-level-verilog`, an explicit `options.power_connectivity: false`, or a layout whose instances declare no PG pins at all \u2014 means the question was never asked; this item and `klt signoff` both read it as \"does not apply here\", never as \"verified\", so a fleet policy of \"re-run LVS, look for `match`\" is not by itself power-connectivity evidence (#1985). And even where it does run it is *not* a geometric rail/grid continuity check: whether a rail is an unbroken annulus, and whether the grid carries the current, stay `klt ring-check`, `klt power`, and the DRC deck's business \u2014 see \"Power/IR-drop + EM evidence\" below for what is and is not covered. Warnings-only mismatches must be listed with the claim. A second, independent engine's concurring verdict (#343) strengthens this from \"one toolchain agrees with itself\" to a cross-checked result.",
+      "text": "latest LVS report `status: match`, fresh, engine named, checked against the netlist from item 1 (schematic netlist for analog, synthesized/routed gate-level netlist for digital), **and that same report's `power_connectivity.status` not `\"mismatch\"`**. Those are two verdicts, not one: `klt lvs`'s top-level `status` is the *signal*- connectivity compare's own result, and since issue #1952 the power/ground half is reported beside it in its own `power_connectivity` block (`docs/cli/lvs.md` \u2192 \"Power/ground connectivity\"). `klt signoff` already grades this item on both \u2014 an `lvs`-kind check passes only on `status == \"match\"` **and** `power_connectivity.status != \"mismatch\"` (issue #1965) \u2014 so a claim resting on `status: match` alone is weaker than the tool that grades it. What the check verifies is per-standard-cell-instance *pin-to-net* correctness: on every abstracted instance, each pin the PDK library declares power/ground must reach the net the caller declared (`options.power_connectivity.expected_nets`) or, absent a declaration, the same net every other instance's same-named pin reaches; a disagreement renders `power.inconsistent_pin_net` / `power.unexpected_pin_net`, and a pin on no net at all renders `power.unconnected_pin`. **The check's reach is narrower than \"the power grid is verified\", and a claim must not say otherwise.** A `power_connectivity.status` of `\"unchecked\"` \u2014 every `reference.form` other than `gate-level-verilog`, an explicit `options.power_connectivity: false`, or a layout whose instances declare no PG pins at all \u2014 means the question was never asked; this item and `klt signoff` both read it as \"does not apply here\", never as \"verified\", so a fleet policy of \"re-run LVS, look for `match`\" is not by itself power-connectivity evidence (#1985). And even where it does run it is *not* a geometric rail/grid continuity check: whether a rail is an unbroken annulus, and whether the grid carries the current, stay `klt ring-check`, `klt power`, and the DRC deck's business \u2014 see \"Power/IR-drop + EM evidence\" below for what is and is not covered. Warnings-only mismatches must be listed with the claim. A second, independent engine's concurring verdict (#343) strengthens this from \"one toolchain agrees with itself\" to a cross-checked result. **PDK-runset path (issue #2870, operator ruling of 2026-10-08).** For device families the PDK's own open KLayout LVS runset recognises and the curated extraction deck does not, a `klt lvs` report with `\"engine\": \"klayout-runset\"` is accepted evidence for this item, on four conditions: (1) the runset is the PDK's own at a pinned revision \u2014 `klt signoff` checks `provenance.runset.content_hash` against a signoff-side allowlist (`signoff_runset.PINNED_RUNSETS`, hash \u2192 PDK revision), not against a field the block declares, and the runset file named by the report must still re-hash to that value; (2) the report is a `klt` envelope with the same `--check` re-hash guarantees as a curated-deck report (layout hash, reference netlist hash, plus the runset hash); (3) the report names its engine, and `klt signoff` carries `engine` and the runset hash distinctly in the check detail and the `met` citation; (4) every device is recognised \u2014 a non-empty `coverage.declared_not_recognized`, or a `device_census` whose per-class layout and reference counts differ, is a failure (`runset_unrecognised_device`), never a warning, even when `status` reads `match`. A report from a runset that is not in the allowlist is refused `runset_not_pinned`; one whose runset file changed since the run, `runset_hash_mismatch`. **This does not change** the default: curated decks stay the route wherever they recognise every device in the block, and a block may not choose the runset to avoid a curated-deck finding. The allowlist is empty as of this change (2026-10-17) until a published runset's digest is reviewed into it, so no runset report grades `met` before then.",
       "notes": [],
       "status": "met",
       "reason": null,
@@ -182,17 +182,21 @@
       "notes": [
         "Both require the spec table itself to be ratified \u2014 verdicts against a draft spec are provisional by construction."
       ],
-      "status": "met",
-      "reason": null,
+      "status": "unmet",
+      "reason": "partial_coverage",
       "graded_by_build": true,
-      "citation": {
-        "file": "measurements/timing-characterization/logic_tile.sta.json",
-        "command": null,
-        "kind": "sta",
-        "check_status": "ok",
-        "content_hash": "sha256:6e1bb79d924d42cd4debc48df534e7dabe20b0c0b46efbc7944c96d5b4f33be5",
-        "input_verified": null,
-        "exit_status": 0
+      "citation": null,
+      "citations_graded": [
+        {
+          "citation": "measurements/timing-characterization/logic_tile.sta.json",
+          "status": "met",
+          "reason": null
+        }
+      ],
+      "detail": {
+        "missing_kinds": [
+          "functional-verification"
+        ]
       }
     },
     {
@@ -200,7 +204,7 @@
       "id": 6,
       "title": "Statistical claims carry Monte Carlo evidence",
       "partition": null,
-      "text": "any accuracy, offset, or matching spec row is statistical; a corner matrix (or STA corner sweep) cannot validate it. This applies to whichever spec rows are actually statistical, regardless of block kind \u2014 most digital spec rows (functional correctness, Fmax, timing closure) are not, and a block whose spec has no statistical row must say so explicitly rather than omit the item. Where it does apply, MC runs need a recorded seed, sample count, a deterministic negative control, and results combined with (not instead of) process corners (#344). A `klt yield` JSON report \u2014 a yield estimate with its confidence interval, sample-size verdict, and Cpk/sigma-to-spec against the row's own limits \u2014 is the machine-checkable evidence for this item (`klt signoff`'s tier-verdict mode grades it the same way it grades the deterministic items above). **The campaign's own self-report is a grading input, not just a footnote** (issue #2467): a cited report whose `sample_size.verdict` is `insufficient` on any measurement renders `unmet` with `reason: \"undersized_sample\"`, and one whose declared negative control did not show the seeded degradation renders `unmet` with `reason: \"negative_control_not_detected\"` \u2014 the report's passing `status` answers only \"did every declared `target_yield` hold\", which a campaign declaring none can never fail. A campaign that declared **no** negative control at all is still `met`, but says so: `citation.yield_campaign.negative_control` reads `\"not_declared\"`, since `klt yield` itself treats that as a warning rather than a failure and whether it is acceptable for a given spec row is the claimant's call. See [`cli/signoff.md`](cli/signoff.md)'s \"Campaign discipline on item 6\". **This item's evidence verb needs the `yield` extra.** Unlike every other T1 item's evidence verb (`drc`, `lvs`, `extract`, `sim`, `pex`, `sta`, `functional-verification`, `erc`, `place-and-route`), `klt yield` requires the `klt_yield_native` Rust extension. It is published as the prebuilt `klt-yield-native` wheel (Linux x86_64, macOS arm64), reached by `pip install 'klayout-tools[yield]'`; a bare `pip install klayout-tools` and the git-pinned form do not include it. A consumer pinning a release that predates the first `klt-yield-native` publication, or on another platform, still needs a repo checkout with a Rust toolchain; see `docs/cli/yield.md`'s \"What the extra does and does not reach\" callout and `docs/releasing-native.md`. **When \"not applicable\" is legitimate** (issue #2865): a block whose ratified spec has *no* statistical row passes this item by a recorded \"not applicable\", not by a waiver at grant time and not by inventing a statistical claim. That holds only when the spec is ratified, a committed statement accounts for every spec row with the reason its row class is not statistical (for example \"timing rows are corner-bounded by STA at the PDK's characterised corners\"), and both are bound by content hash so editing either invalidates the claim. Any accuracy, offset, matching or yield row is statistical by definition: a spec carrying one \u2014 or a sigma, yield, Cpk or `3\u03c3`-style bound \u2014 cannot use the outcome and needs `klt yield` evidence for that row. The outcome is available to a digital partition only; an analog partition (including the analog half of a mixed-signal block) always requires Monte Carlo evidence. `klt signoff` reports it as `not_applicable`, never as `met`.",
+      "text": "any accuracy, offset, or matching spec row is statistical; a corner matrix (or STA corner sweep) cannot validate it. This applies to whichever spec rows are actually statistical, regardless of block kind \u2014 most digital spec rows (functional correctness, Fmax, timing closure) are not, and a block whose spec has no statistical row must say so explicitly rather than omit the item. Where it does apply, MC runs need a recorded seed, sample count, a deterministic negative control, and results combined with (not instead of) process corners (#344). A `klt yield` JSON report \u2014 a yield estimate with its confidence interval, sample-size verdict, and Cpk/sigma-to-spec against the row's own limits \u2014 is the machine-checkable evidence for this item (`klt signoff`'s tier-verdict mode grades it the same way it grades the deterministic items above). **The campaign's own self-report is a grading input, not just a footnote** (issue #2467): a cited report whose `sample_size.verdict` is `insufficient` on any measurement renders `unmet` with `reason: \"undersized_sample\"`, and one whose declared negative control did not show the seeded degradation renders `unmet` with `reason: \"negative_control_not_detected\"` \u2014 the report's passing `status` answers only \"did every declared `target_yield` hold\", which a campaign declaring none can never fail. A campaign that declared **no** negative control at all is still `met`, but says so: `citation.yield_campaign.negative_control` reads `\"not_declared\"`, since `klt yield` itself treats that as a warning rather than a failure and whether it is acceptable for a given spec row is the claimant's call. See [`cli/signoff.md`](cli/signoff.md)'s \"Campaign discipline on item 6\". **This item's evidence verb needs the `yield` extra.** Unlike every other T1 item's evidence verb (`drc`, `lvs`, `extract`, `sim`, `pex`, `sta`, `functional-verification`, `erc`, `place-and-route`), `klt yield` requires the `klt_yield_native` Rust extension. It is published as the prebuilt `klt-yield-native` wheel (Linux x86_64, macOS arm64), reached by `pip install 'klayout-tools[yield]'`; a bare `pip install klayout-tools` and the git-pinned form do not include it. A consumer pinning a release that predates the first `klt-yield-native` publication, or on another platform, still needs a repo checkout with a Rust toolchain; see `docs/cli/yield.md`'s \"What the extra does and does not reach\" callout and `docs/releasing-native.md`. **When \"not applicable\" is legitimate** (issue #2865): a block whose ratified spec has *no* statistical row passes this item by a recorded \"not applicable\", not by a waiver at grant time and not by inventing a statistical claim. That holds only when the spec is ratified, a committed statement accounts for every spec row with the reason its row class is not statistical (for example \"timing rows are corner-bounded by STA at the PDK's characterised corners\"), and both are bound by content hash so editing either invalidates the claim. Any accuracy, offset, matching or yield row is statistical by definition: a spec carrying one \u2014 or a sigma, yield, Cpk or `3\u03c3`-style bound \u2014 cannot use the outcome and needs `klt yield` evidence for that row. The outcome is available to a digital partition only; an analog partition (including the analog half of a mixed-signal block) always requires Monte Carlo evidence. `klt signoff` reports it as `not_applicable`, never as `met`. **Several statistical rows, only some evidenced** (issue #2908): item 6 is a claim about *every* statistical row, so a manifest may declare the row set under `spec_rows.\"6\"` and cite one `klt yield` report per row set (`rows` on each citation). Item 6 grades `met` only when every declared row is covered by a passing citation against a ratified target. A row with no citation (`uncovered_rows`), a row declared a `gap` because no evidence can exist yet (`declared_gaps`), or a row declared `ratified: false` (`unratified_rows`, evidence against a proposed limit is provisional) grades `unmet` / `partial_coverage`, never `met`. Without a declaration the item grades as before; a `not_applicable` entry contradicts a declared row set and is `invalid_evidence`.",
       "notes": [],
       "status": "not_applicable",
       "reason": null,
@@ -308,13 +312,13 @@
         "command": null,
         "kind": "generic",
         "check_status": "pass",
-        "content_hash": "sha256:fea257901e3a2fd0db9cb50e163239cd33373917b65cb68b99f9824848f51102",
+        "content_hash": "sha256:f1094e33a7e2c78da8a748d5f215adbae2fd9aa61315a4e0811e01d8f355554e",
         "input_verified": true,
         "exit_status": 0,
         "artifact_binding": {
           "t1_item": 10,
           "path": "../.github/workflows/signoff.yml",
-          "content_hash": "sha256:fea257901e3a2fd0db9cb50e163239cd33373917b65cb68b99f9824848f51102",
+          "content_hash": "sha256:f1094e33a7e2c78da8a748d5f215adbae2fd9aa61315a4e0811e01d8f355554e",
           "input_verified": true,
           "summary": "T1 item 10 repo hygiene: README.md, spec/tile-spec.md and LICENSE are committed and the signoff CI lane (.github/workflows/signoff.yml) re-grades this record on every push and PR. Binding covers the workflow file bytes only; README, spec and LICENSE are inspected but not hashed by this envelope.",
           "source": ".github/workflows/signoff.yml"
