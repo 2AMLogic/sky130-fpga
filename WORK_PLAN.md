@@ -32,6 +32,7 @@ _None._
 Issues currently being built (`loom:building`).
 
 - **#216**: Consolidate lvs_sanitize_verilog.py into the shared netlist sanitizer (two rename rules for one netlist)
+- **#221**: Stamped benches cannot run from a cold clone: case lists, streams and generated RTL are not in the stamp
 
 ## PRs Awaiting Review
 
@@ -43,7 +44,7 @@ _None._
 
 PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
 
-_None._
+- **#222**: docs(sim): document generated inputs and cold-clone runnability of benches
 
 ## Proposed
 
@@ -51,6 +52,7 @@ Issues carrying `loom:curated`.
 
 - **#117**: G4: identify the binding path of the composed-tile STA (cfg-input vs datapath) once klt exposes path reports *(curated)*
 - **#213**: T1 item 7: SDF-annotated post-route functional run, via name sanitization or klayout-tools#2897 *(curated)*
+- **#221**: Stamped benches cannot run from a cold clone: case lists, streams and generated RTL are not in the stamp *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -68,10 +70,10 @@ _None._
 | Very important | 0 |
 | Important | 0 |
 | Ready (`loom:issue`) | 0 |
-| In Progress (`loom:building`) | 1 |
+| In Progress (`loom:building`) | 2 |
 | PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 0 |
-| Curated | 2 |
+| Approved PRs awaiting merge | 1 |
+| Curated | 3 |
 | Architect / Hermit proposals | 0 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
