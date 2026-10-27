@@ -86,3 +86,16 @@
     17/17 each); loader/decoder/record cfg cross-check agrees. Existing fixtures regenerate byte-identically.
   Unit tests: flow/test_check_regbel_fixtures.py 6 tests OK (moved placement, combinational cell, wrong
     wiring BEL, missing index entry, unpinned source all caught). ./sim/run.sh: all PASS.
+
+2026-10-27  sim/cocotb/test_bitstream_fabric.py  (issue #228; flow/functional-verification.sh)
+  Harness : cocotb 2.1.0 on Icarus Verilog 13.0, run by `klt functional-verification` 0.8.0
+            (request sim/cocotb/fv_request.json, seed 228); design/rtl/logic_tile_routed.v configured
+            from sim/bitstream/top_io.bin and top_reg.bin through flow/fasm_to_bitstream.py decode.
+  Results : 6/6 tests pass -- decoded cfg == recorded cfg (both designs); malformed streams rejected
+            (truncated, bad sync, trailing data, empty); comb truth table (16 vectors x 4 patterns on
+            unrouted tracks); reg exhaustive (2 start states x 32 vectors); reg directed sequence;
+            reg 300 seeded-random cycles vs. an independent reference register.
+  Envelope: signoff/item-5-functional-verification.json (cited by signoff/block-manifest.json item 5).
+  Negative control (manual, not committed): XOR-ing cfg bit 95 failed 4/6 tests, bit 140 failed 1/6.
+  Not covered: +mutate perturbation sweep, Verilog-side loader checks, corpus designs (still
+    sim/tb_logic_tile_bitstream.v only); ratified fabric, inter-tile routing, timing.

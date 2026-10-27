@@ -47,6 +47,14 @@
 #                                         non-negative setup/hold, complete
 #                                         annotation, agreement with the
 #                                         committed per-corner SPEF reports)
+#           signoff/item-5-
+#           functional-verification.json  second member of item 5's citation
+#                                         (issue #228). No input pin exists
+#                                         (klt records none for this kind);
+#                                         checked for internal consistency
+#                                         here and for byte-exact
+#                                         reproduction by
+#                                         flow/functional-verification.sh
 #   item 8  signoff/characterization-
 #           evidence.json                 generated characterization record
 #                                         (measurements/characterization-
@@ -165,12 +173,43 @@ check("  sta envelope spef_sha256 == committed SPEF",
       sha256_of("measurements/timing-characterization/logic_tile.spef"),
       "re-run ./flow/sta-sweep.sh --update (it rewrites the envelope and the SPEF together)")
 if "5" in ev:
+    # Item 5 is a two-member citation (issue #228): the STA envelope and the
+    # functional-verification envelope.
+    members = ev["5"] if isinstance(ev["5"], list) else [ev["5"]]
+    sta_member = next((m for m in members if m.get("file") == sta_rel), {})
     check("  manifest item-5 cites the multi-corner envelope",
-          sta_rel, ev["5"].get("file"),
+          sta_rel, sta_member.get("file"),
           f"point signoff/block-manifest.json item 5 at {sta_rel}")
     check("  manifest item-5 pin == sta envelope input pin",
-          ev["5"].get("content_hash"), sta_input_pin,
+          sta_member.get("content_hash"), sta_input_pin,
           "update signoff/block-manifest.json item 5's content_hash after ./flow/sta-sweep.sh --update")
+    fv_rel = "signoff/item-5-functional-verification.json"
+    fv_member = next((m for m in members if m.get("file") == fv_rel), {})
+    check("  manifest item-5 also cites the functional-verification envelope",
+          fv_rel, fv_member.get("file"),
+          f"cite {fv_rel} in signoff/block-manifest.json item 5")
+    # klt functional-verification envelopes carry no provenance.input hash, so
+    # the manifest cannot pin one (pinning grades unverifiable_provenance).
+    # Freshness is instead the byte-exact reproduction check of
+    # ./flow/functional-verification.sh (a cocotb run, so not repeated here);
+    # this script checks the envelope is internally consistent and was
+    # produced from the committed bitstream test module.
+    fv = json.load(open(f"{repo}/{fv_rel}"))
+    check("  fv envelope status pass, no failed tests, counts consistent",
+          (True, fv["test_count"]),
+          (fv.get("status") == "pass" and fv.get("failed_count") == 0
+           and fv["passed_count"] + fv["skipped_count"] == fv["test_count"] == len(fv["tests"]),
+           len(fv["tests"])),
+          "re-run ./flow/functional-verification.sh --update")
+    check("  fv envelope names the committed testbench module and toplevel",
+          ("test_bitstream_fabric", "logic_tile_routed"),
+          (fv.get("testbench"), fv.get("hdl_toplevel")),
+          "re-run ./flow/functional-verification.sh --update")
+    check("  fv envelope has no unnormalised machine-local fields",
+          True,
+          all(not v.startswith("/") for v in fv["environment"].values() if isinstance(v, str))
+          and all(t["real_time_s"] == 0.0 for t in fv["tests"]),
+          "re-run ./flow/functional-verification.sh --update (it normalises paths and wall time)")
 else:
     check("  manifest cites item 5", "cited", "missing",
           "add item 5 to signoff/block-manifest.json")

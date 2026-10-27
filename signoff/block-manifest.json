@@ -18,10 +18,21 @@
       "file": "layout/logic_tile.lvs.json",
       "content_hash": "sha256:193095a101b08f37927cf1e8cfbaf0b3ef02459eb63047d6512734cb1fa5ef2d"
     },
-    "5": {
-      "file": "measurements/timing-characterization/logic_tile.sta.json",
-      "content_hash": "sha256:6e1bb79d924d42cd4debc48df534e7dabe20b0c0b46efbc7944c96d5b4f33be5"
-    },
+    "5": [
+      {
+        "file": "measurements/timing-characterization/logic_tile.sta.json",
+        "content_hash": "sha256:6e1bb79d924d42cd4debc48df534e7dabe20b0c0b46efbc7944c96d5b4f33be5",
+        "rows": [
+          "timing"
+        ]
+      },
+      {
+        "file": "signoff/item-5-functional-verification.json",
+        "rows": [
+          "switch-matrix-routing-tracks"
+        ]
+      }
+    ],
     "6": {
       "not_applicable": {
         "spec": {
@@ -36,11 +47,11 @@
     },
     "8": {
       "file": "signoff/characterization-evidence.json",
-      "content_hash": "sha256:9513ada8af48a8ce3924c9ed4523e2c413cfc9e94c12023e30076416a5f8c7d4"
+      "content_hash": "sha256:5ab1166803b724016da3c04468f6dc532cf024f272fd8eb3136f59a52f16e690"
     },
     "9": {
       "file": "signoff/item-9-testbenches.json",
-      "content_hash": "sha256:1ab6fe1092a5fa8d330151122bbc17e72b98fd2ddd3690313d797cf33117bcc6"
+      "content_hash": "sha256:8f37ce93d014a4ba436e6a93ac37a2de9f37c81a54cd363b4409b54fe49bee40"
     },
     "10": {
       "file": "signoff/item-10-repo-hygiene.json",
@@ -58,6 +69,16 @@
       {
         "file": "layout/logic_tile.par.json",
         "content_hash": "sha256:220840d26409c3572a50156fb29b2f3e2ee8c9e8b26d94550546f397e667dbb9"
+      }
+    ]
+  },
+  "spec_rows": {
+    "5": [
+      {
+        "id": "switch-matrix-routing-tracks"
+      },
+      {
+        "id": "timing"
       }
     ]
   }

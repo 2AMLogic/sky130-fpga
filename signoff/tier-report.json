@@ -5,7 +5,7 @@
   "tier": null,
   "t1_item_count": 11,
   "build_t1_item_count": 11,
-  "t1_met_count": 8,
+  "t1_met_count": 9,
   "t1_not_applicable_count": 1,
   "source_doc": "docs/design-evidence-tiers.md",
   "source_doc_content_hash": "sha256:a26b90262320d0fbd32b3f549a02b6300832706041797a559d8bf6bdb62efdc7",
@@ -182,22 +182,66 @@
       "notes": [
         "Both require the spec table itself to be ratified \u2014 verdicts against a draft spec are provisional by construction."
       ],
-      "status": "unmet",
-      "reason": "partial_coverage",
+      "status": "met",
+      "reason": null,
       "graded_by_build": true,
-      "citation": null,
+      "citation": {
+        "file": "measurements/timing-characterization/logic_tile.sta.json",
+        "command": null,
+        "kind": "sta",
+        "check_status": "ok",
+        "content_hash": "sha256:6e1bb79d924d42cd4debc48df534e7dabe20b0c0b46efbc7944c96d5b4f33be5",
+        "input_verified": null,
+        "exit_status": 0
+      },
       "citations_graded": [
         {
           "citation": "measurements/timing-characterization/logic_tile.sta.json",
+          "rows": [
+            "timing"
+          ],
+          "status": "met",
+          "reason": null
+        },
+        {
+          "citation": "signoff/item-5-functional-verification.json",
+          "rows": [
+            "switch-matrix-routing-tracks"
+          ],
           "status": "met",
           "reason": null
         }
       ],
-      "detail": {
-        "missing_kinds": [
-          "functional-verification"
-        ]
-      }
+      "row_coverage": {
+        "failed_rows": [],
+        "uncovered_rows": [],
+        "declared_gaps": [],
+        "unratified_rows": [],
+        "row_sources": {
+          "switch-matrix-routing-tracks": "asserted",
+          "timing": "asserted"
+        }
+      },
+      "citations": [
+        {
+          "file": "measurements/timing-characterization/logic_tile.sta.json",
+          "command": null,
+          "kind": "sta",
+          "check_status": "ok",
+          "content_hash": "sha256:6e1bb79d924d42cd4debc48df534e7dabe20b0c0b46efbc7944c96d5b4f33be5",
+          "input_verified": null,
+          "exit_status": 0
+        },
+        {
+          "file": "signoff/item-5-functional-verification.json",
+          "command": null,
+          "kind": "functional-verification",
+          "check_status": "pass",
+          "content_hash": null,
+          "input_verified": null,
+          "exit_status": 0
+        }
+      ]
     },
     {
       "tier": "T1",
@@ -264,7 +308,7 @@
         "command": null,
         "kind": "generic",
         "check_status": "pass",
-        "content_hash": "sha256:9513ada8af48a8ce3924c9ed4523e2c413cfc9e94c12023e30076416a5f8c7d4",
+        "content_hash": "sha256:5ab1166803b724016da3c04468f6dc532cf024f272fd8eb3136f59a52f16e690",
         "input_verified": null,
         "exit_status": 0
       }
@@ -284,13 +328,13 @@
         "command": null,
         "kind": "generic",
         "check_status": "pass",
-        "content_hash": "sha256:1ab6fe1092a5fa8d330151122bbc17e72b98fd2ddd3690313d797cf33117bcc6",
+        "content_hash": "sha256:8f37ce93d014a4ba436e6a93ac37a2de9f37c81a54cd363b4409b54fe49bee40",
         "input_verified": true,
         "exit_status": 0,
         "artifact_binding": {
           "t1_item": 9,
           "path": "../measurements/claim-traceability.md",
-          "content_hash": "sha256:1ab6fe1092a5fa8d330151122bbc17e72b98fd2ddd3690313d797cf33117bcc6",
+          "content_hash": "sha256:8f37ce93d014a4ba436e6a93ac37a2de9f37c81a54cd363b4409b54fe49bee40",
           "input_verified": true,
           "summary": "T1 item 9 testbenches shipped: measurements/claim-traceability.md (issue #34 walk, re-audited post-PDN, for the issue #68 timing_status re-sweep, and for the issue #69 LVS power-connectivity re-enable) maps every published claim to a committed testbench or flow script and a pinned PDK; ./flow/audit-evidence.sh re-derives its machine half and passes clean. Cold-start: ./flow/audit-evidence.sh.",
           "source": "measurements/claim-traceability.md"
