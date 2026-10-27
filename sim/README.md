@@ -711,6 +711,91 @@ with `FABULOUS_SKIP_TILE_REPLAY=1` (printed as SKIPPED) so this replay is not
 repeated for each nextpnr/bitstream/corpus run. A direct `flow/fabulous.sh`
 (also the CI step) always runs it.
 
+## Bench inputs and cold-clone runnability (issue #221)
+
+Not every bench in `sim/` and `design/fabulous/` runs from those two
+directories alone. The missing inputs are not absent evidence: they are
+produced by committed generators in `flow/`, or by a FABulous run whose
+output is deliberately never committed (`flow/build/` is gitignored).
+Streams and case lists are regenerated on each run, so committing them would
+add a second copy that can drift from the generators. A downstream port that
+stamps only `sim/` and `design/fabulous/` can therefore run class (a) and
+nothing else.
+
+All commands below are run from the repository root with Icarus Verilog 13.0
+and `python3`. Use `iverilog -g2012`: `tb_lut4_slice.v` does not compile with
+`-g2005` (`sim/tb_lut4_slice.v:52: syntax error`). The `design/fabulous/`
+equivalence benches are compiled with `-g2005` by `flow/fabulous.sh`.
+
+**Verified** 2026-10-27 at commit `8593880`, in a clean worktree of that
+commit, by running each class (a) and (b) command exactly as written. Class (c)
+could not be run to `PASS` there: the worker had no FABulous install, and
+`flow/fabulous.sh` builds its pinned venv itself. What is recorded for (c) is
+the missing-module error, below.
+
+### (a) Runnable from `sim/` + `design/rtl/` + `design/fabulous/` alone
+
+| Bench | Command |
+|---|---|
+| `tb_lut4_slice`, `tb_logic_tile`, `tb_logic_tile_gapfill`, `tb_logic_tile_routed`, `tb_switch_matrix`, `tb_logic_tile_bitstream` (over `sim/bitstream/` and its `corpus/`) | `./sim/run.sh` (all `PASS`, `rc=0`, about 90 s) |
+| `design/fabulous/tb_lut4_ff_bel_equiv.v` | `iverilog -g2005 -o b design/fabulous/tb_lut4_ff_bel_equiv.v design/fabulous/Tile/LOGIC4/lut4_ff_bel.v design/rtl/lut4_slice.v && vvp b` |
+
+`sim/run.sh` additionally needs `python3` and the drift guard's inputs in
+`design/gen/`, so a stamp must include `design/rtl/` and `design/gen/` too.
+
+### (b) Needs the committed generators in `flow/` (no FABulous run)
+
+Each bench loads a sequence of generated streams into one live tile. The
+generator writes `cases.txt`, `required.txt`, the `<case>.bin`/`.cfg` streams
+and a wiring file into `<out>`. Define once:
+
+```
+RTL="design/rtl/lut4_slice.v design/rtl/logic_tile_switch_matrix.v design/rtl/logic_tile_routed.v"
+MAP=sim/bitstream/logic4_configmem.map
+```
+
+| Bench | Generator (writes `<out>`) | Wiring file | Compile | Result |
+|---|---|---|---|---|
+| `tb_lut_basis` | `python3 -I flow/lut_basis.py <out> --snapshot sim/bitstream/fabric_spec.json` | `basis.wiring` | `iverilog -g2012 -Wall $RTL sim/tb_lut_basis.v` | `PASS`, 73/73 cases |
+| `tb_route_diag` | `python3 -I flow/route_diag.py <out> --snapshot ...` | `route.wiring` | `iverilog -g2012 -Wall $RTL sim/tb_route_diag.v` | `PASS`, 64/64 cases |
+| `tb_ctrl_route` | `python3 -I flow/ctrl_route.py <out> --snapshot ...` | `ctrl.wiring` | `iverilog -g2012 -Wall $RTL sim/tb_ctrl_route.v` | `PASS`, 20/20 cases |
+| `tb_output_route` | `python3 -I flow/output_route.py <out> --snapshot ...` | `out.wiring` | `iverilog -g2012 -Wall $RTL sim/tb_output_route.v` | `PASS`, 112/112 cases |
+
+Run each as `vvp <bench>.vvp +dir=<out> +list=<out>/cases.txt
++wiring=<out>/<wiring file> +map=$MAP`. The repository-composition compile
+needs no generated RTL, no `-DGEN_TILE` and no FABulous output. The same
+benches also run against the FABulous-generated tile (class (c)) and the
+synthesized netlist; the drivers are `flow/generated_tile_replay.sh`,
+`flow/gate-sim-bitstream.sh` and `flow/gate_route_diag.sh`, which add the
+case-list, cfg-readback and coverage checks that the bare `vvp` run above does
+not. `design/fabulous/tb_configmem_equiv.v` takes its `+vec` file from
+`python3 flow/configmem_frames.py sim/bitstream > vec.txt`, which also needs
+no FABulous output (357 lines at the verified commit), but the bench itself is
+class (c).
+
+**Minimum stamp for class (b):** `flow/` (generators, `gate_sim_verdict.sh`,
+`sim_budget.py`), `sim/bitstream/` (at least `fabric_spec.json` and
+`logic4_configmem.map`), `design/rtl/` and `sim/` itself (benches and
+`switch_matrix_tb_gen.vh`).
+
+### (c) Needs a FABulous run (not runnable from a stamp)
+
+| Bench | Generated input | Produced by |
+|---|---|---|
+| `sim/tb_boundary_fwd.v` | `-DGEN_TILE` and `Tile/LOGIC4/LOGIC4.v` (+ `LOGIC4_ConfigMem.v`, `LOGIC4_switch_matrix.v`, `Fabric/models_pack.v`) | `flow/fabulous.sh`, then `flow/generated_tile_replay.sh <fabulous-run dir> <build dir>` (run dir is `flow/build/fabulous-run`) |
+| `design/fabulous/tb_configmem_equiv.v` | `LOGIC4_ConfigMem.v`, plus `+map=$MAP` and `+vec` from `flow/configmem_frames.py` | `flow/fabulous.sh` |
+| `design/fabulous/tb_switch_matrix_equiv.v` | `LOGIC4_switch_matrix.v` | `flow/fabulous.sh` |
+
+Without the generated RTL these fail at compile time with Icarus's
+`These modules were missing: LOGIC4` / `LOGIC4_ConfigMem` /
+`LOGIC4_switch_matrix` (observed at the verified commit). Compiled without
+`-DGEN_TILE`, `tb_boundary_fwd` prints `FAIL: tb_boundary_fwd: needs
+-DGEN_TILE (the generated LOGIC4 tile)`. `flow/fabulous.sh` builds a throwaway
+pinned FABulous venv under `flow/build/`, so it needs network access and the
+tool versions in `flow/tool_versions.sh`. A port that stamps only `sim/` and
+`design/fabulous/` should treat class (c) as outside its bench inventory, or
+also stamp `flow/` and run `flow/fabulous.sh` itself.
+
 ## Out of scope here
 
 Bitstream-level verification of the *ratified* fabric (the Wilton-class
