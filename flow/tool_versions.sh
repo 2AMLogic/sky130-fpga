@@ -86,7 +86,7 @@ RECORDED_OPENROAD_VERSION="26Q3-1278-g4421880472"
 # the 0.5.0 lineage: binding-corner (ss_n40C_1v28) SPEF WNS 15.2146 ->
 # 15.2145 ns (-0.1 ps); see the record for every corner. flow/sta-sweep.sh
 # prints its banner against THESE two values.
-RECORDED_STA_KLT_VERSION="0.7.0+g6fd0278268cc"
+RECORDED_STA_KLT_VERSION="0.8.0"
 RECORDED_STA_OPENROAD_VERSION="26Q3-1510-g6cb3f2b704"
 
 # The klt that produced the LVS report CURRENTLY committed as
@@ -105,7 +105,7 @@ RECORDED_STA_OPENROAD_VERSION="26Q3-1510-g6cb3f2b704"
 # reference netlist is regenerated every run by flow/layout.sh's check
 # mode; under this klt that ran OpenROAD RECORDED_STA_OPENROAD_VERSION.
 # flow/lvs.sh prints its klt banner against this value.
-RECORDED_LVS_KLT_VERSION="0.7.0+g4cbdfa769875"
+RECORDED_LVS_KLT_VERSION="0.8.0"
 
 # The sky130A PDK revision those same committed artifacts were produced
 # against -- the value `klt pdk find --pdk sky130A --format json` reports

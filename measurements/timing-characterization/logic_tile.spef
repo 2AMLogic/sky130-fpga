@@ -3,7 +3,7 @@
 *DATE "canonicalized (see flow/sta_sanitize_names.py)"
 *VENDOR "2AM Logic"
 *PROGRAM "klt extract"
-*VERSION "0.7.0+g6fd0278268cc"
+*VERSION "0.8.0"
 *DESIGN_FLOW "NAME_SCOPE LOCAL" "PIN_CAP NONE"
 *DIVIDER /
 *DELIMITER :

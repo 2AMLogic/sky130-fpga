@@ -1,0 +1,10 @@
+{
+  "sources": [
+    "../../design/rtl/logic_tile_routed.v",
+    "../../design/rtl/logic_tile_switch_matrix.v",
+    "../../design/rtl/lut4_slice.v"
+  ],
+  "hdl_toplevel": "logic_tile_routed",
+  "testbench": { "module": "test_bitstream_fabric" },
+  "options": { "random_seed": 228 }
+}

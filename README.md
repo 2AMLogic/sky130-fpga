@@ -25,7 +25,7 @@ full per-issue narrative: ["Current position" in `spec/framework-gaps.md`](spec/
 | [ADR-0005](spec/decisions/0005-nextpnr-io-and-constant-handling.md) (nextpnr IO/constants) | Proposed <!-- status-claim: adr-0005=Proposed --> | pending operator ratification |
 | [ADR-0006](spec/decisions/0006-lut-pin-assignment-policy.md) (LUT pin-assignment policy) | Proposed <!-- status-claim: adr-0006=Proposed --> | pending operator ratification |
 | Bitstream-level verification | experimental single-tile harness only; ratified fabric not verified (G5, G6 not closed) | `sim/README.md` |
-| klt T1 evidence tier | 8 <!-- status-claim: t1-met=8 --> of 11 <!-- status-claim: t1-items=11 --> items met (item 5 `unmet`/`partial_coverage`) | [`signoff/tier-report.json`](signoff/tier-report.json) |
+| klt T1 evidence tier | 9 <!-- status-claim: t1-met=9 --> of 11 <!-- status-claim: t1-items=11 --> items met | [`signoff/tier-report.json`](signoff/tier-report.json) |
 
 **Built agent-native.** Every specification, decision record, testbench, and
 line of documentation here is produced by AI agents working from a ratified

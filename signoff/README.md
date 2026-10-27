@@ -69,9 +69,7 @@ regenerate `tier-report.json` last.
 grader **cannot** check — the claim-side disclosures
 `docs/design-evidence-tiers.md` makes this repo's responsibility.
 
-**8 of 11 T1 items are `met`: items 1, 2, 3, 4, 8, 9, 10, 11. Item 5 renders
-`unmet`/`partial_coverage` under the 0.8.0 grader (see the grader paragraph
-below). Item 6
+**9 of 11 T1 items are `met`: items 1, 2, 3, 4, 5, 8, 9, 10, 11. Item 6
 renders `not_applicable` (issue #212; counted apart in
 `t1_not_applicable_count`, never as `met`). Item 7 renders
 `unmet`/`no_evidence` and is deliberately uncited.** Item 11
@@ -83,7 +81,9 @@ item 5 went `met` to `unmet`/`partial_coverage` (`missing_kinds:
 ["functional-verification"]`), because 0.8.0 derives item-5 spec-row coverage
 from the envelopes' `spec_row` tags (klayout-tools#3768/#3778) and the
 manifest cites only the `klt sta` envelope. The record is committed as
-graded, not relaxed; the missing evidence is tracked in a follow-up issue.
+graded, not relaxed. Issue #228 supplied the missing evidence (a cited
+`klt functional-verification` envelope, see the item 5 row) and item 5 is `met`
+again.
 Item 10's citation hash moved with the workflow bytes, and the grader
 metadata (`build`, ruleset id, checklist document hash, item 4 and 6 text)
 changed. The earlier move from
@@ -98,7 +98,7 @@ other differences in `tier-report.json` are the grader's own metadata
 Item 5's citation (issue #68) did not need a grader bump. The pinned
 grader already recognizes the multi-corner `klt sta` shape (#1959) and its
 `timing_status` pass rule. The design-flow klt that produced the envelope
-(`0.7.0+g6fd0278268cc`) is a separate pin, `RECORDED_STA_KLT_VERSION` in
+(now `0.8.0`, issue #228) is a separate pin, `RECORDED_STA_KLT_VERSION` in
 `flow/tool_versions.sh`. It descends from the grader commit and carries
 byte-identical signoff code.
 
@@ -124,8 +124,11 @@ byte-identical signoff code.
   the same report to the committed GDS, and `verify-pins.sh` re-checks that
   tie. Since issue #69, `power_connectivity.status` is `"match"` (power
   pins `VGND`/`VPB`/`VPWR`, 63 instances, 0 findings), produced by klt
-  `0.7.0+g4cbdfa769875`, which carries klayout-tools#2121
-  (`RECORDED_LVS_KLT_VERSION`). Before that it was `"unchecked"`, because
+  `0.7.0` onward (klayout-tools#2121) and re-stamped under `0.8.0` in issue
+  #228 (`RECORDED_LVS_KLT_VERSION`). The 0.8.0 compare is `status: match` with
+  top-level pin anchoring on (`options.anchor_top_level_pins` unset, i.e. the
+  default; 94 pins anchored, none rejected); the report is otherwise unchanged
+  apart from 0.8.0's added fields and `schema_version: 2`. Before that it was `"unchecked"`, because
   `flow/lvs.sh` disabled the check. Scope disclosure:
   - The netlist compare is **signal-connectivity only**: the as-built
     reference carries no supply pins.
@@ -207,8 +210,9 @@ byte-identical signoff code.
   item-10 envelope hash and the manifest pin (`verify-pins.sh` fails until
   you do), then regenerating `tier-report.json` last. Native DRC or LVS
   envelopes are deliberately not cited for these rows.
-- **Item 5 (corner verification against a ratified spec) — `unmet`, STA half
-  only** (issue #68). Cited envelope:
+- **Item 5 (corner verification against a ratified spec) — `met`** (STA:
+  issue #68; functional verification: issue #228). Two cited envelopes. The
+  first:
   `measurements/timing-characterization/logic_tile.sta.json`, the trimmed
   response of **one** `klt sta` request with `pdk.corners` listing all 18
   `sky130_fd_sc_hd` corners ADR-0002 ratified and ADR-0003 re-ratified,
@@ -227,9 +231,10 @@ byte-identical signoff code.
 
   `flow/sta-sweep.sh` refuses to record an envelope that fails this gate,
   and `verify-pins.sh` re-runs it. Binding setup corner `ss_n40C_1v28`,
-  SPEF WNS 15.2145 ns under klt `0.7.0+g6fd0278268cc`. That is -0.1 ps
+  SPEF WNS 15.2145 ns under klt `0.8.0` (unchanged from `0.7.0`). That is -0.1 ps
   against ADR-0003's figure of record of 15.2146 ns. The spec row is
-  unchanged; see record `20261008-234741-dc615b4` for every corner's delta.
+  unchanged; see record `20261008-234741-dc615b4` for every corner's delta; the
+  klt 0.8.0 re-sweep (`20261027-201500-9111a08`) moved no number.
 
   **What the pin binds.** The manifest's item-5 `content_hash` is the
   envelope's `provenance.input.content_hash`: the hash of the DEF OpenSTA
@@ -252,21 +257,39 @@ byte-identical signoff code.
   `./flow/sta-sweep.sh --update` fails `verify-pins.sh` with the
   regeneration command.
 
-  **What this citation does not cover.** Item 5's digital text asks for
-  multi-corner STA **plus** a bit-exact functional test suite. This
-  citation covers the STA half only. The bit-exact functional half is
-  currently the zero-delay testbench evidence: `sim/run.sh`'s RTL
-  testbenches (`tb_lut4_slice`, `tb_logic_tile`), plus the zero-delay
-  gate-level `tb_logic_tile` PASS against the as-built `sky130_fd_sc_hd`
-  netlist (record `20260921-062530-e8a37ad`). None of it is a `klt
-  functional-verification` envelope, and none of it is cited. The
-  timing-correct functional leg, the SDF-annotated gate-level
-  re-simulation, is still blocked. That is item 7: klayout-tools#1890
-  closed only as a fail-loud guard; re-tried 2026-10-08 under #72, the
-  gap is now klayout-tools#2897 (record `20261008-233733-23e6b5e`). Under
-  the 0.8.0 grader item 5 is `unmet`/`partial_coverage` (`missing_kinds:
-  ["functional-verification"]`): the STA envelope alone no longer earns
-  `met`, and this paragraph records what is still missing. Also not covered:
+  **The functional-verification member** (issue #228).
+  `signoff/item-5-functional-verification.json` is the `klt
+  functional-verification` envelope of `sim/cocotb/test_bitstream_fabric.py`
+  (6 cocotb tests, all pass), generated by `flow/functional-verification.sh`
+  from the run's own `results.xml`. The committed FABulous frame streams
+  (`sim/bitstream/top_io.bin`, `top_reg.bin`) are decoded by the
+  repository's stream decoder into the `cfg` port of
+  `design/rtl/logic_tile_routed.v` and the mapped designs' function is
+  checked against independent oracles. A one-off manual negative control (flipping a used
+  switch-matrix select bit of the loaded `cfg`) made the comb/reg tests fail;
+  it is not a committed test. Honest limits:
+  - It is zero-delay RTL on the G1 harness fabric: no timing, no inter-tile
+    routing. It is the cocotb counterpart of `sim/tb_logic_tile_bitstream.v`
+    for the `comb` and `reg` designs; it does not repeat that testbench's
+    `+mutate` sweep, its Verilog-side loader checks, or the corpus designs.
+  - The manifest declares `spec_rows` for item 5 (`timing` -> the STA
+    envelope, `switch-matrix-routing-tracks` -> the functional-verification
+    envelope). The grader reports `row_sources: "asserted"` for both: 0.8.0
+    derives rows from `spec_row` tags only on `klt sim` `measurements[]`, and
+    neither envelope has them. The row-to-envelope assignment is this repo's
+    claim, not a grader finding.
+  - `klt functional-verification` envelopes carry no input hash, so the
+    manifest cannot pin one (pinning grades `unverifiable_provenance`).
+    Freshness is `flow/functional-verification.sh` check mode (byte-exact
+    reproduction of the committed envelope); `verify-pins.sh` checks only its
+    internal consistency. The only normalisation applied to the envelope is
+    machine-local paths and per-test wall-clock time.
+  - The timing-correct functional leg, the SDF-annotated gate-level
+    re-simulation, is still blocked. That is item 7: klayout-tools#1890 closed
+    only as a fail-loud guard; re-tried 2026-10-08 under #72, the gap is now
+    klayout-tools#2897 (record `20261008-233733-23e6b5e`).
+
+  Not covered by the STA member:
   - propagated-clock timing (the clock is an ideal SDC clock);
   - any Fmax figure (`fmax_mhz` is a `1/(T-WNS)` extrapolation, and none
     is ratified);

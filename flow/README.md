@@ -86,11 +86,12 @@ successor records
 - the sanitized SPEF `logic_tile.spef`.
 
 Record:
-`measurements/timing-characterization/records/20261008-234741-dc615b4.md`.
+`measurements/timing-characterization/records/20261027-201500-9111a08.md`
+(issue #228, klt 0.8.0; supersedes `20261008-234741-dc615b4`).
 
 | Tool | Version |
 |------|---------|
-| `klt` (klayout-tools) | `0.7.0+g6fd0278268cc` (`RECORDED_STA_KLT_VERSION`) |
+| `klt` (klayout-tools) | `0.8.0` (`RECORDED_STA_KLT_VERSION`; PyPI `klayout-tools==0.8.0`) |
 | OpenROAD | `26Q3-1510-g6cb3f2b704` (`RECORDED_STA_OPENROAD_VERSION`; image pinned by digest in the host wrapper) |
 
 This was a deliberate design-flow upgrade. Only a `klt sta` that emits
@@ -107,6 +108,10 @@ lineage. Measured drift against the 0.5.0 lineage:
   against ADR-0003's figure of record;
 - every verdict is unchanged.
 
+Issue #228 re-ran the sweep under `klayout-tools==0.8.0`: no metric or verdict
+moved; only `schema_version`, the SPEF `*VERSION` header (and so `spef_sha256`)
+and fields the 0.8.0 response adds changed (record `20261027-201500-9111a08`).
+
 `flow/sta-sweep.sh` prints its banner against this pair.
 
 **Recorded LVS toolchain** (issue #69). This produced the committed
@@ -114,7 +119,7 @@ lineage. Measured drift against the 0.5.0 lineage:
 
 | Tool | Version |
 |------|---------|
-| `klt` (klayout-tools) | `0.7.0+g4cbdfa769875` (`RECORDED_LVS_KLT_VERSION`; PyPI `klayout-tools==0.7.0`) |
+| `klt` (klayout-tools) | `0.8.0` (`RECORDED_LVS_KLT_VERSION`; PyPI `klayout-tools==0.8.0`) |
 | OpenROAD (reference-netlist regeneration only) | `26Q3-1510-g6cb3f2b704` |
 
 Bump rule, as for the STA pin: a deliberate design-flow upgrade, pinned
@@ -128,20 +133,26 @@ and `layout/logic_tile.gds` stayed byte-identical. ERC and PAR keep
 their own lineages (`provenance.klt_version` in the ERC report;
 `RECORDED_KLT_VERSION` for PAR). Reproduce in a throwaway env without
 touching the host klt:
-`uvx --from "klayout-tools==0.7.0" klt ...`, or put that klt first on
-`$PATH` and run `./flow/lvs.sh`. `flow/lvs.sh` prints its klt banner
+`uvx --from "klayout-tools==0.8.0" klt ...`, or put that klt first on
+`$PATH` and run `./flow/lvs.sh` (with `PDK_ROOT=~/.volare PDK=sky130A` on a host
+whose default PDK root resolves a different revision than `RECORDED_PDK_VERSION`). `flow/lvs.sh` prints its klt banner
 against this value. The `flow/layout.sh` it calls prints its own banner
 against `RECORDED_KLT_VERSION`, and that one warns.
 
-**Not bumped to 0.8.0 (issue #227).** Under `klayout-tools==0.8.0`
-`./flow/lvs.sh` does not reproduce this report: the compare returns
-`status: mismatch` (28 mismatches, all `hints.rejected` on the pinned
-top-level pins, from `options.anchor_top_level_pins`), while
-`power_connectivity.status` stays `match`. The committed LVS report, GDS,
-DEF, par report and STA evidence were therefore not regenerated, and
-`RECORDED_KLT_VERSION`, `RECORDED_STA_KLT_VERSION` and
-`RECORDED_LVS_KLT_VERSION` stay at their producing versions. Only the
-signoff grader (`.github/workflows/signoff.yml`) moved to 0.8.0.
+**0.8.0 (issues #227, #228).** The signoff grader moved to
+`klayout-tools==0.8.0` in #227. #228 re-ran the LVS and STA evidence under it
+and moved `RECORDED_LVS_KLT_VERSION` and `RECORDED_STA_KLT_VERSION`
+accordingly. `./flow/lvs.sh` under 0.8.0 reports `status: match` and
+`power_connectivity.status: match` with top-level pin anchoring on
+(`topology.top_level_pins_anchored`, 94 pins, no `hints.rejected`); the
+`status: mismatch` with 28 `hints.rejected` seen in #227 did **not**
+reproduce against the committed GDS with the recorded PDK
+(`PDK_ROOT=~/.volare PDK=sky130A`). `RECORDED_KLT_VERSION` (layout/PAR/ERC/DRC
+lineage) is **not** moved: `flow/layout.sh` under 0.8.0 does not reproduce the
+committed GDS or routed DEF, so those artifacts were not regenerated.
+Item 5's functional-verification envelope comes from
+`flow/functional-verification.sh` (cocotb, run as
+`uvx --from "klayout-tools[functional-verification]==0.8.0" klt`).
 
 `flow/layout.sh`, `flow/sta-sweep.sh` and `flow/sdf-resim.sh` all source
 `flow/tool_versions.sh` and print the installed `klt`/OpenROAD versions at

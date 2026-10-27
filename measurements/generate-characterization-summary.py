@@ -20,9 +20,10 @@ cross-checked against each one):
 - layout/logic_tile.erc.json           (ERC -- supply connectivity + antenna
   from the GDS geometry, the supply-island/tie half the LVS compare cannot
   supply; see issue #41)
-- measurements/timing-characterization/records/20261008-234741-dc615b4.md
-  (the current 18-corner STA sweep record, issue #68's timing_status
-  re-sweep; successor of 20260921-062500-e8a37ad, itself the post-PDN
+- measurements/timing-characterization/records/20261027-201500-9111a08.md
+  (the current 18-corner STA sweep record, issue #228's klt 0.8.0 re-sweep;
+  successor of 20261008-234741-dc615b4, issue #68's timing_status re-sweep,
+  itself the successor of 20260921-062500-e8a37ad, the post-PDN
   successor of the 20260909-225431-86f71d2 record ADR-0002 originally
   cited), the per-corner corners/<corner>/{lef-only,spef}.sta.json machine
   reports it is derived from, and the multi-corner `klt sta` envelope
@@ -74,7 +75,7 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 OUTPUT_PATH = REPO_ROOT / "measurements" / "characterization-summary.md"
 
-STA_RECORD_ID = "20261008-234741-dc615b4"
+STA_RECORD_ID = "20261027-201500-9111a08"
 SDF_RECORD_ID = "20261008-233733-23e6b5e"
 # The record id ADR-0002 cites as its evidentiary source. A ratified
 # decision record is never edited, so this historical id stays fixed even

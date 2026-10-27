@@ -836,3 +836,14 @@ and python3 only). It is not part of the default `./sim/run.sh` path.
   run) closes them. The existing benches and their results files are unchanged.
 - CI: `.github/workflows/rtl-sim.yml` runs `./sim/run.sh --mutation` after the
   regression suite.
+
+## cocotb bitstream regression (issue #228)
+
+`sim/cocotb/test_bitstream_fabric.py` loads the committed `sim/bitstream/*.bin`
+frame streams into `design/rtl/logic_tile_routed.v` and checks the `comb` and
+`reg` mapped designs against independent oracles. It is run by
+`klt functional-verification` through `./flow/functional-verification.sh`
+(needs `uvx` and `iverilog`; not part of `sim/run.sh`), whose envelope
+`signoff/item-5-functional-verification.json` is cited for T1 item 5. Scope:
+zero-delay RTL on the G1 harness fabric; see the test module's header and
+`signoff/README.md`.

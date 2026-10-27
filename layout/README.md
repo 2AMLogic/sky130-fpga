@@ -244,9 +244,9 @@ topologically match a `sky130_fd_sc_hd`-built layout (see
   fixed it by keeping the abstracted well polygons as conductor. The
   extraction change is visible in the report: `counts.nets.layout` is 139,
   down from 146 under the 0.5.0 build, the 7 row-local well nets having
-  merged. The report was produced by klt `0.7.0+g4cbdfa769875`
-  (`RECORDED_LVS_KLT_VERSION` in `flow/tool_versions.sh`; PyPI
-  `klayout-tools==0.7.0`, 725 commits past the #2121 merge) with
+  merged. The report was first produced by klt `0.7.0+g4cbdfa769875` and
+  re-stamped under klt `0.8.0` (issue #228; `RECORDED_LVS_KLT_VERSION` in
+  `flow/tool_versions.sh`; PyPI `klayout-tools==0.8.0`) with
   `flow/lvs.sh --update-report`, against the unchanged
   `logic_tile.gds` (`sha256:38498092…`). What it does **not** cover:
   `VNB` (the p-substrate body) is not among the power pins — the

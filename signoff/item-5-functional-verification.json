@@ -1,0 +1,63 @@
+{
+  "coverage": null,
+  "engine": "icarus",
+  "environment": {
+    "build_log": "build_icarus.log",
+    "cocotb_version": "2.1.0",
+    "engine": "icarus",
+    "engine_version": "13.0",
+    "initial_state": null,
+    "random_seed": 228,
+    "results_xml": "results_icarus.xml",
+    "sdf": null,
+    "source_defines": {},
+    "test_log": "test_icarus.log"
+  },
+  "failed_count": 0,
+  "hdl_toplevel": "logic_tile_routed",
+  "passed_count": 6,
+  "schema_version": 1,
+  "skipped_count": 0,
+  "status": "pass",
+  "test_count": 6,
+  "testbench": "test_bitstream_fabric",
+  "tests": [
+    {
+      "name": "test_bitstream_decodes_to_recorded_cfg",
+      "real_time_s": 0.0,
+      "sim_time_ns": 0.0,
+      "status": "passed"
+    },
+    {
+      "name": "test_malformed_bitstreams_rejected",
+      "real_time_s": 0.0,
+      "sim_time_ns": 0.0,
+      "status": "passed"
+    },
+    {
+      "name": "test_comb_design_truth_table",
+      "real_time_s": 0.0,
+      "sim_time_ns": 68.0,
+      "status": "passed"
+    },
+    {
+      "name": "test_reg_design_exhaustive",
+      "real_time_s": 0.0,
+      "sim_time_ns": 1762.0,
+      "status": "passed"
+    },
+    {
+      "name": "test_reg_design_directed_sequence",
+      "real_time_s": 0.0,
+      "sim_time_ns": 97.0,
+      "status": "passed"
+    },
+    {
+      "name": "test_reg_design_random_sequence",
+      "real_time_s": 0.0,
+      "sim_time_ns": 4101.0,
+      "status": "passed"
+    }
+  ],
+  "trace": null
+}
