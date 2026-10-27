@@ -2,6 +2,11 @@
 
 Chronological record of merged pull requests and closed issues, maintained by the Loom Guide role. Newest entries appear first.
 
+### 2026-10-27
+
+- **PR #222**: docs(sim): document generated inputs and cold-clone runnability of benches
+- **Issue #221** (closed): Stamped benches cannot run from a cold clone: case lists, streams and generated RTL are not in the stamp
+
 ### 2026-10-17
 
 - **PR #215**: feat: add paired netlist/SDF identifier sanitizer and item 7 retry record
