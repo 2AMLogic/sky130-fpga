@@ -32,12 +32,13 @@ _None._
 Issues currently being built (`loom:building`).
 
 - **#216**: Consolidate lvs_sanitize_verilog.py into the shared netlist sanitizer (two rename rules for one netlist)
+- **#227**: Bump klayout-tools pin 0.5.0, 0.7.0, 7755612adb51 → 0.8.0
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#229**: build: pin signoff grader to klayout-tools 0.8.0 and regenerate tier report
 
 ## Approved (Awaiting Merge)
 
@@ -51,6 +52,7 @@ Issues carrying `loom:curated`.
 
 - **#117**: G4: identify the binding path of the composed-tile STA (cfg-input vs datapath) once klt exposes path reports *(curated)*
 - **#213**: T1 item 7: SDF-annotated post-route functional run, via name sanitization or klayout-tools#2897 *(curated)*
+- **#227**: Bump klayout-tools pin 0.5.0, 0.7.0, 7755612adb51 → 0.8.0 *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -68,10 +70,10 @@ _None._
 | Very important | 0 |
 | Important | 0 |
 | Ready (`loom:issue`) | 0 |
-| In Progress (`loom:building`) | 1 |
-| PRs awaiting review | 0 |
+| In Progress (`loom:building`) | 2 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 2 |
+| Curated | 3 |
 | Architect / Hermit proposals | 0 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
