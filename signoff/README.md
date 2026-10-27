@@ -69,15 +69,24 @@ regenerate `tier-report.json` last.
 grader **cannot** check — the claim-side disclosures
 `docs/design-evidence-tiers.md` makes this repo's responsibility.
 
-**9 of 11 T1 items are `met`: items 1, 2, 3, 4, 5, 8, 9, 10, 11. Item 6
+**8 of 11 T1 items are `met`: items 1, 2, 3, 4, 8, 9, 10, 11. Item 5 renders
+`unmet`/`partial_coverage` under the 0.8.0 grader (see the grader paragraph
+below). Item 6
 renders `not_applicable` (issue #212; counted apart in
 `t1_not_applicable_count`, never as `met`). Item 7 renders
 `unmet`/`no_evidence` and is deliberately uncited.** Item 11
 moved from `unmet`/`lvs_supply_unproven` to `met` in issue #69, when the LVS
 report gained `power_connectivity.status: "match"` (see its row below). The
-grader is pinned at klayout-tools
-`7755612adb513f00ec61e7a77ff7091aee7630f5` (the commit that merged the item 6
-`not_applicable` outcome, klayout-tools#2865). Moving to it from
+grader is pinned at the PyPI release `klayout-tools==0.8.0` (issue #227).
+Moving to it from the dev commit `7755612adb51` changed one item's status:
+item 5 went `met` to `unmet`/`partial_coverage` (`missing_kinds:
+["functional-verification"]`), because 0.8.0 derives item-5 spec-row coverage
+from the envelopes' `spec_row` tags (klayout-tools#3768/#3778) and the
+manifest cites only the `klt sta` envelope. The record is committed as
+graded, not relaxed; the missing evidence is tracked in a follow-up issue.
+Item 10's citation hash moved with the workflow bytes, and the grader
+metadata (`build`, ruleset id, checklist document hash, item 4 and 6 text)
+changed. The earlier move from
 `3a75c3ae705b7ad3803625255de93bcd982e70c6` changed no item's status except
 item 6 (`unmet`/`no_evidence` to `not_applicable`); item 10's citation hash
 moved with the workflow bytes and item 11's grader note text was reworded.

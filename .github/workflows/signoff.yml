@@ -21,15 +21,14 @@
 # gate is the diff, not the exit code; exit 0 (T1 reached) and 3 (not yet)
 # both pass, everything else fails.
 #
-# klt is pinned to the exact upstream commit the committed tier report was
-# graded with (its bundled copy of docs/design-evidence-tiers.md fixes the
-# item skeleton and its text, so a floating install would churn the record):
-# 7755612adb513f00ec61e7a77ff7091aee7630f5, "feat(signoff): item 6 not_applicable outcome"
-# (klayout-tools#2865, PR #3200). That grader re-hashes the artifact each item
-# 1/2/9/10 envelope names in provenance.input.path (klayout-tools#2718), which
-# is what lets this repo cite those four rows, and accepts the recorded item 6
-# not_applicable form (see signoff/README.md). This pin is independent of
-# flow/tool_versions.sh's RECORDED_KLT_VERSION, which governs the design-flow
+# klt is pinned to the PyPI release the committed tier report was graded
+# with (its bundled copy of docs/design-evidence-tiers.md fixes the item
+# skeleton and its text, so a floating install would churn the record):
+# klayout-tools==0.8.0 (tag v0.8.0). That grader re-hashes the artifact each
+# item 1/2/9/10 envelope names in provenance.input.path (klayout-tools#2718),
+# which is what lets this repo cite those four rows, and accepts the recorded
+# item 6 not_applicable form (see signoff/README.md). This pin is independent
+# of flow/tool_versions.sh's RECORDED_KLT_VERSION, which governs the design-flow
 # evidence (see layout/README.md's "ERC scope, concretely" for the same
 # split); bump it deliberately, together with a regenerated
 # signoff/tier-report.json, when a new klt must re-grade the manifest.
@@ -61,8 +60,9 @@ jobs:
 
       - name: Install the pinned klt (klayout-tools)
         run: |
-          uv tool install "klayout-tools @ git+https://github.com/2AMLogic/klayout-tools@7755612adb513f00ec61e7a77ff7091aee7630f5"
+          uv tool install "klayout-tools==0.8.0"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          klt --version
 
       - name: Verify every manifest pin against the live artifacts
         run: ./signoff/verify-pins.sh

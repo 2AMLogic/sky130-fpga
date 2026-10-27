@@ -7,7 +7,7 @@
   "source": ".github/workflows/signoff.yml",
   "provenance": {
     "input": {
-      "content_hash": "sha256:fea257901e3a2fd0db9cb50e163239cd33373917b65cb68b99f9824848f51102",
+      "content_hash": "sha256:f1094e33a7e2c78da8a748d5f215adbae2fd9aa61315a4e0811e01d8f355554e",
       "path": "../.github/workflows/signoff.yml",
       "role": "audited-artifact"
     }

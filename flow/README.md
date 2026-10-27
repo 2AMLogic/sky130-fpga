@@ -133,6 +133,16 @@ touching the host klt:
 against this value. The `flow/layout.sh` it calls prints its own banner
 against `RECORDED_KLT_VERSION`, and that one warns.
 
+**Not bumped to 0.8.0 (issue #227).** Under `klayout-tools==0.8.0`
+`./flow/lvs.sh` does not reproduce this report: the compare returns
+`status: mismatch` (28 mismatches, all `hints.rejected` on the pinned
+top-level pins, from `options.anchor_top_level_pins`), while
+`power_connectivity.status` stays `match`. The committed LVS report, GDS,
+DEF, par report and STA evidence were therefore not regenerated, and
+`RECORDED_KLT_VERSION`, `RECORDED_STA_KLT_VERSION` and
+`RECORDED_LVS_KLT_VERSION` stay at their producing versions. Only the
+signoff grader (`.github/workflows/signoff.yml`) moved to 0.8.0.
+
 `flow/layout.sh`, `flow/sta-sweep.sh` and `flow/sdf-resim.sh` all source
 `flow/tool_versions.sh` and print the installed `klt`/OpenROAD versions at
 the top of every run, with a warning if they differ from the table above
