@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "kind": "t1-attestation-inventory",
+  "t1_item": 9,
+  "description": "T1 item 9 testbenches shipped: every committed testbench and harness (sim/, the cocotb bitstream test, the FABulous equivalence benches), the claim-to-harness traceability table, and the audit scripts. Cold start is ./flow/audit-evidence.sh, which needs no toolchain.",
+  "testbenches": [
+    "design/fabulous/tb_configmem_equiv.v",
+    "design/fabulous/tb_lut4_ff_bel_equiv.v",
+    "design/fabulous/tb_switch_matrix_equiv.v",
+    "flow/audit-evidence.sh",
+    "flow/audit_evidence.py",
+    "flow/tool_versions.sh",
+    "measurements/claim-traceability.md",
+    "sim/cocotb/fv_request.json",
+    "sim/cocotb/test_bitstream_fabric.py",
+    "sim/switch_matrix_tb_gen.vh",
+    "sim/tb_boundary_fwd.v",
+    "sim/tb_ctrl_route.v",
+    "sim/tb_logic_tile.v",
+    "sim/tb_logic_tile_bitstream.v",
+    "sim/tb_logic_tile_gapfill.v",
+    "sim/tb_logic_tile_routed.v",
+    "sim/tb_lut4_slice.v",
+    "sim/tb_lut_basis.v",
+    "sim/tb_output_route.v",
+    "sim/tb_route_diag.v",
+    "sim/tb_switch_matrix.v"
+  ],
+  "cold_start": {
+    "argv": [
+      "./flow/audit-evidence.sh"
+    ]
+  },
+  "pins": {
+    "pdk": {
+      "name": "open_pdks",
+      "revision": "c6d73a35f524070e85faff4a6a9eef49553ebc2b"
+    },
+    "tools": {
+      "klayout-tools": "0.8.0",
+      "openroad": "26Q3-1510-g6cb3f2b704",
+      "yosys": "0.69+260",
+      "nextpnr": "nextpnr-0.11.1-54-g861c57be",
+      "fabulous": "2.2.0"
+    }
+  }
+}

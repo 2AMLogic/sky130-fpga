@@ -3,13 +3,206 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 9,
-  "summary": "T1 item 9 testbenches shipped: measurements/claim-traceability.md (issue #34 walk, re-audited post-PDN, for the issue #68 timing_status re-sweep, and for the issue #69 LVS power-connectivity re-enable) maps every published claim to a committed testbench or flow script and a pinned PDK; ./flow/audit-evidence.sh re-derives its machine half and passes clean. Cold-start: ./flow/audit-evidence.sh.",
-  "source": "measurements/claim-traceability.md",
+  "summary": "T1 item 9 (Testbenches shipped): 24/24 attestation checks passed (klt signoff --attest)",
+  "source": "signoff/item-9-inventory.json",
+  "attestation": {
+    "producer": "klt signoff --attest",
+    "inventory_schema_version": 1,
+    "hash_algorithm": "sha256-raw-bytes",
+    "check_count": 24,
+    "passed_count": 24,
+    "checks": [
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "design/fabulous/tb_configmem_equiv.v",
+        "passed": true,
+        "content_hash": "sha256:613e07b2367ad773a1104460eedbc9cae57697b9d8f26d41d54247dfe46e0fde"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "design/fabulous/tb_lut4_ff_bel_equiv.v",
+        "passed": true,
+        "content_hash": "sha256:d76678ab028ac0f5c564b8c3e6449354d2265d7c90c8ec7642554158008c0035"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "design/fabulous/tb_switch_matrix_equiv.v",
+        "passed": true,
+        "content_hash": "sha256:089505e1b25d60010c53f37faf985f98a40bfda4a39f7ab7247fb29a104565f0"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "flow/audit-evidence.sh",
+        "passed": true,
+        "content_hash": "sha256:8e44d079de54d743959fd43ff0175ad30d838435166817add16e9a554f8410da"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "flow/audit_evidence.py",
+        "passed": true,
+        "content_hash": "sha256:c84b1389cb35efe1d1338e6350a86a2be148a62fb210c32413c92910734f1ff1"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "flow/tool_versions.sh",
+        "passed": true,
+        "content_hash": "sha256:479d2f18f0ca7392b0085f9b2c7ac3f60de54708ad2a26b61dbb508ed767b6d9"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "measurements/claim-traceability.md",
+        "passed": true,
+        "content_hash": "sha256:8f37ce93d014a4ba436e6a93ac37a2de9f37c81a54cd363b4409b54fe49bee40"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/cocotb/fv_request.json",
+        "passed": true,
+        "content_hash": "sha256:d23aad591bd4e99175c4977c7a603083eb5a35ba3fa4faeffbf61eea1603725a"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/cocotb/test_bitstream_fabric.py",
+        "passed": true,
+        "content_hash": "sha256:19b83097dcaab5cac93f88cbc51597f1cb0963012b96a20658edb24155cd6cb4"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/switch_matrix_tb_gen.vh",
+        "passed": true,
+        "content_hash": "sha256:42d60d50e22d50d30590dec8f5454fa5dab1e8dcd19612ac17b5fdafc935b7df"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_boundary_fwd.v",
+        "passed": true,
+        "content_hash": "sha256:fdcc61136469c2f11f563947cf726a64da712c99c93d5f539906bbb4f8108485"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_ctrl_route.v",
+        "passed": true,
+        "content_hash": "sha256:a1c6a55b773c1510d980f5d1ff88ba79e509db1b7b64c4e4be229d26c869f603"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_logic_tile.v",
+        "passed": true,
+        "content_hash": "sha256:3f90296942e63a59f55db70dd657025d90d91f9452577a07fbddef35a15c3603"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_logic_tile_bitstream.v",
+        "passed": true,
+        "content_hash": "sha256:20b42058541902130769c0e4791462fc585e4edcd7632a2b0635ebd20d43e1f9"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_logic_tile_gapfill.v",
+        "passed": true,
+        "content_hash": "sha256:014a86edb1f21d3c8a90e22650bcec720d45832c468145aa635bb2e90f6b7b2e"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_logic_tile_routed.v",
+        "passed": true,
+        "content_hash": "sha256:cad2f85b85ebc037e87efdf39ed5ef1002cfa65a66b565b1cf731b74e3c4f30f"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_lut4_slice.v",
+        "passed": true,
+        "content_hash": "sha256:ca664daecc674501368ed17d2aacf84eff52486dbfeea81f19db81f33efb382f"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_lut_basis.v",
+        "passed": true,
+        "content_hash": "sha256:45a7d48b418e09ce2264a8cbce20cfb757fff9140ee5369aa0b347a7913fdfd8"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_output_route.v",
+        "passed": true,
+        "content_hash": "sha256:ca6245b6c413371fe90f75eb1d134c9e8ebc154ccd6710a1a3736ef6817972b8"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_route_diag.v",
+        "passed": true,
+        "content_hash": "sha256:5500be2c541dbaa48f990a2c431222237d104b58dcb06b3c4cd1b3145cb7214a"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tb_switch_matrix.v",
+        "passed": true,
+        "content_hash": "sha256:f8843679a8e444429696f5d9c481ac5220bc6971c09d3ad751bb1751a7ff968a"
+      },
+      {
+        "check": "command",
+        "role": "cold_start",
+        "argv": [
+          "./flow/audit-evidence.sh"
+        ],
+        "cwd": ".",
+        "exit_status": 0,
+        "passed": true
+      },
+      {
+        "check": "pin",
+        "role": "pdk",
+        "passed": true,
+        "value": {
+          "name": "open_pdks",
+          "revision": "c6d73a35f524070e85faff4a6a9eef49553ebc2b"
+        }
+      },
+      {
+        "check": "pin",
+        "role": "tools",
+        "passed": true,
+        "value": {
+          "fabulous": "2.2.0",
+          "klayout-tools": "0.8.0",
+          "nextpnr": "nextpnr-0.11.1-54-g861c57be",
+          "openroad": "26Q3-1510-g6cb3f2b704",
+          "yosys": "0.69+260"
+        }
+      }
+    ]
+  },
   "provenance": {
+    "klt_version": "0.8.0",
+    "klayout_version": null,
+    "pdk": null,
+    "deck": null,
     "input": {
-      "content_hash": "sha256:8f37ce93d014a4ba436e6a93ac37a2de9f37c81a54cd363b4409b54fe49bee40",
-      "path": "../measurements/claim-traceability.md",
-      "role": "audited-artifact"
+      "path": {
+        "path": "signoff/item-9-inventory.json",
+        "scope": "repo"
+      },
+      "content_hash": "sha256:3c1e983a6a259054528411dd36333e0d2b1c8a6f81561ab211373404120a801d"
     }
   }
 }

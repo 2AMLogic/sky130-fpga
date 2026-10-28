@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "kind": "t1-attestation-inventory",
+  "t1_item": 10,
+  "description": "T1 item 10 repo hygiene: README, LICENSE, the ratified tile spec and every CI lane are committed and hashed, so editing any of them turns the row stale. The check runs the status-claim checker's own unit tests (toolchain-free, independent of the tier report).",
+  "hygiene": [
+    "README.md",
+    "LICENSE",
+    "spec/tile-spec.md",
+    ".github/workflows/fabulous-nextpnr.yml",
+    ".github/workflows/flow-evidence.yml",
+    ".github/workflows/gate-sim.yml",
+    ".github/workflows/rtl-sim.yml",
+    ".github/workflows/signoff.yml"
+  ],
+  "checks": [
+    {
+      "name": "status-claim-checker-tests",
+      "argv": [
+        "python3",
+        "-I",
+        "flow/test_check_status_claims.py"
+      ]
+    }
+  ]
+}

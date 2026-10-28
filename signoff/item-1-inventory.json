@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "kind": "t1-attestation-inventory",
+  "t1_item": 1,
+  "description": "T1 item 1 design sources: every committed RTL file under design/rtl/ (the tile, its slice, and the routed/switch-matrix variants, so an edit to any of them turns the row stale) plus the derived generic-cell netlist, whose freshness command regenerates it from the RTL with yosys and diffs it. The freshness command needs yosys, which the signoff CI runner lacks, so it is local_only: CI --check carries the committed outcome and re-hashes every file. Re-run the attest command in signoff/README.md after an RTL change.",
+  "sources": [
+    "design/rtl/logic_tile.v",
+    "design/rtl/logic_tile_routed.v",
+    "design/rtl/logic_tile_switch_matrix.v",
+    "design/rtl/lut4_slice.v"
+  ],
+  "derived": [
+    {
+      "path": "design/netlist/logic_tile_netlist.v",
+      "generator": "flow/synth.sh --update (yosys generic-cell synthesis)",
+      "check": {
+        "argv": [
+          "./flow/synth.sh"
+        ],
+        "local_only": true
+      }
+    }
+  ]
+}
