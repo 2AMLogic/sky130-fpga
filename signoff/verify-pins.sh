@@ -67,16 +67,22 @@
 #                                         provenance.input pin; regenerated
 #                                         with the flow)
 #
-#   items 1, 2, 9, 10  artifact-anchored generic envelopes (signoff/item-N-*.json,
+#   items 1, 9, 10     tool-produced attestation envelopes (issue #236,
+#                                         `klt signoff --attest N --inventory
+#                                         signoff/item-N-inventory.json`). The
+#                                         envelope pins the inventory's bytes; the
+#                                         inventory lists every member file, and CI
+#                                         re-runs `--attest N --check` to re-hash
+#                                         them (this script checks the pin chain
+#                                         envelope -> inventory -> manifest).
+#
+#   items 2            artifact-anchored generic envelope (signoff/item-2-layout.json,
 #                                         klayout-tools#2718). Each names its
 #                                         audited artifact in provenance.input.path
 #                                         (resolved beside the envelope) and pins its
 #                                         hash; the envelope, the manifest and the live
 #                                         artifact bytes must all agree:
-#                                           1  design/netlist/logic_tile_netlist.v
 #                                           2  layout/logic_tile.gds
-#                                           9  measurements/claim-traceability.md
-#                                           10 .github/workflows/signoff.yml
 #
 # Usage: ./signoff/verify-pins.sh          (from the repo root -- paths are
 #                                          repo-root-relative)
@@ -260,17 +266,17 @@ if "11" in ev:
           "update the manifest's item-11 par content_hash after ./flow/lvs.sh --update "
           "(the P&R report regenerates together with the LVS inputs)")
 
-print("items 1, 2, 9, 10 (artifact-anchored generic envelopes): live audited bytes")
+print("items 1, 2, 9, 10 (generic envelopes): live audited bytes")
 import os
 bound = [
-    ("1", "signoff/item-1-design-sources.json", "design/netlist/logic_tile_netlist.v",
-     "regenerate the netlist with ./flow/layout.sh, then"),
+    ("1", "signoff/item-1-design-sources.json", "signoff/item-1-inventory.json",
+     "re-run the item-1 attest command in signoff/README.md, then"),
     ("2", "signoff/item-2-layout.json", "layout/logic_tile.gds",
      "after re-running the flow (./flow/drc.sh --update etc.),"),
-    ("9", "signoff/item-9-testbenches.json", "measurements/claim-traceability.md",
-     "re-run ./flow/audit-evidence.sh and re-audit the file, then"),
-    ("10", "signoff/item-10-repo-hygiene.json", ".github/workflows/signoff.yml",
-     "re-inspect README, spec and LICENSE, then"),
+    ("9", "signoff/item-9-testbenches.json", "signoff/item-9-inventory.json",
+     "re-run the item-9 attest command in signoff/README.md, then"),
+    ("10", "signoff/item-10-repo-hygiene.json", "signoff/item-10-inventory.json",
+     "re-run the item-10 attest command in signoff/README.md, then"),
 ]
 for item, env_rel, art_rel, pre in bound:
     remedy = (f"{pre} update {env_rel}'s provenance.input.content_hash and the "
@@ -279,10 +285,14 @@ for item, env_rel, art_rel, pre in bound:
     env = json.load(open(f"{repo}/{env_rel}"))
     live = sha256_of(art_rel)
     inp = env["provenance"]["input"]
-    resolved = os.path.normpath(os.path.join(os.path.dirname(f"{repo}/{env_rel}"), inp["path"]))
+    in_path = inp["path"]
+    if isinstance(in_path, dict):  # --attest form: {"path": repo-relative, "scope": "repo"}
+        resolved = os.path.normpath(os.path.join(repo, in_path["path"]))
+    else:
+        resolved = os.path.normpath(os.path.join(os.path.dirname(f"{repo}/{env_rel}"), in_path))
     check(f"  item-{item} envelope names {art_rel}",
           os.path.realpath(f"{repo}/{art_rel}"), os.path.realpath(resolved),
-          f"point {env_rel} provenance.input.path at ../{art_rel}")
+          f"point {env_rel} provenance.input.path at {art_rel}")
     check(f"  item-{item} envelope declares t1_item {item}",
           item, str(env.get("t1_item")), f"set t1_item in {env_rel}")
     check(f"  item-{item} envelope input pin == live {art_rel}",

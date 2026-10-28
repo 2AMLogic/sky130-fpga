@@ -33,10 +33,13 @@
 # split); bump it deliberately, together with a regenerated
 # signoff/tier-report.json, when a new klt must re-grade the manifest.
 #
-# NOTE: the item-10 envelope binds the bytes of THIS file. Any edit here
-# (including to this comment) requires re-running the steps in
-# signoff/README.md ("Regenerate and verify") -- verify-pins.sh will fail
-# until the item-10 envelope and manifest pins are refreshed.
+# Items 1, 9 and 10 are tool-produced (issue #236): their envelopes come from
+# `klt signoff --attest N --inventory signoff/item-N-inventory.json`, and the
+# attest-check step below re-attests each one and fails (exit 3) when any
+# inventoried file -- RTL, testbench, README, spec, LICENSE, or a workflow --
+# changed without a refreshed envelope. This file is itself an item-10
+# inventory member: any edit here (including to this comment) requires
+# re-running the steps in signoff/README.md ("Regenerate and verify").
 
 name: signoff
 
@@ -66,6 +69,18 @@ jobs:
 
       - name: Verify every manifest pin against the live artifacts
         run: ./signoff/verify-pins.sh
+
+      - name: Re-attest items 1, 9 and 10 against the committed envelopes
+        run: |
+          # exit 3 = drift (an inventoried file changed, or a check failed).
+          # Item 1's yosys freshness command is local_only, so it is carried
+          # from the committed envelope here; every file is still re-hashed.
+          for pair in 1:design-sources 9:testbenches 10:repo-hygiene; do
+            item="${pair%%:*}"; name="${pair#*:}"
+            klt signoff --attest "$item" \
+              --inventory "signoff/item-$item-inventory.json" \
+              --check "signoff/item-$item-$name.json"
+          done
 
       - name: Re-run klt signoff and diff against the committed tier report
         run: |

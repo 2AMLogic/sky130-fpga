@@ -3,13 +3,97 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 10,
-  "summary": "T1 item 10 repo hygiene: README.md, spec/tile-spec.md and LICENSE are committed and the signoff CI lane (.github/workflows/signoff.yml) re-grades this record on every push and PR. Binding covers the workflow file bytes only; README, spec and LICENSE are inspected but not hashed by this envelope.",
-  "source": ".github/workflows/signoff.yml",
+  "summary": "T1 item 10 (Repo hygiene): 9/9 attestation checks passed (klt signoff --attest)",
+  "source": "signoff/item-10-inventory.json",
+  "attestation": {
+    "producer": "klt signoff --attest",
+    "inventory_schema_version": 1,
+    "hash_algorithm": "sha256-raw-bytes",
+    "check_count": 9,
+    "passed_count": 9,
+    "checks": [
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": ".github/workflows/fabulous-nextpnr.yml",
+        "passed": true,
+        "content_hash": "sha256:289a6d8eb3c25830573fe0699a08fe12e6093fe8b548f3f0167d7e871a978cf3"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": ".github/workflows/flow-evidence.yml",
+        "passed": true,
+        "content_hash": "sha256:0997bc9a4e16ec4efec85bd314da5895a9880d8c4f6e26c583ff4cd2dc1578d4"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": ".github/workflows/gate-sim.yml",
+        "passed": true,
+        "content_hash": "sha256:42f9905191321d4cf818eff4e02568dceb181bdab8e1d13fbc3a161e6d6e9243"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": ".github/workflows/rtl-sim.yml",
+        "passed": true,
+        "content_hash": "sha256:67b1517370389cf1efd47eaf1fc565d9e03f7917f48bac64c9eecb47c8256c31"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": ".github/workflows/signoff.yml",
+        "passed": true,
+        "content_hash": "sha256:665df1ff561a2ae3d4b58187f5ef0e6a7880e392d77f34fa2aa323d313b3e6e9"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": "LICENSE",
+        "passed": true,
+        "content_hash": "sha256:cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": "README.md",
+        "passed": true,
+        "content_hash": "sha256:6e782398b9abc6755bf1c52d87b21c21814dcc192a12f21484f6c69914b374b3"
+      },
+      {
+        "check": "present",
+        "role": "hygiene",
+        "path": "spec/tile-spec.md",
+        "passed": true,
+        "content_hash": "sha256:c8db5409ba1f15b0f0bef8101131a589a8cf7bc90327bcea76841603f1420b67"
+      },
+      {
+        "check": "command",
+        "role": "audit",
+        "name": "status-claim-checker-tests",
+        "argv": [
+          "python3",
+          "-I",
+          "flow/test_check_status_claims.py"
+        ],
+        "cwd": ".",
+        "exit_status": 0,
+        "passed": true
+      }
+    ]
+  },
   "provenance": {
+    "klt_version": "0.8.0",
+    "klayout_version": null,
+    "pdk": null,
+    "deck": null,
     "input": {
-      "content_hash": "sha256:f1094e33a7e2c78da8a748d5f215adbae2fd9aa61315a4e0811e01d8f355554e",
-      "path": "../.github/workflows/signoff.yml",
-      "role": "audited-artifact"
+      "path": {
+        "path": "signoff/item-10-inventory.json",
+        "scope": "repo"
+      },
+      "content_hash": "sha256:6fe42c7a627141064db98d5361b531cfb728610484cbbd066377a2dc13b130d5"
     }
   }
 }
