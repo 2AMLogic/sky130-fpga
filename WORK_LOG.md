@@ -2,8 +2,17 @@
 
 Chronological record of merged pull requests and closed issues, maintained by the Loom Guide role. Newest entries appear first.
 
+### 2026-10-28
+
+- **PR #237**: build: attest T1 items 1, 9 and 10 with klt --attest inventories and CI drift checks
+- **Issue #236** (closed): T1 grading: attest items 1, 9 and 10 with klt signoff --attest inventories (each binding covers one file today)
+
 ### 2026-10-27
 
+- **PR #235**: refactor: share stream-generator scaffolding in flow/_stream_gen.py
+- **Issue #234** (closed): Consolidate duplicated scaffolding across the four flow/ stream generators
+- **PR #233**: build: re-stamp LVS/STA evidence under klt 0.8.0, cite functional-verification for T1 item 5
+- **Issue #228** (closed): Reconcile committed evidence with klt 0.8.0 (item 5 functional-verification, LVS anchor_top_level_pins)
 - **PR #229**: build: pin signoff grader to klayout-tools 0.8.0 and regenerate tier report
 - **Issue #227** (closed): Bump klayout-tools pin 0.5.0, 0.7.0, 7755612adb51 → 0.8.0
 - **PR #226**: refactor: share one load_module helper across flow scripts and tests
