@@ -19,7 +19,7 @@ _None._
 
 `loom:important`; taken before unlabelled work.
 
-_None._
+- **#213**: T1 item 7: SDF-annotated post-route functional run, via name sanitization or klayout-tools#2897
 
 ## Ready
 
@@ -31,7 +31,7 @@ Human-approved issues ready for implementation (`loom:issue`).
 
 Issues currently being built (`loom:building`).
 
-- **#216**: Consolidate lvs_sanitize_verilog.py into the shared netlist sanitizer (two rename rules for one netlist)
+_None._
 
 ## PRs Awaiting Review
 
@@ -66,9 +66,9 @@ _None._
 |------|-------|
 | Operator merge-risk holds | 0 |
 | Very important | 0 |
-| Important | 0 |
+| Important | 1 |
 | Ready (`loom:issue`) | 1 |
-| In Progress (`loom:building`) | 1 |
+| In Progress (`loom:building`) | 0 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
 | Curated | 2 |
