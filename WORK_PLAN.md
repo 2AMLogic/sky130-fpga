@@ -54,7 +54,7 @@ Issues carrying `loom:curated`.
 
 ## Proposed (Architect / Hermit)
 
-_None._
+- **#230**: Finish #225: route the 8 remaining hand-rolled spec_from_file_location loaders through flow/_modload.py *(hermit)*
 
 ## Epics
 
@@ -72,6 +72,6 @@ _None._
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
 | Curated | 2 |
-| Architect / Hermit proposals | 0 |
+| Architect / Hermit proposals | 1 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
