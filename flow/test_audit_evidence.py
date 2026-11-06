@@ -6,20 +6,20 @@ stdlib only, temp trees; no committed record is touched.
     python3 -I flow/test_audit_evidence.py
 """
 import hashlib
-import importlib.util
 import io
 import json
 import shutil
 import tempfile
+import sys
 import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-_spec = importlib.util.spec_from_file_location(
-    "audit_evidence", REPO / "flow" / "audit_evidence.py")
-A = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(A)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
+
+A = _load("audit_evidence", REPO / "flow" / "audit_evidence.py")
 
 PDK = "test-pdk"
 DATA = b"current contents\n"

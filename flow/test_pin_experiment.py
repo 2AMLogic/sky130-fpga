@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Unit tests for flow/pin_experiment.py's transform and equivalence checks (issues #137, #160). Stdlib only."""
-import importlib.util
 import itertools
 import json
+import sys
 import unittest
 from pathlib import Path
 
-spec = importlib.util.spec_from_file_location("pin_experiment", Path(__file__).with_name("pin_experiment.py"))
-pe = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(pe)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
+
+pe = _load("pin_experiment", Path(__file__).with_name("pin_experiment.py"))
 
 
 def lut(fn, nets, out):

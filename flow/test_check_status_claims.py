@@ -3,18 +3,18 @@
 
     python3 flow/test_check_status_claims.py
 """
-import importlib.util
 import json
 import shutil
 import tempfile
+import sys
 import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-_spec = importlib.util.spec_from_file_location(
-    "check_status_claims", REPO / "flow" / "check_status_claims.py")
-C = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(C)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
+
+C = _load("check_status_claims", REPO / "flow" / "check_status_claims.py")
 
 FILES = [
     "README.md", "spec/framework-gaps.md", C.SUMMARY,

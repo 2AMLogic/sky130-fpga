@@ -1,17 +1,18 @@
 #!/usr/bin/env python3
 """Tests for flow/check_regbel_fixtures.py (issue #156). Mutations happen in a temp copy."""
-import importlib.util
 import json
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parent
-spec = importlib.util.spec_from_file_location("crf", HERE / "check_regbel_fixtures.py")
-crf = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(crf)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
+
+crf = _load("crf", HERE / "check_regbel_fixtures.py")
 
 
 class RegbelMetadata(unittest.TestCase):
