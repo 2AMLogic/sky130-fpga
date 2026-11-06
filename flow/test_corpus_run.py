@@ -5,16 +5,16 @@ Pure stdlib, no mapper needed: they pin the rule that tool/setup problems are
 never reported as routability evidence and that every measured class is
 distinguished.
 """
-import importlib.util
 import json
 import sys
 import tempfile
 import unittest
 from pathlib import Path
 
-spec = importlib.util.spec_from_file_location("corpus_run", Path(__file__).with_name("corpus_run.py"))
-cr = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(cr)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
+
+cr = _load("corpus_run", Path(__file__).with_name("corpus_run.py"))
 
 PROGRESS = ("Info: Routing..\nInfo:    IterCnt |  w/ripup   wo/ripup |  w/r  wo/r |      arcs| batch(sec) total(sec)|\n"
             "Info:       1000 |      958         41 |  958    41 |         3|       0.02       0.02|\n")

@@ -56,7 +56,6 @@ must each be a completed rejection or nothing is routed.
 """
 import argparse
 import hashlib
-import importlib.util
 import itertools
 import json
 import os
@@ -65,16 +64,15 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE))
+from _modload import load_module as _load  # noqa: E402
 REPO = HERE.parent
 MAX_PI = 16
 NPINS = 4
 
 
 def _load_corpus_run():
-    spec = importlib.util.spec_from_file_location("corpus_run", HERE / "corpus_run.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return _load("corpus_run", HERE / "corpus_run.py")
 
 
 # ------------------------------------------------------------------ netlist helpers
@@ -740,10 +738,7 @@ def export_fixtures(cr, case, seeds, rows, variants, problems, base_sha, version
 
 
 def _load_pin_fixtures():
-    spec = importlib.util.spec_from_file_location("pin_fixtures", HERE / "pin_fixtures.py")
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    return mod
+    return _load("pin_fixtures", HERE / "pin_fixtures.py")
 
 
 def record(case, versions, base_sha, variants, rows, problems, expect, controls=None):

@@ -7,17 +7,18 @@ wrong case count, missing file, sha256 drift, stray file, snapshot provenance
 drift, transformed-netlist relation, plus the self-consistent LUT corruption
 helper used by the simulation negative tests.
 """
-import importlib.util
 import json
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-spec = importlib.util.spec_from_file_location("pin_fixtures", HERE / "pin_fixtures.py")
-pf = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(pf)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
+
+pf = _load("pin_fixtures", HERE / "pin_fixtures.py")
 
 
 class FixtureGate(unittest.TestCase):
@@ -116,9 +117,7 @@ class ExportGuard(unittest.TestCase):
     """flow/pin_experiment.py export refuses (writing nothing) unless every gate held."""
 
     def setUp(self):
-        spec = importlib.util.spec_from_file_location("pin_experiment", HERE / "pin_experiment.py")
-        self.pe = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(self.pe)
+        self.pe = _load("pin_experiment", HERE / "pin_experiment.py")
         self.tmp = Path(tempfile.mkdtemp())
         self.dest = self.tmp / "out"
         sim = "61697 checks, 0 failures; 38/38 perturbations detected"

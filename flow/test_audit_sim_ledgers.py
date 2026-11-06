@@ -6,22 +6,22 @@ evidence file is touched (the real repository is only read).
 
     python3 -I flow/test_audit_sim_ledgers.py
 """
-import importlib.util
 import io
 import os
 import re
 import shutil
 import subprocess
 import tempfile
+import sys
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-_spec = importlib.util.spec_from_file_location(
-    "audit_sim_ledgers", REPO / "flow" / "audit_sim_ledgers.py")
-L = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(L)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
+
+L = _load("audit_sim_ledgers", REPO / "flow" / "audit_sim_ledgers.py")
 
 WORKFLOW = REPO / ".github" / "workflows" / "flow-evidence.yml"
 HDR = "# Append-only evidence record (issue #0). Add new dated entries below.\n"

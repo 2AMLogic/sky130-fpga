@@ -3,18 +3,18 @@
 
     python3 flow/test_gen_bitstream_format.py
 """
-import importlib.util
 import re
 import shutil
 import tempfile
+import sys
 import unittest
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-_spec = importlib.util.spec_from_file_location(
-    "gen_bitstream_format", REPO / "flow" / "gen_bitstream_format.py")
-G = importlib.util.module_from_spec(_spec)
-_spec.loader.exec_module(G)
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from _modload import load_module as _load  # noqa: E402
+
+G = _load("gen_bitstream_format", REPO / "flow" / "gen_bitstream_format.py")
 
 FILES = [G.MAP, G.SPEC, G.OUT] + [f"sim/bitstream/{n}.cfg" for n in G.FIXTURES]
 
