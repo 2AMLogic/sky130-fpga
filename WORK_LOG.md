@@ -2,6 +2,11 @@
 
 Chronological record of merged pull requests and closed issues, maintained by the Loom Guide role. Newest entries appear first.
 
+### 2026-11-06
+
+- **PR #243**: refactor(flow): use shared load_module for remaining module loaders
+- **Issue #230** (closed): Finish #225: route the 8 remaining hand-rolled spec_from_file_location loaders through flow/_modload.py
+
 ### 2026-10-28
 
 - **PR #237**: build: attest T1 items 1, 9 and 10 with klt --attest inventories and CI drift checks
