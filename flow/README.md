@@ -150,6 +150,11 @@ reproduce against the committed GDS with the recorded PDK
 (`PDK_ROOT=~/.volare PDK=sky130A`). `RECORDED_KLT_VERSION` (layout/PAR/ERC/DRC
 lineage) is **not** moved: `flow/layout.sh` under 0.8.0 does not reproduce the
 committed GDS or routed DEF, so those artifacts were not regenerated.
+Issue #245 measured that drift: against the committed klt-0.5.0 layout, a
+check-mode `flow/layout.sh` run is **physical**, not cosmetic (45 of 47 logic
+cells and all 137 nets differ, independent of the PDK revision), though every
+verdict in `par.json` still passes. See
+`measurements/layout-reproducibility/records/20261107-213000-9e83907.md`.
 Item 5's functional-verification envelope comes from
 `flow/functional-verification.sh` (cocotb, run as
 `uvx --from "klayout-tools[functional-verification]==0.8.0" klt`).
