@@ -2,6 +2,11 @@
 
 Chronological record of merged pull requests and closed issues, maintained by the Loom Guide role. Newest entries appear first.
 
+### 2026-11-07
+
+- **PR #246**: docs: record physical drift of flow/layout.sh vs committed layout
+- **Issue #245** (closed): Diff flow/layout.sh output under the current klt against the committed klt-0.5.0 layout
+
 ### 2026-11-06
 
 - **PR #243**: refactor(flow): use shared load_module for remaining module loaders
