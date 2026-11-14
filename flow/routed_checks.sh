@@ -63,7 +63,9 @@ case "${1:-}" in
     *) echo "usage: $0 [--update]" >&2; exit 1 ;;
 esac
 
-command -v klt >/dev/null 2>&1 || { echo "error: klt not found on PATH" >&2; exit 1; }
+# shellcheck source=./report_check.sh
+source "$SCRIPT_DIR/report_check.sh"
+require_klt
 for f in "$GDS" "$NETLIST" "$DEF" "$PAR" "$SPEC"; do
     [[ -f "$f" ]] || { echo "error: missing input $f -- run flow/layout_routed.sh --update" >&2; exit 1; }
 done
@@ -78,7 +80,6 @@ print_pdk_version_banner "$PDK_VARIANT"
 
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
-sha() { python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$1"; }
 
 # --- DRC ------------------------------------------------------------------
 echo "=== klt drc ${TOP}.gds (deck: sky130; experimental observation) ==="
@@ -116,7 +117,7 @@ klt lvs "$BUILD_DIR/lvs_request.json" --format json > "$BUILD_DIR/lvs.raw" || tr
 python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$BUILD_DIR/lvs.raw" \
     || { echo "error: klt lvs produced no JSON report" >&2; exit 1; }
 RTL_HASH="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['provenance']['input']['content_hash'])" "$PAR")"
-python3 "$SCRIPT_DIR/lvs_report_trim.py" "$BUILD_DIR/lvs.raw" "sha256:$(sha "$GDS")" "$RTL_HASH" \
+python3 "$SCRIPT_DIR/lvs_report_trim.py" "$BUILD_DIR/lvs.raw" "$(sha256_of "$GDS")" "$RTL_HASH" \
     "$BUILD_DIR/${TOP}.lvs.json"
 
 # --- ERC ------------------------------------------------------------------
@@ -125,7 +126,7 @@ echo "=== klt erc ${TOP}.gds (spec: flow/erc_supply_spec.json; experimental obse
     --top "$TOP" --pdk sky130 --format json ) > "$BUILD_DIR/erc.raw" 2>"$BUILD_DIR/erc.err" || true
 python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$BUILD_DIR/erc.raw" \
     || { echo "error: klt erc produced no JSON report (see $BUILD_DIR/erc.err)" >&2; exit 1; }
-python3 "$SCRIPT_DIR/erc_report_trim.py" "$BUILD_DIR/erc.raw" "sha256:$(sha "$GDS")" "sha256:$(sha "$SPEC")" \
+python3 "$SCRIPT_DIR/erc_report_trim.py" "$BUILD_DIR/erc.raw" "$(sha256_of "$GDS")" "$(sha256_of "$SPEC")" \
     "$(klt --version | awk '{print $2}')" "$BUILD_DIR/${TOP}.erc.json"
 
 # --- routing pitch / utilization measurement ------------------------------

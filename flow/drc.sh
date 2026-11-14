@@ -51,24 +51,10 @@ REPORT_NAME="logic_tile.drc.json"
 DECK="sky130"
 PDK_VARIANT="sky130A"
 
-MODE="check"
-case "${1:-}" in
-    --update)
-        MODE="update"
-        ;;
-    "")
-        MODE="check"
-        ;;
-    *)
-        echo "usage: $0 [--update]" >&2
-        exit 1
-        ;;
-esac
-
-if ! command -v klt >/dev/null 2>&1; then
-    echo "error: klt not found on PATH" >&2
-    exit 1
-fi
+# shellcheck source=./report_check.sh
+source "$SCRIPT_DIR/report_check.sh"
+parse_update_mode "$@"
+require_klt
 
 # shellcheck source=./pdk_root.sh
 source "$SCRIPT_DIR/pdk_root.sh"

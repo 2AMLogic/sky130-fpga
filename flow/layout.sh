@@ -74,19 +74,9 @@ REPORT_NAME="logic_tile.par.json"
 CLOCK_PERIOD_NS=20
 CLOCK_PORT="clk"
 
-MODE="check"
-case "${1:-}" in
-    --update)
-        MODE="update"
-        ;;
-    "")
-        MODE="check"
-        ;;
-    *)
-        echo "usage: $0 [--update]" >&2
-        exit 1
-        ;;
-esac
+# shellcheck source=./report_check.sh
+source "$SCRIPT_DIR/report_check.sh"
+parse_update_mode "$@"
 
 for tool in klt openroad; do
     if ! command -v "$tool" >/dev/null 2>&1; then

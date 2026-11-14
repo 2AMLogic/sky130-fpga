@@ -18,6 +18,7 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | --- | --- | --- |
 | `tool_versions.sh` | single source of tool pins (sourced by the others) | all flow workflows |
 | `pdk_root.sh` | `$PDK_ROOT`/`$PDK` resolution, sourced by `drc.sh`, `layout.sh`, `lvs.sh`, `sta-sweep.sh` | - |
+| `report_check.sh` | `--update`/check argument parse (`parse_update_mode`), `require_klt` PATH guard and `sha256_of` provenance hash, sourced by `drc.sh`, `synth.sh`, `layout.sh`, `erc.sh`, `lvs.sh`, `routed_checks.sh`, `sta-sweep.sh` (issue #265) | - |
 | `fabulous.sh` | `design/fabulous/generator.log` and generated-versus-repository checks | `fabulous-nextpnr.yml` |
 | `fabulous_summary.py` | summary of a FABulous run directory (emitted files, config-bit layout); run by `fabulous.sh` | `fabulous-nextpnr.yml` |
 | `nextpnr.sh` | `design/fabulous/nextpnr.log` | `fabulous-nextpnr.yml` |
