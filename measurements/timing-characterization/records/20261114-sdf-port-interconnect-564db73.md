@@ -15,7 +15,7 @@
       {
         "path": "sim/sdf_port_interconnect/port_interconnect_dut.v",
         "role": "the fixture netlist under test",
-        "content_hash": "sha256:c9aafa360f8dbfd69b653b31293749874bca289bc7a9f69ab138681b831568c3"
+        "content_hash": "sha256:b453bc146181e1e371e9dd20087a0e797434e1e14c875ddcb207a6ee17c949d1"
       },
       {
         "path": "sim/sdf_port_interconnect/tb_port_interconnect_noop.v",
@@ -29,7 +29,7 @@
       },
       {
         "path": "sim/sdf_port_interconnect/run.sh",
-        "role": "the harness; asserts every verdict below",
+        "role": "the harness; asserts every verdict below except the one-off netlist-order observation in Result 3",
         "content_hash": "sha256:06c0653058545daa01ed7d31757509cdebd9d453d9e10cccabc04b07416fa789"
       },
       {
@@ -244,8 +244,14 @@ destination becomes `u_f4c` -- the last declared. So the annotatable
 destination is the one belonging to the **last-declared instance on the
 net**, and SDF entry order is not the variable.
 
-This is asserted on every run by `run.sh` leg C, which rebuilds the
-reversed SDF from the committed one and compares survivors.
+The SDF-order half is asserted on every run by `run.sh` leg C, which
+rebuilds the reversed SDF from the committed one and compares survivors.
+The netlist-order result above is a one-off scratch observation, not
+harness-asserted: no reordered netlist variant is committed and none is
+pinned in `record-meta.provenance.inputs`. It remains the load-bearing
+evidence for "last-declared" over "last by name", because in the
+committed fixture `u_a3` is both the last-declared and the alphabetically
+last instance on the fanout-4 net -- leg C alone cannot separate the two.
 
 ## Result 4: the destination's `specify`/`IOPATH` block is irrelevant
 

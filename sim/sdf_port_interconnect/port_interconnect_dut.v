@@ -34,7 +34,7 @@
 //
 // Port shapes mirror the committed logic_tile SDF
 // (measurements/timing-characterization/logic_tile_route.sdf): `in` is a
-// BUS, so `in[N]` is a bit-selected top-level port (113 of its 179 entries
+// BUS, so `in[N]` is a bit-selected top-level port (116 of its 179 entries
 // are sourced from one); `clk` is a SCALAR top-level port.
 
 `default_nettype none
@@ -116,7 +116,7 @@ module port_interconnect_dut (
     // THE DISCRIMINATOR. Same source spelling and same specify-bearing
     // destination pin as GROUP A, differing only in fanout. The shape of
     // the committed SDF's 8 one-way `in[N]` nets, its 64 `lut_init[N]` and
-    // its 4 `reg_sel[N]` nets -- 113 of 179 entries. Expect APPLIED.
+    // its 4 `reg_sel[N]` nets -- 76 of 179 entries. Expect APPLIED.
     // ------------------------------------------------------------------ //
     sky130_fd_sc_hd__mux4_2 u_c0 (
         .A0 (1'b0), .A1 (1'b1), .A2 (1'b0), .A3 (1'b0),
