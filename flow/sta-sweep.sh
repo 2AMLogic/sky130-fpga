@@ -67,6 +67,19 @@
 # records the verdict as found. See that directory's README.md. Combine with
 # `--update` in either order.
 #
+# Issue #259: `--target <dir>` generalizes that selection to an arbitrary
+# directory holding a logic_tile.{gds,def} pair (a freshly regenerated
+# layout under flow/build/, say), so a measurement runs through the same
+# code path that measures the committed one instead of replicating this
+# script's klt requests by hand. It is strictly READ-ONLY: it refuses
+# `--update`, skips every committed-copy diff (there is no committed
+# counterpart) and writes only into flow/build/sta_target/. Its envelope
+# gate runs with --observation (structure only, verdict recorded as found),
+# like --routed's. `--target <repo>/layout/experimental` is the exact alias
+# of `--routed` and `--target <repo>/layout` is the default spelled
+# explicitly, so every committed caller and record citation keeps its
+# meaning.
+#
 # Usage:
 #   ./flow/sta-sweep.sh            # extract parasitics, sweep every corner,
 #                                   # and diff the trimmed per-corner reports,
@@ -84,6 +97,12 @@
 #                                   # under
 #                                   # measurements/timing-characterization/records/)
 #                                   # after an intentional layout change.
+#   ./flow/sta-sweep.sh --target <dir>
+#                                  # same sweep against <dir>/logic_tile.{gds,def}
+#                                   # (an uncommitted layout); read-only --
+#                                   # refuses --update, skips the committed
+#                                   # diffs, prints where the trimmed reports
+#                                   # landed in flow/build/sta_target/.
 #
 # Requires `klt` (klayout-tools) and `openroad` on $PATH, plus a resolvable
 # sky130A PDK install (`klt pdk find --pdk sky130A`). Does NOT require
@@ -110,29 +129,77 @@
 # runs succeed, every SPEF run reports annotation_complete, the name
 # rewrite is proven timing-neutral at every corner, and (in the default,
 # non-`--update` mode) every trimmed per-corner report matches its
-# committed copy.
+# committed copy. Under `--target <dir>` (issue #259) the committed-copy
+# comparisons are skipped, so exit 0 means the measurement itself completed
+# and passed its gates -- never that any committed evidence changed.
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-# Target selection (issue #113). Default: the ratified BEL-only `logic_tile`.
-# `--routed`: the EXPERIMENTAL composed tile `logic_tile_routed` (stand-in
-# matrix, ADR-0004 Proposed) -- an additive, separate namespace; see the
-# header of this file and measurements/timing-characterization-experimental/
-# README.md. The default target's paths, requests and gates are unchanged.
+# Target selection (issue #113, generalized to `--target <dir>` by issue
+# #259). Default: the ratified BEL-only `logic_tile`. `--routed`: the
+# EXPERIMENTAL composed tile `logic_tile_routed` (stand-in matrix, ADR-0004
+# Proposed) -- an additive, separate namespace; see the header of this file
+# and measurements/timing-characterization-experimental/README.md. The
+# default target's paths, requests and gates are unchanged. `--target <dir>`
+# (issue #259): any other directory holding logic_tile.{gds,def} -- strictly
+# read-only, see the header above.
 TARGET="bel"
+TARGET_DIR=""
+ROUTED_GIVEN=""
 MODE="check"
-for arg in "$@"; do
-    case "$arg" in
+while [[ $# -gt 0 ]]; do
+    case "$1" in
         --update) MODE="update" ;;
-        --routed) TARGET="routed" ;;
+        --routed) TARGET="routed"; ROUTED_GIVEN=1 ;;
+        --target)
+            if [[ $# -lt 2 ]]; then
+                echo "error: --target requires a directory argument" >&2
+                echo "usage: $0 [--routed | --target <dir>] [--update]" >&2
+                exit 1
+            fi
+            if [[ -n "$TARGET_DIR" ]]; then
+                echo "error: --target given twice" >&2
+                exit 1
+            fi
+            TARGET_DIR="$2"
+            shift
+            ;;
         *)
-            echo "usage: $0 [--routed] [--update]" >&2
+            echo "usage: $0 [--routed | --target <dir>] [--update]" >&2
             exit 1
             ;;
     esac
+    shift
 done
+
+if [[ -n "$TARGET_DIR" ]]; then
+    if [[ -n "$ROUTED_GIVEN" ]]; then
+        echo "error: --routed and --target are mutually exclusive (use --target <repo>/layout/experimental for the routed tile)" >&2
+        exit 1
+    fi
+    if [[ ! -d "$TARGET_DIR" ]]; then
+        echo "error: --target directory does not exist: $TARGET_DIR" >&2
+        exit 1
+    fi
+    TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
+    if [[ "$TARGET_DIR" == "$REPO_ROOT/layout/experimental" ]]; then
+        # Exact alias of --routed, so record citations keep their meaning.
+        TARGET="routed"
+        TARGET_DIR=""
+    elif [[ "$TARGET_DIR" == "$REPO_ROOT/layout" ]]; then
+        # The default target, spelled explicitly.
+        TARGET="bel"
+        TARGET_DIR=""
+    else
+        TARGET="custom"
+    fi
+fi
+if [[ "$TARGET" == "custom" && "$MODE" == "update" ]]; then
+    echo "error: --target is read-only -- it measures a layout outside layout/ and never writes committed evidence; drop --update" >&2
+    exit 1
+fi
 
 if [[ "$TARGET" == "routed" ]]; then
     LAYOUT_DIR="$REPO_ROOT/layout/experimental"
@@ -149,6 +216,20 @@ if [[ "$TARGET" == "routed" ]]; then
     # Plain (unescaped) submodule hierarchy also needs the rewrite -- see
     # sta_sanitize_names.py def_sanitize_hier. BEL-only keeps def-sanitize.
     DEF_SANITIZE_MODE="def-sanitize-hier"
+elif [[ "$TARGET" == "custom" ]]; then
+    # Issue #259: an arbitrary, uncommitted layout. Same BEL constraint and
+    # sanitizer semantics as the default target (the point is to measure a
+    # regenerated logic_tile exactly the way the committed one is measured);
+    # the envelope gate runs with --observation (structure only, verdict
+    # recorded as found) since the run is an observation of an uncommitted
+    # layout, not a committed-evidence refresh.
+    LAYOUT_DIR="$TARGET_DIR"
+    TOP_MODULE="logic_tile"
+    TIMING_DIR=""
+    STA_BUILD_DIR="$SCRIPT_DIR/build/sta_target"
+    IO_CONSTRAINTS=""
+    ENVELOPE_GATE_FLAGS="--observation"
+    DEF_SANITIZE_MODE="def-sanitize"
 else
     LAYOUT_DIR="$REPO_ROOT/layout"
     TOP_MODULE="logic_tile"
@@ -158,11 +239,18 @@ else
     ENVELOPE_GATE_FLAGS=""
     DEF_SANITIZE_MODE="def-sanitize"
 fi
-CORNERS_DIR="$TIMING_DIR/corners"
 # The multi-corner envelope cited for T1 item 5 and the sanitized SPEF it
-# (and every per-corner SPEF run) annotates -- issue #68.
-COMMITTED_ENVELOPE="$TIMING_DIR/${TOP_MODULE}.sta.json"
-COMMITTED_SPEF="$TIMING_DIR/${TOP_MODULE}.spef"
+# (and every per-corner SPEF run) annotates -- issue #68. Under --target
+# (custom) there is no committed counterpart: TIMING_DIR is empty and every
+# reference below to a committed copy is skipped.
+CORNERS_DIR=""
+COMMITTED_ENVELOPE=""
+COMMITTED_SPEF=""
+if [[ -n "$TIMING_DIR" ]]; then
+    CORNERS_DIR="$TIMING_DIR/corners"
+    COMMITTED_ENVELOPE="$TIMING_DIR/${TOP_MODULE}.sta.json"
+    COMMITTED_SPEF="$TIMING_DIR/${TOP_MODULE}.spef"
+fi
 STD_CELL_LIBRARY="sky130_fd_sc_hd"
 PDK_VARIANT="sky130A"
 
@@ -406,6 +494,12 @@ print(json.dumps(d.get('spef_annotation'), indent=2))
         continue
     fi
 
+    if [[ "$TARGET" == "custom" ]]; then
+        # Issue #259: an uncommitted layout has no committed counterpart to
+        # diff against -- the trimmed reports stay in the build dir.
+        continue
+    fi
+
     for name in lef-only spef; do
         committed_report="$committed_corner_dir/${name}.sta.json"
         generated_report="$corner_build/${name}.sta.json"
@@ -474,6 +568,13 @@ if [[ "$MODE" == "update" ]]; then
     exit 0
 fi
 
+if [[ "$TARGET" == "custom" ]]; then
+    echo "=== --target measurement complete (read-only: nothing under layout/ or measurements/ was written) ==="
+    echo "=== trimmed per-corner reports: ${STA_BUILD_DIR}/corners-trimmed/ ==="
+    echo "=== multi-corner envelope (not committed): ${generated_envelope} ==="
+    exit 0
+fi
+
 for pair in "$COMMITTED_ENVELOPE:$generated_envelope" "$COMMITTED_SPEF:$SPEF"; do
     committed_artifact="${pair%%:*}"
     generated_artifact="${pair#*:}"
@@ -488,7 +589,11 @@ for pair in "$COMMITTED_ENVELOPE:$generated_envelope" "$COMMITTED_SPEF:$SPEF"; d
 done
 
 # Guard against a committed corner directory the sweep no longer produces.
-UNEXPECTED="$(cd "$CORNERS_DIR" 2>/dev/null && ls -1d */ 2>/dev/null | sed 's#/$##' | sort | comm -13 <(printf '%s\n' "${ALL_CORNERS[@]}" | sort) - || true)"
+# Skipped under --target: the committed corner set is not this run's concern.
+UNEXPECTED=""
+if [[ "$TARGET" != "custom" ]]; then
+    UNEXPECTED="$(cd "$CORNERS_DIR" 2>/dev/null && ls -1d */ 2>/dev/null | sed 's#/$##' | sort | comm -13 <(printf '%s\n' "${ALL_CORNERS[@]}" | sort) - || true)"
+fi
 if [[ -n "$UNEXPECTED" ]]; then
     echo "error: committed corner directories with no counterpart in this sweep:" >&2
     printf '       %s\n' $UNEXPECTED >&2

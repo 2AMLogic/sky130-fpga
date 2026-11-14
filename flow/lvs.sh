@@ -90,6 +90,21 @@
 #                              so a "match" here is a cross-run topological
 #                              match -- see layout/README.md's "LVS scope,
 #                              concretely" for why that is still honest.
+#   ./flow/lvs.sh --target <dir>
+#                            # run the same LVS against <dir>/logic_tile.gds
+#                              (a layout outside layout/, e.g. a regenerated
+#                              one under flow/build/) instead of the
+#                              committed GDS -- issue #259. Strictly
+#                              READ-ONLY: refuses --update and
+#                              --update-report, skips the committed-report
+#                              diff (no committed counterpart), writes the
+#                              trimmed report into flow/build/lvs/ only,
+#                              prints where it landed, and exits 0 on a
+#                              "match". The reference netlist is still
+#                              regenerated from this checkout's RTL exactly
+#                              as in check mode.
+#                              `--target <repo>/layout` is the default
+#                              spelled explicitly.
 #
 # Every mode also refuses (exit non-zero) unless the report's
 # power_connectivity.status is "match": T1 item 11 cites this report for
@@ -107,7 +122,10 @@
 #
 # Exit status: 0 iff LVS reports status "match" and (in the default,
 # non-`--update` mode) the trimmed report matches the committed copy;
-# non-zero otherwise.
+# non-zero otherwise. Under `--target <dir>` (issue #259) the committed-copy
+# comparison is skipped, so exit 0 means the target layout matched its
+# freshly regenerated reference -- never that any committed evidence
+# changed.
 
 set -euo pipefail
 
@@ -123,21 +141,65 @@ STD_CELL_LIBRARY="sky130_fd_sc_hd"
 PDK_VARIANT="sky130A"
 
 MODE="check"
-case "${1:-}" in
-    --update)
-        MODE="update"
-        ;;
-    --update-report)
-        MODE="update-report"
-        ;;
-    "")
-        MODE="check"
-        ;;
-    *)
-        echo "usage: $0 [--update | --update-report]" >&2
+TARGET_DIR=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --update)
+            MODE="update"
+            ;;
+        --update-report)
+            MODE="update-report"
+            ;;
+        --target)
+            if [[ $# -lt 2 ]]; then
+                echo "error: --target requires a directory argument" >&2
+                echo "usage: $0 [--target <dir> | --update | --update-report]" >&2
+                exit 1
+            fi
+            if [[ -n "$TARGET_DIR" ]]; then
+                echo "error: --target given twice" >&2
+                exit 1
+            fi
+            TARGET_DIR="$2"
+            shift
+            ;;
+        "")
+            MODE="check"
+            ;;
+        *)
+            echo "usage: $0 [--target <dir> | --update | --update-report]" >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# Issue #259: --target points the compare at a GDS outside layout/.
+# Normalization and read-only guarantee identical to flow/drc.sh's: the
+# committed layout directory spelled explicitly behaves exactly as the
+# default; anything else refuses both write modes before anything is
+# written.
+TARGET_MODE="default"
+if [[ -n "$TARGET_DIR" ]]; then
+    if [[ ! -d "$TARGET_DIR" ]]; then
+        echo "error: --target directory does not exist: $TARGET_DIR" >&2
         exit 1
-        ;;
-esac
+    fi
+    TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
+    if [[ "$TARGET_DIR" == "$REPO_ROOT/layout" ]]; then
+        TARGET_MODE="default"
+        TARGET_DIR=""
+    else
+        TARGET_MODE="target"
+    fi
+fi
+if [[ "$TARGET_MODE" == "target" && "$MODE" != "check" ]]; then
+    echo "error: --target is read-only -- it measures a layout outside layout/ and never writes committed evidence; drop --update (or --update-report)" >&2
+    exit 1
+fi
+if [[ "$TARGET_MODE" == "target" ]]; then
+    LAYOUT_DIR="$TARGET_DIR"
+fi
 
 if ! command -v klt >/dev/null 2>&1; then
     echo "error: klt not found on PATH" >&2
@@ -145,10 +207,17 @@ if ! command -v klt >/dev/null 2>&1; then
 fi
 
 COMMITTED_GDS="$LAYOUT_DIR/${GDS_NAME}"
-COMMITTED_REPORT="$LAYOUT_DIR/${REPORT_NAME}"
+# The committed copy always lives under layout/, even when --target points
+# the compare elsewhere (issue #259); the diff against it is skipped in
+# target mode, so the variable is simply unused there.
+COMMITTED_REPORT="$REPO_ROOT/layout/${REPORT_NAME}"
 
 if [[ "$MODE" != "update" && ! -f "$COMMITTED_GDS" ]]; then
-    echo "error: no committed GDS at $COMMITTED_GDS -- run flow/layout.sh --update first" >&2
+    if [[ "$TARGET_MODE" == "target" ]]; then
+        echo "error: no ${GDS_NAME} in the --target directory $LAYOUT_DIR" >&2
+    else
+        echo "error: no committed GDS at $COMMITTED_GDS -- run flow/layout.sh --update first" >&2
+    fi
     exit 1
 fi
 
@@ -326,6 +395,15 @@ python3 "$SCRIPT_DIR/lvs_report_trim.py" "$LVS_RESPONSE" "$LAYOUT_GDS_SHA256" "$
 if [[ "$MODE" == "update" || "$MODE" == "update-report" ]]; then
     cp "$GENERATED_REPORT" "$COMMITTED_REPORT"
     echo "=== LVS report written to ${COMMITTED_REPORT} (status: match, power_connectivity: match) ==="
+    exit 0
+fi
+
+if [[ "$TARGET_MODE" == "target" ]]; then
+    # Issue #259: a clean compare of an uncommitted layout against a freshly
+    # regenerated reference. No committed counterpart to diff against --
+    # print where the trimmed report landed and stop, having touched nothing
+    # under layout/ or signoff/.
+    echo "=== --target LVS measurement written to ${GENERATED_REPORT} (status: match, power_connectivity: match; read-only: nothing under layout/ or signoff/ was touched) ==="
     exit 0
 fi
 
