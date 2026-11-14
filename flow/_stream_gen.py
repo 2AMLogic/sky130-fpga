@@ -1,7 +1,8 @@
 """flow/_stream_gen.py
 
 Shared scaffolding for the frame-stream generators flow/ctrl_route.py,
-flow/output_route.py, flow/route_diag.py and flow/lut_basis.py: the header
+flow/output_route.py, flow/route_diag.py and flow/lut_basis.py, and for the
+negative-control stream mutator flow/route_diag_negative.py: the header
 constants, the frozen-model pip set and its membership check, the standard
 wiring manifest, the assemble -> pack -> decode round trip, the per-case
 `.fasm/.bin/.cfg` writer and the common `main()` wrapper. The case-specific

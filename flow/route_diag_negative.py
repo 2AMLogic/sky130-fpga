@@ -23,14 +23,8 @@ import shutil
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parent.parent
-
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from _modload import load_module as _load  # noqa: E402
-
-
-F = _load("fasm_to_bitstream", REPO / "flow" / "fasm_to_bitstream.py")
+from _stream_gen import F, DEFAULT_SNAPSHOT, roundtrip, write_case  # noqa: E402
 
 
 class NegError(Exception):
@@ -65,20 +59,14 @@ def alter(src, dst, case, old, new, snap_path):
     if new in lines:
         raise NegError(f"{case}.fasm already contains {new!r}")
     text = "\n".join(new if ln == old else ln for ln in lines) + "\n"
-    asm = F.assemble(text, snap, None)
-    data = F.pack(asm["positions"], snap)
-    cfg, _ = F.decode(data, snap)
-    if cfg != asm["cfg"]:
-        raise NegError(f"{case}: decode(pack()) != assembled cfg")
+    _, data, cfg = roundtrip(case, text, snap)
     orig = int((src / f"{case}.cfg").read_text().strip(), 16)
     if cfg == orig:
         raise NegError(f"{case}: altered stream assembles to the original configuration")
     if dst.exists():
         raise NegError(f"{dst} already exists")
     shutil.copytree(src, dst)
-    (dst / f"{case}.fasm").write_text(text)
-    (dst / f"{case}.bin").write_bytes(data)
-    (dst / f"{case}.cfg").write_text(f"{cfg:040x}\n")
+    write_case(dst, case, text, data, cfg)
     return bin(cfg ^ orig).count("1"), orig, cfg
 
 
@@ -89,7 +77,7 @@ def main(argv=None):
     ap.add_argument("case")
     ap.add_argument("old")
     ap.add_argument("new")
-    ap.add_argument("--snapshot", default=str(REPO / "sim" / "bitstream" / "fabric_spec.json"))
+    ap.add_argument("--snapshot", default=str(DEFAULT_SNAPSHOT))
     a = ap.parse_args(argv)
     try:
         n, _, _ = alter(a.src, a.dst, a.case, a.old, a.new, a.snapshot)
