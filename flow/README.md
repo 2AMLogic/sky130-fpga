@@ -984,14 +984,35 @@ to a minimal, from-scratch, non-sky130 15-line reproduction (any
 `[`/`]`, independent of file size) and confirmed reproducing identically
 through `klt functional-verification`'s own `options.sdf` path, not just
 this repo's hand-wired mechanism — filed generically as
-[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)). Note: klt >= 0.6.0 also moved stage artifacts under `.klt/<stage>/run-<id>/`; `flow/sdf-resim.sh` resolves both layouts, but under klt 0.6.0 / OpenROAD 26Q3-1510 its DEF-reproducibility gate fails (toolchain drift, see record `20261008-233733-23e6b5e`).
-Issue #213 tried the rename workaround: `flow/sdf_sanitize_names.py` rewrites
-the routed netlist and the SDF with one injective name map (checked by
-inverse round-trip), and `vvp` then no longer aborts. It is not wired into
-`sdf-resim.sh` (pinned, #162): the DEF gate still fails on the current
-toolchain, and an exploratory annotated run left 28 of 179 port-sourced
-`INTERCONNECT` entries unapplied, so item 7 stays uncited. See record
-`20261017-sdf-sanitize-d811bcd`.
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked) and its successor gap [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897) (**closed upstream on 2026-10-18** via [klayout-tools#3293](https://github.com/2AMLogic/klayout-tools/pull/3293), which has `klt` rewrite escaped-divider instance names to plain identifiers in build-directory copies of the SDF and of each source that declares them, reported in a new `environment.sdf.renamed` field; first contained in tag `v0.8.0`, the version `.github/workflows/signoff.yml` already pins, and **no GitHub Release carries notes for it** -- upstream releases stop at v0.5.0, 2026-09-15). Note: klt >= 0.6.0 also moved stage artifacts under `.klt/<stage>/run-<id>/`; `flow/sdf-resim.sh` resolves both layouts, but under klt 0.6.0 / OpenROAD 26Q3-1510 its DEF-reproducibility gate fails (toolchain drift, see record `20261008-233733-23e6b5e`).
+Issue [#213](https://github.com/2AMLogic/sky130-fpga/issues/213) tried the
+rename workaround: `flow/sdf_sanitize_names.py` rewrites the routed netlist and
+the SDF with one injective name map (checked by inverse round-trip). It is
+still not wired into `sdf-resim.sh`.
+**klayout-tools#2897's closure did not unblock item 7, which is still not
+met**, and #2897 is no longer what holds this leg. Two blockers do. **(a) The
+annotation is only partial.** With the rename workaround applied `vvp` no
+longer aborts, but 28 of 179 `INTERCONNECT` entries -- every one sourced at a
+top-level input port (`in[N]`, `ce[N]`) -- are rejected, and the cause was not
+isolated (record
+[`20261017-sdf-sanitize-d811bcd`](../measurements/timing-characterization/records/20261017-sdf-sanitize-d811bcd.md));
+that is [#250](https://github.com/2AMLogic/sky130-fpga/issues/250)'s work, and
+the matching upstream defect is still **open** as
+[klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)
+(`vvp` aborts in `vpi_scan` on a flat post-route SDF, filed 2026-11-05,
+successor to the `not_planned` klayout-tools#3740), whose own A/B isolates
+top-level-port `INTERCONNECT` entries -- the same shape. **(b) The
+characterized geometry no longer reproduces on the current toolchain**, so an
+annotated run today would not be on the geometry that was characterized: record
+[`20261107-213000-9e83907`](../measurements/layout-reproducibility/records/20261107-213000-9e83907.md)
+measured that under the host's development build (klt
+`0.9.2.dev246+g2faba5dec206`, **not** the pinned release), and record
+[`20261114-043307-515714f`](../measurements/layout-reproducibility/records/20261114-043307-515714f.md)
+confirmed it under the pinned `klayout-tools==0.8.0` -- that regenerated layout
+is DRC-, LVS- and ERC-clean and setup/hold-clean at all 18 corners, but it
+still does not reproduce the committed klt-0.5.0 GDS/DEF.
+[#162](https://github.com/2AMLogic/sky130-fpga/issues/162) and
+[#213](https://github.com/2AMLogic/sky130-fpga/issues/213) track this.
 Not worked around with a fabricated SDF or a faked result:
 `flow/sdf-resim.sh` re-attempts this leg every run and treats *reproducing
 the cited crash* as the expected, checked-in outcome — a clean pass, a
