@@ -8,6 +8,11 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-14
 
+- **PR #257**: docs(flow): record why the klt erc coverage enumeration stays in full
+- **PR #249**: docs: roadmap as of 2026-11-13
+- **PR #258**: docs: record DRC/LVS/ERC/18-corner STA on the klt-0.8.0 regenerated layout
+- **Issue #253** (closed): Summarize the klt erc coverage cross-product: 317 KB of the committed ERC evidence is derivable from gate_count
+- **Issue #252** (closed): Measure the regenerated layout under pinned klayout-tools==0.8.0: DRC, LVS, ERC and 18-corner STA as a decision-input record
 - **Issue #82** (closed): Auditor Capability Request: Python 3 for local evidence validation
 
 ### 2026-11-07
