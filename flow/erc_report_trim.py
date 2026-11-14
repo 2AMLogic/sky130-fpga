@@ -47,6 +47,50 @@ supply islands, `erc.missing_tie`) is this report's actual verdict -- the
 thing `layout/README.md`'s power-connectivity claim cites -- so it is
 committed verbatim, however long it is.
 
+**The `coverage` enumeration is kept, and that was tested rather than
+assumed** (issue #253). The cross-product reasoning above applies one key
+over: `coverage.checked` / `.skipped` / `.inapplicable` are the mechanical
+product of `gate_count` with a fixed level set and a single constant reason
+-- 696/696/232 entries, 93,886 B of this 136,730 B report (223,222 B of the
+experimental routed sibling's 323,922 B), every byte of it reproducible from
+two histograms plus `gate_count`. It is committed in full anyway, because
+`coverage` is *not* producer-private scaffolding the way `gates` is: it is
+klt's versioned checked-work contract (`coverage.schema_version: 1`), whose
+own validator (`klayout_tools.coverage`) requires each of
+`checked`/`skipped`/`inapplicable`/`unknown` to be an array of unique
+identity records. Replace any of them with a histogram and `coverage_state`
+returns `"malformed"` -- the hard refusal row, not a smaller partial.
+
+Measured end-to-end with the klt build installed when that gate ran
+(`0.9.2.dev1022+g2a9c52b27ce7`; the committed report's own
+`provenance.klt_version` is `0.5.0+g2b1e55e51bb8.dirty`), a histogram
+summary fails in the one way that matters: `klt signoff --manifest` went on
+grading T1 item 11 `met` with `check_status: "clean_partial"`, and
+**silently dropped `citation.coverage_qualification` altogether** -- the
+`reason: "partial_coverage"` plus `skipped_total: 696` /
+`skipped_by_reason` disclosure that is what makes that `met` row honest
+about sky130 having no met3-met5 antenna limits (`signoff/README.md`'s item
+11 note; klayout-tools#1997). Envelope aggregation does report the breakage
+(`detail.coverage_state: "malformed"`, `detail.coverage_error: "checked:
+work must be an array"`); the tier-verdict path reports nothing at all,
+filed generically as klayout-tools#5643. A single aggregate record in place
+of the 696 *does* validate and *does* keep `partial_coverage` -- but the
+committed artifact would then state one skipped request where 696 exist,
+which is understating a coverage gap to save bytes, the one thing this
+evidence may not do. klt's own aggregate form for this shape
+(`klt erc --findings-only --compact`, klayout-tools#2965) is unavailable
+here: it is a clean error on a graded antenna run, and a graded antenna run
+is exactly what this report is. The missing summary form is filed
+generically as klayout-tools#5642.
+
+So the enumeration is the price of item 11's coverage disclosure being
+checkable rather than asserted, and it is paid deliberately. Summarizing it
+is not a free size win and should not be re-proposed without re-running
+that gate against the installed klt -- where the acceptance condition is
+`klt signoff --manifest` still emitting
+`citation.coverage_qualification.reason: "partial_coverage"` for item 11,
+never that the file got smaller.
+
 Also **synthesizes the `provenance` block `klt erc` does not write**.
 Every other klt verb whose JSON this repo commits as evidence carries one
 (`klt drc`: `deck`/`input` content hashes; `klt place-and-route`/`klt sta`:
