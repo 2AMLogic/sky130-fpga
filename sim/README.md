@@ -756,10 +756,10 @@ MAP=sim/bitstream/logic4_configmem.map
 
 | Bench | Generator (writes `<out>`) | Wiring file | Compile | Result |
 |---|---|---|---|---|
-| `tb_lut_basis` | `python3 -I flow/lut_basis.py <out> --snapshot sim/bitstream/fabric_spec.json` | `basis.wiring` | `iverilog -g2012 -Wall $RTL sim/tb_lut_basis.v` | `PASS`, 73/73 cases |
-| `tb_route_diag` | `python3 -I flow/route_diag.py <out> --snapshot ...` | `route.wiring` | `iverilog -g2012 -Wall $RTL sim/tb_route_diag.v` | `PASS`, 64/64 cases |
-| `tb_ctrl_route` | `python3 -I flow/ctrl_route.py <out> --snapshot ...` | `ctrl.wiring` | `iverilog -g2012 -Wall $RTL sim/tb_ctrl_route.v` | `PASS`, 20/20 cases |
-| `tb_output_route` | `python3 -I flow/output_route.py <out> --snapshot ...` | `out.wiring` | `iverilog -g2012 -Wall $RTL sim/tb_output_route.v` | `PASS`, 112/112 cases |
+| `tb_lut_basis` | `python3 -I flow/lut_basis.py <out> --snapshot sim/bitstream/fabric_spec.json` | `basis.wiring` | `iverilog -g2012 -Wall -I sim $RTL sim/tb_lut_basis.v` | `PASS`, 73/73 cases |
+| `tb_route_diag` | `python3 -I flow/route_diag.py <out> --snapshot ...` | `route.wiring` | `iverilog -g2012 -Wall -I sim $RTL sim/tb_route_diag.v` | `PASS`, 64/64 cases |
+| `tb_ctrl_route` | `python3 -I flow/ctrl_route.py <out> --snapshot ...` | `ctrl.wiring` | `iverilog -g2012 -Wall -I sim $RTL sim/tb_ctrl_route.v` | `PASS`, 20/20 cases |
+| `tb_output_route` | `python3 -I flow/output_route.py <out> --snapshot ...` | `out.wiring` | `iverilog -g2012 -Wall -I sim $RTL sim/tb_output_route.v` | `PASS`, 112/112 cases |
 
 Run each as `vvp <bench>.vvp +dir=<out> +list=<out>/cases.txt
 +wiring=<out>/<wiring file> +map=$MAP`. The repository-composition compile

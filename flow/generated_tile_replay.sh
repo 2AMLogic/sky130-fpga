@@ -314,7 +314,7 @@ python3 -I "$REPO/flow/lut_basis.py" "$LB" --snapshot "$BS/fabric_spec.json" || 
 LB_GEN="$OUT/basis_gen.vvp"; LB_RTL="$OUT/basis_rtl.vvp"
 gen_compile "$GEN_TILE_V" "$LB_GEN" "$LB_TB" \
     || { cat "$LB_GEN.compile.log" >&2; die "compile of the generated-tile basis bench failed"; }
-iverilog -g2012 -Wall -o "$LB_RTL" "$REPO/design/rtl/lut4_slice.v" \
+iverilog -g2012 -Wall -I "$REPO/sim" -o "$LB_RTL" "$REPO/design/rtl/lut4_slice.v" \
     "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
     "$LB_TB" >"$LB_RTL.compile.log" 2>&1 \
     || { cat "$LB_RTL.compile.log" >&2; die "compile of the repository-composition basis bench failed"; }
@@ -434,7 +434,7 @@ python3 -I "$REPO/flow/route_diag.py" "$RD" --snapshot "$BS/fabric_spec.json" ||
 RD_GEN="$OUT/route_gen.vvp"; RD_RTL="$OUT/route_rtl.vvp"
 gen_compile "$GEN_TILE_V" "$RD_GEN" "$RD_TB" \
     || { cat "$RD_GEN.compile.log" >&2; die "compile of the generated-tile route bench failed"; }
-iverilog -g2012 -Wall -o "$RD_RTL" "$REPO/design/rtl/lut4_slice.v" \
+iverilog -g2012 -Wall -I "$REPO/sim" -o "$RD_RTL" "$REPO/design/rtl/lut4_slice.v" \
     "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
     "$RD_TB" >"$RD_RTL.compile.log" 2>&1 \
     || { cat "$RD_RTL.compile.log" >&2; die "compile of the repository-composition route bench failed"; }
@@ -557,7 +557,7 @@ python3 -I "$REPO/flow/ctrl_route.py" "$CR" --snapshot "$BS/fabric_spec.json" ||
 CR_GEN="$OUT/ctrl_gen.vvp"; CR_RTL="$OUT/ctrl_rtl.vvp"
 gen_compile "$GEN_TILE_V" "$CR_GEN" "$CR_TB" \
     || { cat "$CR_GEN.compile.log" >&2; die "compile of the generated-tile control-route bench failed"; }
-iverilog -g2012 -Wall -o "$CR_RTL" "$REPO/design/rtl/lut4_slice.v" \
+iverilog -g2012 -Wall -I "$REPO/sim" -o "$CR_RTL" "$REPO/design/rtl/lut4_slice.v" \
     "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
     "$CR_TB" >"$CR_RTL.compile.log" 2>&1 \
     || { cat "$CR_RTL.compile.log" >&2; die "compile of the repository-composition control-route bench failed"; }
@@ -697,7 +697,7 @@ python3 -I "$REPO/flow/output_route.py" "$OR" --snapshot "$BS/fabric_spec.json" 
 OR_GEN="$OUT/outroute_gen.vvp"; OR_RTL="$OUT/outroute_rtl.vvp"
 gen_compile "$GEN_TILE_V" "$OR_GEN" "$OR_TB" \
     || { cat "$OR_GEN.compile.log" >&2; die "compile of the generated-tile output-route bench failed"; }
-iverilog -g2012 -Wall -o "$OR_RTL" "$REPO/design/rtl/lut4_slice.v" \
+iverilog -g2012 -Wall -I "$REPO/sim" -o "$OR_RTL" "$REPO/design/rtl/lut4_slice.v" \
     "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
     "$OR_TB" >"$OR_RTL.compile.log" 2>&1 \
     || { cat "$OR_RTL.compile.log" >&2; die "compile of the repository-composition output-route bench failed"; }
