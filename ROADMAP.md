@@ -4,12 +4,20 @@ sky130-fpga delivers one verified, DRC/LVS-clean, timing-characterized LUT4-clas
 logic tile on SkyWater sky130, plus a small demonstration fabric, built with
 klayout-tools and the open yosys + nextpnr + FABulous flow.
 
-**Status as of 2026-11-13, `main` @ `1ebcb5a`.**
+**Status as of 2026-11-14, `main` @ `515714f`.**
 
 [`WORK_PLAN.md`](WORK_PLAN.md) is the generated view of issue labels,
 [`spec/framework-gaps.md`](spec/framework-gaps.md) the narrative for gaps G1 to
 G6, and [`signoff/tier-report.json`](signoff/tier-report.json) the graded
 verdict of record. Where they disagree with this file, they win.
+
+This file is unguarded prose. It carries none of the drift markers that
+`flow/check_status_claims.py` enforces, and sits outside that script's `DOCS`
+tuple, so the markered documents (`README.md`, `spec/framework-gaps.md`) win on
+every number they guard — including `t1-met`, `t1-items`, `adr-0004` and
+`corner-count`, which this file restates for narrative continuity only. The
+issue and PR states below are a snapshot of the date above; `WORK_PLAN.md` is
+the live view.
 
 ## Where it stands
 
@@ -52,26 +60,27 @@ Two facts changed since the status text in `README.md` and
   abort and that two obstacles remain: the layout drift above, and 28
   `INTERCONNECT` entries sourced from top-level input ports that are not applied.
 
-## Now (none has an issue yet)
+## Now
 
 1. **Isolate the port-sourced `INTERCONNECT` rejection without place-and-route.**
    Done when a hand-written minimal netlist + SDF reproducer under `sim/` shows
    whether Icarus Verilog 13 applies an `INTERCONNECT` delay whose source is a
    top-level input port, and a record states the cause and whether a tool-side
-   or flow-side remedy exists. Needs only Icarus. Feeds #213.
+   or flow-side remedy exists. Needs only Icarus. Tracked as #250; feeds #213.
 2. **Bring the status text in line with the two facts above.** Done when
    `README.md`, `spec/framework-gaps.md`, `signoff/README.md`,
    `measurements/README.md` and `sim/README.md` no longer name
    klayout-tools#2897 as the open blocker for item 7 and instead name the
    layout drift and the port-sourced `INTERCONNECT` finding, with
    `flow/check_status_claims.py` and `./flow/audit-evidence.sh` passing.
+   Tracked as #251.
 3. **Measure the regenerated layout under the pinned `klayout-tools==0.8.0`.**
    The #245 record used a development build and did not run DRC, LVS, ERC or
    the STA sweep on the regenerated layout. Done when a successor record under
    `measurements/layout-reproducibility/records/` reports those four results
    for the regenerated layout, with nothing under `layout/` changed. Needs a
-   host that can run OpenROAD. This is the input to the decision under
-   "Blocked and waiting".
+   host that can run OpenROAD. Tracked as #252. This is the input to the
+   decision under "Blocked and waiting".
 
 ## Next
 
@@ -118,11 +127,15 @@ Two facts changed since the status text in `README.md` and
   so a re-layout ends in a re-ratification. No issue is filed for it yet.
 - **ADR-0004, ADR-0005, ADR-0006** are Proposed, pending operator ratification.
 - **OpenROAD execution route** for #117 and #216 (see those issues).
-- **PR #63** (dependency update policy) is open with no review label; #3, #65
-  and #82 are housekeeping holds.
+- **PR #63** (dependency update policy) is open with no review label; #3 and
+  #65 are housekeeping holds (#82 closed on 2026-11-14).
 
-Every open issue carries `loom:blocked`. The only work that can be drawn today
-is the three Now items, and they need issues first.
+Of the 12 open issues, 7 carry `loom:blocked`. The five that do not are the
+three Now items — #250 (`loom:triage`), #251 and #252 (both `loom:curated` and
+estimated) — plus #253 and #255, two code-simplification issues already
+promoted to `loom:issue` and drawable as they stand. The Now items are filed:
+they need execution, not re-filing. `WORK_PLAN.md` is the authority on what is
+drawable at any later date.
 
 ## Not planned
 
