@@ -306,8 +306,33 @@ byte-identical signoff code.
     machine-local paths and per-test wall-clock time.
   - The timing-correct functional leg, the SDF-annotated gate-level
     re-simulation, is still blocked. That is item 7: klayout-tools#1890 closed
-    only as a fail-loud guard; re-tried 2026-10-08 under #72, the gap is now
-    klayout-tools#2897 (record `20261008-233733-23e6b5e`).
+    only as a fail-loud guard, and its successor gap klayout-tools#2897 closed
+    upstream on 2026-10-18 via klayout-tools#3293 -- first contained in tag
+    `v0.8.0`, the version this repo pins, with no GitHub Release carrying notes
+    for it (record `20261008-233733-23e6b5e` predates that closure).
+    **That closure did not unblock item 7, which is still not met**, and
+    klayout-tools#2897 is no longer what holds it. Two blockers do. **(a) The
+    annotation is only partial.** With the rename workaround applied `vvp` no
+    longer aborts, but 28 of 179 `INTERCONNECT` entries -- every one sourced at
+    a top-level input port (`in[N]`, `ce[N]`) -- are rejected, and the cause
+    was not isolated (record
+    [`20261017-sdf-sanitize-d811bcd`](../measurements/timing-characterization/records/20261017-sdf-sanitize-d811bcd.md));
+    that is [#250](https://github.com/2AMLogic/sky130-fpga/issues/250)'s work,
+    and the matching upstream defect is still **open** as
+    [klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)
+    (`vvp` aborts in `vpi_scan` on a flat post-route SDF, filed 2026-11-05,
+    successor to the `not_planned` klayout-tools#3740), whose own A/B isolates
+    top-level-port `INTERCONNECT` entries -- the same shape. **(b) The
+    characterized geometry no longer reproduces on the current toolchain**, so
+    an annotated run today would not be on the geometry that was characterized:
+    record
+    [`20261107-213000-9e83907`](../measurements/layout-reproducibility/records/20261107-213000-9e83907.md)
+    measured that under the host's development build (klt
+    `0.9.2.dev246+g2faba5dec206`, **not** the pinned release), and record
+    [`20261114-043307-515714f`](../measurements/layout-reproducibility/records/20261114-043307-515714f.md)
+    confirmed it under the pinned `klayout-tools==0.8.0`.
+    [#162](https://github.com/2AMLogic/sky130-fpga/issues/162) and
+    [#213](https://github.com/2AMLogic/sky130-fpga/issues/213) track this.
 
   Not covered by the STA member:
   - propagated-clock timing (the clock is an ideal SDC clock);
@@ -336,4 +361,4 @@ byte-identical signoff code.
   identifiers, klayout-tools#1890); the zero-delay leg passing is recorded
   in the characterization record but is, by the item's own text, the
   pre-layout run — so no citable envelope exists for this item until
-  #1890's successor gap closes (#1890 itself closed 2026-09-16 as a fail-loud guard in klt v0.6.0 only; re-tried under #72, still blocked, now tracked as klayout-tools#2897). No result was fabricated to fill the row.
+  the remaining blockers clear. #1890 closed 2026-09-16 as a fail-loud guard in klt v0.6.0 only, and its successor gap klayout-tools#2897 closed upstream on 2026-10-18 via klayout-tools#3293 (first contained in tag `v0.8.0`, the version this repo pins; no GitHub Release carries notes for it), so #2897 is no longer the blocker: klayout-tools#2897's closure did **not** unblock item 7, which is still not met: two other blockers hold it -- the renamed pair leaves 28 of 179 `INTERCONNECT` entries, every one sourced at a top-level input port, unapplied (record [`20261017-sdf-sanitize-d811bcd`](../measurements/timing-characterization/records/20261017-sdf-sanitize-d811bcd.md), worked as [#250](https://github.com/2AMLogic/sky130-fpga/issues/250), with the matching upstream defect still **open** as [klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)), and the characterized geometry no longer reproduces on the current toolchain (records [`20261107-213000-9e83907`](../measurements/layout-reproducibility/records/20261107-213000-9e83907.md), measured under the host's klt `0.9.2.dev246+g2faba5dec206` development build, and [`20261114-043307-515714f`](../measurements/layout-reproducibility/records/20261114-043307-515714f.md), confirmed under the pinned `klayout-tools==0.8.0`), which [#162](https://github.com/2AMLogic/sky130-fpga/issues/162) and [#213](https://github.com/2AMLogic/sky130-fpga/issues/213) track. No result was fabricated to fill the row.
