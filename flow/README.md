@@ -47,6 +47,7 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | `lvs.sh`, `lvs_report_trim.py`, `lvs_declared_pins.py`, `lvs_sanitize_verilog.py` | `layout/logic_tile.lvs.json` | - |
 | `erc.sh`, `erc_report_trim.py`, `erc_supply_spec.json` | `layout/logic_tile.erc.json` | - |
 | `sta-sweep.sh`, `sta_report_trim.py`, `sta_sanitize_names.py`, `sta_envelope_check.py` | `measurements/timing-characterization/logic_tile.sta.json` | - |
+| `test_signoff_target.sh` | the read-only `--target <dir>` flag on `drc.sh`/`erc.sh`/`lvs.sh`/`sta-sweep.sh` (issue #259): default-path `klt` argv+cwd fixture, target argv, write-mode refusals, `--routed` alias. Stub `klt` on `PATH` — needs no klt, PDK or network (run manually: `./flow/test_signoff_target.sh`) | - |
 | `layout_routed.sh`, `layout_routed_record.py`, `routed_checks.sh`, `routed_pitch.py` | `layout/experimental/` composed-tile canary (EXPERIMENTAL) | - |
 | `_report_trim.py` | shared driver of the `*_report_trim.py` scripts | - |
 | `audit-evidence.sh`, `audit_evidence.py` | `measurements/claim-traceability.md` audit | `flow-evidence.yml` |
@@ -582,6 +583,18 @@ Running:
                           # Run this (and commit the result) after an
                           # intentional layout change (i.e. after
                           # `flow/layout.sh --update`).
+./flow/drc.sh --target <dir>
+                          # rerun DRC against <dir>/logic_tile.gds -- a
+                          # layout outside layout/ (a regenerated one under
+                          # flow/build/, say), issue #259. Strictly
+                          # read-only: it never writes committed evidence
+                          # (refuses --update, skips the committed-report
+                          # diff and the `klt drc --check` cross-check --
+                          # they have no committed counterpart), writes the
+                          # trimmed report into flow/build/ only, prints
+                          # where it landed, and exits 0 on a clean result.
+                          # `--target <repo>/layout` is the default spelled
+                          # explicitly. Regression: flow/test_signoff_target.sh.
 ```
 
 Requires `klt` (klayout-tools) on `PATH`, plus a resolvable sky130A PDK
@@ -679,6 +692,18 @@ Running:
                           # layout/logic_tile.lvs.json; GDS/DEF/par report
                           # untouched. For a klt change to the compare
                           # itself (issue #69).
+./flow/lvs.sh --target <dir>
+                          # run the same LVS against <dir>/logic_tile.gds
+                          # instead of the committed GDS (issue #259). The
+                          # reference netlist is still regenerated from this
+                          # checkout's RTL exactly as in check mode. Strictly
+                          # read-only: it never writes committed evidence
+                          # (refuses --update and --update-report, skips the
+                          # committed-report diff), writes the trimmed report
+                          # into flow/build/lvs/ only, prints where it
+                          # landed, and exits 0 on a "match".
+                          # `--target <repo>/layout` is the default spelled
+                          # explicitly. Regression: flow/test_signoff_target.sh.
 ```
 
 Every mode refuses a report whose `power_connectivity.status` is not
@@ -785,6 +810,17 @@ Running:
 ./flow/erc.sh --update   # rerun and overwrite the committed report (run
                           # after ./flow/layout.sh --update, or after any
                           # supply-spec edit).
+./flow/erc.sh --target <dir>
+                          # rerun ERC against <dir>/logic_tile.gds instead
+                          # of the committed GDS (issue #259). Strictly
+                          # read-only: it never writes committed evidence
+                          # (refuses --update, skips the committed-report
+                          # diff -- no committed counterpart), writes the
+                          # trimmed report into flow/build/ only, prints
+                          # where it landed, and exits 0 on a 0-findings
+                          # result. `--target <repo>/layout` is the default
+                          # spelled explicitly. Regression:
+                          # flow/test_signoff_target.sh.
 ```
 
 Requires only `klt`, `python3` and a resolvable sky130A PDK rev on `$PATH`
@@ -838,6 +874,22 @@ Running:
                                 # per-corner reports (then add a new record
                                 # under
                                 # measurements/timing-characterization/records/)
+./flow/sta-sweep.sh --target <dir>
+                                # same sweep against <dir>/logic_tile.{gds,def}
+                                # -- a layout outside layout/ (a regenerated
+                                # one, issue #259). Strictly read-only: it
+                                # never writes committed evidence (refuses
+                                # --update, skips every committed-copy diff),
+                                # writes the trimmed reports into
+                                # flow/build/sta_target/ only, prints where
+                                # they landed, and exits 0 when the
+                                # measurement passed its gates (the envelope
+                                # gate runs with --observation, like
+                                # --routed's). `--target <repo>/layout/
+                                # experimental` is the exact alias of
+                                # `--routed`; `--target <repo>/layout` is the
+                                # default spelled explicitly. Regression:
+                                # flow/test_signoff_target.sh.
 ```
 
 Requires `klt` and `openroad` on `PATH` plus a resolvable sky130A PDK.
@@ -1166,7 +1218,9 @@ and 18 ratified corners as the BEL-only sweep above, re-targeted with
 `layout/experimental/logic_tile_routed.{def,gds}`; results land in
 `measurements/timing-characterization-experimental/` (see its README for what
 is and is not claimed), and the BEL-only paths, requests and gate are
-unchanged. Differences, all additive and only active under `--routed`:
+unchanged. `--target <repo>/layout/experimental` (issue #259) selects the
+same configuration -- the two spellings are the exact same target. Additive
+differences, only active under `--routed`:
 
 - `input_delay_ns`/`output_delay_ns` = 0 are added to every `klt sta`
   request, otherwise port-to-port paths are unconstrained.

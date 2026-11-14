@@ -26,6 +26,18 @@
 #                             # Run this (and commit the result) after an
 #                             # intentional layout change (i.e. after
 #                             # `flow/layout.sh --update`).
+#   ./flow/drc.sh --target <dir>
+#                            # rerun DRC against <dir>/logic_tile.gds (a
+#                             # layout outside layout/, e.g. a regenerated
+#                             # one under flow/build/) -- issue #259.
+#                             # Strictly READ-ONLY: refuses --update, skips
+#                             # the committed-report diff and the `klt drc
+#                             # --check` freshness cross-check (they have no
+#                             # committed counterpart), writes the trimmed
+#                             # report into flow/build/ only, prints where
+#                             # it landed, and exits 0 on a clean result.
+#                             # `--target <repo>/layout` is the default
+#                             # spelled explicitly.
 #
 # Requires on $PATH: `klt` (klayout-tools). Requires a resolvable sky130A
 # PDK install (`klt pdk find --pdk sky130A`; $PDK_ROOT/$PDK, volare, or
@@ -38,7 +50,9 @@
 # trimming -- see flow/drc_report_trim.py) matches the committed copy; 3 if
 # the committed report has drifted from re-derived provenance (surfaced via
 # `klt drc --check`, run last as a freshness cross-check); non-zero
-# otherwise.
+# otherwise. Under `--target <dir>` (issue #259) the committed-copy
+# comparison and the freshness cross-check are skipped, so exit 0 means the
+# target layout measured clean -- never that any committed evidence changed.
 
 set -euo pipefail
 
@@ -52,18 +66,61 @@ DECK="sky130"
 PDK_VARIANT="sky130A"
 
 MODE="check"
-case "${1:-}" in
-    --update)
-        MODE="update"
-        ;;
-    "")
-        MODE="check"
-        ;;
-    *)
-        echo "usage: $0 [--update]" >&2
+TARGET_DIR=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --update)
+            MODE="update"
+            ;;
+        --target)
+            if [[ $# -lt 2 ]]; then
+                echo "error: --target requires a directory argument" >&2
+                echo "usage: $0 [--target <dir>] [--update]" >&2
+                exit 1
+            fi
+            if [[ -n "$TARGET_DIR" ]]; then
+                echo "error: --target given twice" >&2
+                exit 1
+            fi
+            TARGET_DIR="$2"
+            shift
+            ;;
+        "")
+            MODE="check"
+            ;;
+        *)
+            echo "usage: $0 [--target <dir>] [--update]" >&2
+            exit 1
+            ;;
+    esac
+    shift
+done
+
+# Issue #259: --target points the measurement at a GDS outside layout/.
+# Normalization: the committed layout directory spelled explicitly behaves
+# exactly as the default. Anything else is a strictly read-only measurement:
+# --update is refused here, before anything is created or written.
+TARGET_MODE="default"
+if [[ -n "$TARGET_DIR" ]]; then
+    if [[ ! -d "$TARGET_DIR" ]]; then
+        echo "error: --target directory does not exist: $TARGET_DIR" >&2
         exit 1
-        ;;
-esac
+    fi
+    TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
+    if [[ "$TARGET_DIR" == "$REPO_ROOT/layout" ]]; then
+        TARGET_MODE="default"
+        TARGET_DIR=""
+    else
+        TARGET_MODE="target"
+    fi
+fi
+if [[ "$TARGET_MODE" == "target" && "$MODE" == "update" ]]; then
+    echo "error: --target is read-only -- it measures a layout outside layout/ and never writes committed evidence; drop --update" >&2
+    exit 1
+fi
+if [[ "$TARGET_MODE" == "target" ]]; then
+    LAYOUT_DIR="$TARGET_DIR"
+fi
 
 if ! command -v klt >/dev/null 2>&1; then
     echo "error: klt not found on PATH" >&2
@@ -98,21 +155,34 @@ print_pdk_version_banner "$PDK_VARIANT"
 mkdir -p "$BUILD_DIR"
 
 COMMITTED_GDS="$LAYOUT_DIR/${GDS_NAME}"
-COMMITTED_REPORT="$LAYOUT_DIR/${REPORT_NAME}"
+# The committed copy always lives under layout/, even when --target points
+# the measurement elsewhere (issue #259); the diff against it is skipped in
+# target mode, so the variable is simply unused there.
+COMMITTED_REPORT="$REPO_ROOT/layout/${REPORT_NAME}"
 RAW_REPORT="$BUILD_DIR/${REPORT_NAME}.raw"
 GENERATED_REPORT="$BUILD_DIR/${REPORT_NAME}"
 
 if [[ ! -f "$COMMITTED_GDS" ]]; then
-    echo "error: no committed GDS at $COMMITTED_GDS -- run flow/layout.sh --update first" >&2
+    if [[ "$TARGET_MODE" == "target" ]]; then
+        echo "error: no ${GDS_NAME} in the --target directory $LAYOUT_DIR" >&2
+    else
+        echo "error: no committed GDS at $COMMITTED_GDS -- run flow/layout.sh --update first" >&2
+    fi
     exit 1
 fi
 
 # Run with a repo-root-relative input path so the report's "file" field
 # (and thus the committed report itself) is identical across invoking
 # hosts/checkout locations -- mirrors flow/layout.sh's/flow/synth.sh's own
-# absolute-path avoidance.
+# absolute-path avoidance. Under --target (issue #259) the input is the
+# requested directory's GDS as an absolute path: that report is scratch,
+# never committed, so its "file" spelling carries no byte-stability burden.
+TARGET_GDS="layout/${GDS_NAME}"
+if [[ "$TARGET_MODE" == "target" ]]; then
+    TARGET_GDS="$COMMITTED_GDS"
+fi
 echo "=== klt drc ${GDS_NAME} (deck: ${DECK}) ==="
-if ! ( cd "$REPO_ROOT" && klt drc "layout/${GDS_NAME}" --deck "$DECK" --pdk "$PDK_VARIANT" --format json | tee "$RAW_REPORT" ); then
+if ! ( cd "$REPO_ROOT" && klt drc "$TARGET_GDS" --deck "$DECK" --pdk "$PDK_VARIANT" --format json | tee "$RAW_REPORT" ); then
     echo "error: klt drc failed (see $RAW_REPORT)" >&2
     exit 1
 fi
@@ -129,6 +199,15 @@ python3 "$SCRIPT_DIR/drc_report_trim.py" "$RAW_REPORT" "$GENERATED_REPORT"
 if [[ "$MODE" == "update" ]]; then
     cp "$GENERATED_REPORT" "$COMMITTED_REPORT"
     echo "=== report written to ${COMMITTED_REPORT} ==="
+    exit 0
+fi
+
+if [[ "$TARGET_MODE" == "target" ]]; then
+    # Issue #259: a clean measurement of an uncommitted layout. No committed
+    # counterpart to diff against and no provenance to cross-check -- print
+    # where the trimmed report landed and stop, having touched nothing under
+    # layout/ or signoff/.
+    echo "=== --target measurement written to ${GENERATED_REPORT} (read-only: nothing under layout/ or signoff/ was touched) ==="
     exit 0
 fi
 

@@ -111,6 +111,21 @@ ALLOWED_INPUT_DRIFT = {
         "diffs are the SPEF *VERSION header / spef_sha256 from the installed "
         "klt build, which predate this change (toolchain drift)."
     ),
+    ("20261027-201500-9111a08", "flow/sta-sweep.sh"): (
+        "issue #259 generalized the opt-in target selection to --target <dir> "
+        "(strictly read-only: refuses --update, skips every committed-copy "
+        "diff, writes only into flow/build/sta_target/) and guarded the "
+        "committed-evidence references behind it; --routed still selects the "
+        "experimental tile (--target <repo>/layout/experimental is its exact "
+        "alias). Default (BEL-only) target is unchanged: same paths, "
+        "requests, sanitizer mode and gate. Verified by re-running the "
+        "default check mode under the record's own toolchain (klt 0.8.0, "
+        "OpenROAD 26Q3-1510-g6cb3f2b704, PDK open_pdks c6d73a35): exit 0 with "
+        "every committed per-corner report, the multi-corner envelope and "
+        "the SPEF reproduced byte-identically -- no drift at all. The "
+        "default-path klt argv and cwd equality is additionally asserted "
+        "mechanically by flow/test_signoff_target.sh's committed fixture."
+    ),
 }
 
 # Committed reports whose `provenance.pdk` may be null without failing
