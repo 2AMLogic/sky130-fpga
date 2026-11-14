@@ -43,6 +43,29 @@ gs_budget_check || exit 1
 
 mkdir -p "$BUILD_DIR"
 
+# run_pyunit <stem> <header> <error-text>: run flow/<stem>.py as a python
+# unittest suite under `python3 -I`, require a terminal "OK" in its log, and
+# report one "PASS: <stem> (Ran N tests, 0 failures)" line. On failure, dump the
+# log to stderr, name the suite and set overall_status=1. Every unit suite in
+# this harness goes through here, so the "$BUILD_DIR/<stem>.log" path is written
+# once instead of four times per suite -- a mistyped copy of it in the
+# `grep -q '^OK'` arm would turn a real failure into a silent pass.
+# An empty <header> suppresses the "=== ... ===" banner, for the call sites that
+# print one shared banner over several suites.
+run_pyunit() {
+    local stem="$1" header="$2" errtext="$3" log="$BUILD_DIR/$1.log"
+    if [[ -n "$header" ]]; then
+        echo "=== $header ==="
+    fi
+    if python3 -I "$REPO_ROOT/flow/$stem.py" >"$log" 2>&1 && grep -q '^OK' "$log"; then
+        echo "PASS: $stem ($(grep -o '^Ran [0-9]* tests' "$log"), 0 failures)"
+    else
+        cat "$log" >&2
+        echo "error: $errtext" >&2
+        overall_status=1
+    fi
+}
+
 if [[ "${1:-}" == "--mutation" ]]; then
     shift
     for tool in iverilog vvp python3; do
@@ -135,55 +158,25 @@ done
 BS_DIR="$SCRIPT_DIR/bitstream"
 BS_TOOL="$REPO_ROOT/flow/fasm_to_bitstream.py"
 
-echo "=== bitstream assembler unit tests (flow/test_fasm_to_bitstream.py) ==="
-if python3 "$REPO_ROOT/flow/test_fasm_to_bitstream.py" >"$BUILD_DIR/test_fasm_to_bitstream.log" 2>&1 \
-   && grep -q '^OK' "$BUILD_DIR/test_fasm_to_bitstream.log"; then
-    echo "PASS: test_fasm_to_bitstream ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_fasm_to_bitstream.log"), 0 failures)"
-else
-    cat "$BUILD_DIR/test_fasm_to_bitstream.log" >&2
-    echo "error: assembler unit tests failed" >&2
-    overall_status=1
-fi
+run_pyunit test_fasm_to_bitstream \
+    "bitstream assembler unit tests (flow/test_fasm_to_bitstream.py)" \
+    "assembler unit tests failed"
 
-echo "=== LUT basis stream generator unit tests (flow/test_lut_basis.py, issue #172) ==="
-if python3 -I "$REPO_ROOT/flow/test_lut_basis.py" >"$BUILD_DIR/test_lut_basis.log" 2>&1 \
-   && grep -q '^OK' "$BUILD_DIR/test_lut_basis.log"; then
-    echo "PASS: test_lut_basis ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_lut_basis.log"), 0 failures)"
-else
-    cat "$BUILD_DIR/test_lut_basis.log" >&2
-    echo "error: LUT basis generator unit tests failed" >&2
-    overall_status=1
-fi
+run_pyunit test_lut_basis \
+    "LUT basis stream generator unit tests (flow/test_lut_basis.py, issue #172)" \
+    "LUT basis generator unit tests failed"
 
-echo "=== LUT-input route diagnostic stream generator unit tests (flow/test_route_diag.py, issue #176) ==="
-if python3 -I "$REPO_ROOT/flow/test_route_diag.py" >"$BUILD_DIR/test_route_diag.log" 2>&1 \
-   && grep -q '^OK' "$BUILD_DIR/test_route_diag.log"; then
-    echo "PASS: test_route_diag ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_route_diag.log"), 0 failures)"
-else
-    cat "$BUILD_DIR/test_route_diag.log" >&2
-    echo "error: LUT-input route diagnostic generator unit tests failed" >&2
-    overall_status=1
-fi
+run_pyunit test_route_diag \
+    "LUT-input route diagnostic stream generator unit tests (flow/test_route_diag.py, issue #176)" \
+    "LUT-input route diagnostic generator unit tests failed"
 
-echo "=== control-jump route diagnostic stream generator unit tests (flow/test_ctrl_route.py, issue #181) ==="
-if python3 -I "$REPO_ROOT/flow/test_ctrl_route.py" >"$BUILD_DIR/test_ctrl_route.log" 2>&1 \
-   && grep -q '^OK' "$BUILD_DIR/test_ctrl_route.log"; then
-    echo "PASS: test_ctrl_route ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_ctrl_route.log"), 0 failures)"
-else
-    cat "$BUILD_DIR/test_ctrl_route.log" >&2
-    echo "error: control-jump route diagnostic generator unit tests failed" >&2
-    overall_status=1
-fi
+run_pyunit test_ctrl_route \
+    "control-jump route diagnostic stream generator unit tests (flow/test_ctrl_route.py, issue #181)" \
+    "control-jump route diagnostic generator unit tests failed"
 
-echo "=== boundary output-route diagnostic stream generator unit tests (flow/test_output_route.py, issue #180) ==="
-if python3 -I "$REPO_ROOT/flow/test_output_route.py" >"$BUILD_DIR/test_output_route.log" 2>&1 \
-   && grep -q '^OK' "$BUILD_DIR/test_output_route.log"; then
-    echo "PASS: test_output_route ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_output_route.log"), 0 failures)"
-else
-    cat "$BUILD_DIR/test_output_route.log" >&2
-    echo "error: boundary output-route diagnostic generator unit tests failed" >&2
-    overall_status=1
-fi
+run_pyunit test_output_route \
+    "boundary output-route diagnostic stream generator unit tests (flow/test_output_route.py, issue #180)" \
+    "boundary output-route diagnostic generator unit tests failed"
 
 echo "=== bitstream fixtures reproduce from committed FASM (flow/fasm_to_bitstream.py check) ==="
 if ! python3 "$BS_TOOL" check "$BS_DIR"; then
@@ -260,29 +253,17 @@ fi
 # probes have no fixture and no PASS by construction. Regenerating against the
 # pinned mapper (and the recorded expected failures) is flow/corpus.sh.
 CORPUS_DIR="$BS_DIR/corpus"
-echo "=== corpus outcome-classification unit tests (flow/test_corpus_run.py) ==="
-if python3 "$REPO_ROOT/flow/test_corpus_run.py" >"$BUILD_DIR/test_corpus_run.log" 2>&1 \
-   && grep -q '^OK' "$BUILD_DIR/test_corpus_run.log"; then
-    echo "PASS: test_corpus_run ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_corpus_run.log"), 0 failures)"
-else
-    cat "$BUILD_DIR/test_corpus_run.log" >&2
-    echo "error: corpus classification unit tests failed" >&2
-    overall_status=1
-fi
+run_pyunit test_corpus_run \
+    "corpus outcome-classification unit tests (flow/test_corpus_run.py)" \
+    "corpus classification unit tests failed"
 echo "=== corpus fixtures reproduce from committed FASM (flow/fasm_to_bitstream.py check) ==="
 if ! python3 "$BS_TOOL" check "$CORPUS_DIR" --snapshot-dir "$BS_DIR"; then
     echo "error: committed sim/bitstream/corpus fixtures drifted from the assembler output" >&2
     overall_status=1
 fi
-echo "=== registered-BEL fixture metadata (issue #156: BEL A/B/C/D each registered, placement pinned) ==="
-if python3 -I "$REPO_ROOT/flow/test_check_regbel_fixtures.py" >"$BUILD_DIR/test_check_regbel_fixtures.log" 2>&1 \
-   && grep -q '^OK' "$BUILD_DIR/test_check_regbel_fixtures.log"; then
-    echo "PASS: test_check_regbel_fixtures ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/test_check_regbel_fixtures.log"), 0 failures)"
-else
-    cat "$BUILD_DIR/test_check_regbel_fixtures.log" >&2
-    echo "error: regbel fixture-metadata unit tests failed" >&2
-    overall_status=1
-fi
+run_pyunit test_check_regbel_fixtures \
+    "registered-BEL fixture metadata (issue #156: BEL A/B/C/D each registered, placement pinned)" \
+    "regbel fixture-metadata unit tests failed"
 python3 -I "$REPO_ROOT/flow/check_regbel_fixtures.py" "$REPO_ROOT" || overall_status=1
 if [[ -f "$out_bin" ]]; then
     n_corpus=0
@@ -324,13 +305,7 @@ fi
 # or an absent terminal verdict fail the suite.
 echo "=== unit tests for the pin-experiment fixture tooling (flow/test_pin_experiment.py, flow/test_pin_fixtures.py) ==="
 for t in test_pin_experiment test_pin_fixtures; do
-    if python3 "$REPO_ROOT/flow/$t.py" >"$BUILD_DIR/$t.log" 2>&1 && grep -q '^OK' "$BUILD_DIR/$t.log"; then
-        echo "PASS: $t ($(grep -o '^Ran [0-9]* tests' "$BUILD_DIR/$t.log"), 0 failures)"
-    else
-        cat "$BUILD_DIR/$t.log" >&2
-        echo "error: $t failed" >&2
-        overall_status=1
-    fi
+    run_pyunit "$t" "" "$t failed"
 done
 if [[ -f "$out_bin" ]]; then
     echo "=== pin-experiment fixtures (experimental, sim/bitstream/pin_experiment, with perturbation checks) ==="
