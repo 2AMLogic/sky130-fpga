@@ -342,6 +342,12 @@ Full method, provenance and the crash bisection:
 The committed SDF itself:
 [`measurements/timing-characterization/logic_tile_route.sdf`](../measurements/timing-characterization/logic_tile_route.sdf).
 
+Why `$sdf_annotate` drops 28 of that SDF's 179 `INTERCONNECT` entries —
+isolated on a hand-written fixture that needs no `klt`, no OpenROAD and no
+place-and-route:
+[`sim/sdf_port_interconnect/`](sdf_port_interconnect/README.md), recorded in
+[`measurements/timing-characterization/records/20261114-sdf-port-interconnect-564db73.md`](../measurements/timing-characterization/records/20261114-sdf-port-interconnect-564db73.md).
+
 **`tb_lut4_slice.v` is not covered here.** `lut4_slice` has no
 independently placed-and-routed layout of its own — only as a
 `g_slice[N].u_slice` sub-instance flattened inside the routed `logic_tile`

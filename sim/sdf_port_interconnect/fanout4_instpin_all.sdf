@@ -1,0 +1,25 @@
+(DELAYFILE
+ (SDFVERSION "3.0")
+ (DESIGN "port_interconnect_dut")
+ (DATE "hand-written fixture, issue #250")
+ (VENDOR "sky130-fpga")
+ (PROGRAM "hand-written")
+ (VERSION "1.0")
+ (DIVIDER .)
+ (VOLTAGE 1.800::1.800)
+ (PROCESS "1.000::1.000")
+ (TEMPERATURE 25.000::25.000)
+ (TIMESCALE 1ns)
+ (CELL
+  (CELLTYPE "port_interconnect_dut")
+  (INSTANCE)
+  (DELAY
+   (ABSOLUTE
+    (INTERCONNECT u_a3.X u_p0.S0 (0.100:0.100:0.100))
+    (INTERCONNECT u_a3.X u_p1.S0 (0.100:0.100:0.100))
+    (INTERCONNECT u_a3.X u_p2.S0 (0.100:0.100:0.100))
+    (INTERCONNECT u_a3.X u_p3.S0 (0.100:0.100:0.100))
+   )
+  )
+ )
+)
