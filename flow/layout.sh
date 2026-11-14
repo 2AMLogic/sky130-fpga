@@ -119,6 +119,12 @@ fi
 source "$SCRIPT_DIR/pdk_root.sh"
 require_pdk_resolvable "sky130A"
 
+# Shared with flow/sdf-resim.sh, flow/layout_routed.sh and flow/lvs.sh --
+# see flow/klt_artifact.sh's own header comment (issue #261) for why the
+# .klt/<stage>/ artifact fallback is single-sourced there.
+# shellcheck source=./klt_artifact.sh
+source "$SCRIPT_DIR/klt_artifact.sh"
+
 mkdir -p "$BUILD_DIR" "$LAYOUT_DIR"
 
 SYNTH_REQUEST="$BUILD_DIR/synth_request.json"
@@ -134,30 +140,16 @@ COMMITTED_GDS="$LAYOUT_DIR/${GDS_NAME}"
 COMMITTED_DEF="$LAYOUT_DIR/${DEF_NAME}"
 COMMITTED_REPORT="$LAYOUT_DIR/${REPORT_NAME}"
 
-# klt >= 0.6.0 writes stage artifacts under .klt/<stage>/run-<id>/ instead of
-# flat .klt/<stage>/ (the same fallback flow/sdf-resim.sh carries; needed
-# here since flow/lvs.sh runs under klt 0.7.0, issue #69). Returns the flat
-# (<= 0.5.x) path when present, else the newest run-* copy, else the flat
-# path unchanged so the "did not produce" errors below still fire.
-resolve_klt_artifact() {
-    local flat="$1" dir base newest
-    if [[ -s "$flat" ]]; then echo "$flat"; return 0; fi
-    dir="$(dirname "$flat")"; base="$(basename "$flat")"
-    # shellcheck disable=SC2012
-    newest="$(ls -1dt "$dir"/run-*/"$base" 2>/dev/null | head -1 || true)"
-    echo "${newest:-$flat}"
-}
-
-cat > "$SYNTH_REQUEST" <<EOF
-{
-  "schema": "klt.synthesize.request/1",
-  "engine": "yosys",
-  "sources": ["${RTL_DIR}/lut4_slice.v", "${RTL_DIR}/logic_tile.v"],
-  "hdl_toplevel": "${TOP_MODULE}",
-  "pdk": { "cell_library": "sky130_fd_sc_hd", "corner": "tt_025C_1v80" },
-  "constraints": { "clock_period_ns": ${CLOCK_PERIOD_NS} }
-}
-EOF
+# Shared with flow/sdf-resim.sh and flow/layout_routed.sh -- see
+# flow/synth_request.py's own header comment (issue #261) for why the
+# synthesize request body is single-sourced there instead of a second
+# hand-written heredoc here (the same rationale par_request.py applies to
+# the place-and-route request, issue #44).
+python3 "$SCRIPT_DIR/synth_request.py" "$SYNTH_REQUEST" \
+    --source "$RTL_DIR/lut4_slice.v" \
+    --source "$RTL_DIR/logic_tile.v" \
+    --hdl-toplevel "$TOP_MODULE" \
+    --clock-period-ns "$CLOCK_PERIOD_NS"
 
 echo "=== klt synthesize ${TOP_MODULE} (sky130_fd_sc_hd) ==="
 if ! klt synthesize "$SYNTH_REQUEST" --pdk sky130A --format json | tee "$SYNTH_RESPONSE"; then
