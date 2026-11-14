@@ -155,6 +155,15 @@ check-mode `flow/layout.sh` run is **physical**, not cosmetic (45 of 47 logic
 cells and all 137 nets differ, independent of the PDK revision), though every
 verdict in `par.json` still passes. See
 `measurements/layout-reproducibility/records/20261107-213000-9e83907.md`.
+Issue #252 then re-ran that regeneration under the **pinned `0.8.0` release**
+and measured it: the regenerated layout is DRC-, LVS- (including power
+connectivity) and ERC-clean and setup/hold-clean at all 18 corners, with the
+binding setup corner still `ss_n40C_1v28` and its SPEF WNS moving
+15.2145 -> 15.0971 ns (-117.4 ps). An **observation only** -- no spec row,
+decision record or `signoff/` pin changes, and nothing under `layout/` was
+regenerated or committed. See
+`measurements/layout-reproducibility/records/20261114-043307-515714f.md`,
+which also lists what a full re-stamp would have to regenerate.
 Item 5's functional-verification envelope comes from
 `flow/functional-verification.sh` (cocotb, run as
 `uvx --from "klayout-tools[functional-verification]==0.8.0" klt`).
