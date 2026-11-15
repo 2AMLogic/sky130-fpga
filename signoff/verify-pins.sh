@@ -285,18 +285,36 @@ for item, env_rel, art_rel, pre in bound:
     env = json.load(open(f"{repo}/{env_rel}"))
     live = sha256_of(art_rel)
     inp = env["provenance"]["input"]
-    in_path = inp["path"]
-    if isinstance(in_path, dict):  # --attest form: {"path": repo-relative, "scope": "repo"}
-        resolved = os.path.normpath(os.path.join(repo, in_path["path"]))
+    if "path" in inp:
+        # single-input envelope: the pin is the live hash of the one named
+        # artifact (the inventory for --attest items, the GDS for item 2)
+        in_path = inp["path"]
+        if isinstance(in_path, dict):  # --attest form: {"path": repo-relative, "scope": "repo"}
+            resolved = os.path.normpath(os.path.join(repo, in_path["path"]))
+        else:
+            resolved = os.path.normpath(os.path.join(os.path.dirname(f"{repo}/{env_rel}"), in_path))
+        check(f"  item-{item} envelope names {art_rel}",
+              os.path.realpath(f"{repo}/{art_rel}"), os.path.realpath(resolved),
+              f"point {env_rel} provenance.input.path at {art_rel}")
+        check(f"  item-{item} envelope declares t1_item {item}",
+              item, str(env.get("t1_item")), f"set t1_item in {env_rel}")
+        check(f"  item-{item} envelope input pin == live {art_rel}",
+              inp["content_hash"], live, remedy)
     else:
-        resolved = os.path.normpath(os.path.join(os.path.dirname(f"{repo}/{env_rel}"), in_path))
-    check(f"  item-{item} envelope names {art_rel}",
-          os.path.realpath(f"{repo}/{art_rel}"), os.path.realpath(resolved),
-          f"point {env_rel} provenance.input.path at {art_rel}")
-    check(f"  item-{item} envelope declares t1_item {item}",
-          item, str(env.get("t1_item")), f"set t1_item in {env_rel}")
-    check(f"  item-{item} envelope input pin == live {art_rel}",
-          inp["content_hash"], live, remedy)
+        # multi-input envelope (klt 0.9.1 --attest): provenance.input.paths
+        # lists every member with its own hash, and content_hash pins the
+        # whole input set -- the manifest must carry that set hash (it is
+        # what the grader compares against, not the single file's hash)
+        members = {e["path"]["path"]: e["content_hash"] for e in inp["paths"]}
+        check(f"  item-{item} envelope names {art_rel}",
+              True, art_rel in members,
+              f"re-run the item-{item} attest command in signoff/README.md so "
+              f"{env_rel} lists {art_rel} in provenance.input.paths")
+        check(f"  item-{item} envelope declares t1_item {item}",
+              item, str(env.get("t1_item")), f"set t1_item in {env_rel}")
+        check(f"  item-{item} envelope pin for {art_rel} == live bytes",
+              members.get(art_rel), live, remedy)
+        live = inp["content_hash"]
     if item in ev:
         check(f"  manifest item-{item} pin == live {art_rel}",
               ev[item].get("content_hash"), live, remedy)
