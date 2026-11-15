@@ -118,6 +118,23 @@ RECORDED_LVS_KLT_VERSION="0.8.0"
 # the artifacts regenerated against it.
 RECORDED_PDK_VERSION="open_pdks c6d73a35f524070e85faff4a6a9eef49553ebc2b"
 
+# The sha256 of the two generated sky130_fd_sc_hd Verilog model files under
+# that revision's sky130A/libs.ref/sky130_fd_sc_hd/verilog:
+# sky130_fd_sc_hd.v (RECORDED_PDK_MODELS_SHA256) and primitives.v
+# (RECORDED_PDK_PRIMITIVES_SHA256). The pinned revision itself is not
+# published in the ciel-releases index (404), so CI (.github/workflows/
+# gate-sim.yml) fetches the nearest published revision (a492ff78...) whose
+# two files are byte-identical to the recorded revision's, and asserts that
+# byte-identity with these values (issue #130 decision). They live here --
+# not in the workflow's env -- so that gate-sim.yml and
+# sim/sdf_port_interconnect/run.sh read one committed source and a future
+# model bump cannot leave the two asserting different values (issue #269).
+# Consumers compare bare hex -- a "sha256:"-prefixed string (e.g. issue
+# #265's sha256_of helper, if reused here) must be stripped first. Update
+# together with RECORDED_PDK_VERSION on an intentional PDK bump.
+RECORDED_PDK_MODELS_SHA256="12d5d6448ccf265c544d88402d5c10ab6de9bee8b8cde48eee1f31ea8c3c3e45"
+RECORDED_PDK_PRIMITIVES_SHA256="7d4b1441d06b0f2b9662befa675a0484d77149e04eb42a5f1fa2d4cfded7b2ce"
+
 # Prints the resolved sky130A PDK revision and, if it differs from
 # RECORDED_PDK_VERSION above, a warning. Split out from
 # print_tool_version_banner so a PDK-only flow (flow/drc.sh, flow/lvs.sh --
