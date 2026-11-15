@@ -45,7 +45,7 @@
         "role": "testbench",
         "path": "flow/audit_evidence.py",
         "passed": true,
-        "content_hash": "sha256:30f36e6475c693bc432336b47b2ac58d16031b1f37b57132194933b7fe2b407d"
+        "content_hash": "sha256:0d924b685c469ae7b1fbd33099a3f873deffa7d5de1a5205327ae2dbc1811c8e"
       },
       {
         "check": "present",
