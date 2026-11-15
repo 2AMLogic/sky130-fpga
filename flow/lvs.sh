@@ -158,6 +158,13 @@ source "$SCRIPT_DIR/pdk_root.sh"
 export_pdk_root_if_unset "$PDK_VARIANT"
 require_pdk_resolvable "$PDK_VARIANT"
 
+# The flow/layout.sh invocation below leaves its as-built netlist under
+# .klt/place-and-route/; resolve it with the same helper layout.sh itself
+# uses (issue #261) so this script and layout.sh cannot disagree on which
+# run's netlist the LVS reference side compares against.
+# shellcheck source=./klt_artifact.sh
+source "$SCRIPT_DIR/klt_artifact.sh"
+
 # Pin the PDK revision this run resolves against. On klt builds carrying
 # the klayout-tools#1901 fix the report `klt lvs` writes pins the PDK
 # revision in its own provenance block -- the committed
@@ -205,11 +212,10 @@ AS_BUILT_NETLIST="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.v"
 # klt >= 0.6.0 writes stage artifacts under .klt/<stage>/run-<id>/ (same
 # fallback as flow/layout.sh / flow/sdf-resim.sh): flat path if present,
 # else the newest run-* copy -- the one flow/layout.sh just wrote above.
-if [[ ! -s "$AS_BUILT_NETLIST" ]]; then
-    # shellcheck disable=SC2012
-    newest_netlist="$(ls -1dt "$(dirname "$AS_BUILT_NETLIST")"/run-*/"$(basename "$AS_BUILT_NETLIST")" 2>/dev/null | head -1 || true)"
-    AS_BUILT_NETLIST="${newest_netlist:-$AS_BUILT_NETLIST}"
-fi
+# Single-sourced in flow/klt_artifact.sh (issue #261); resolving with the
+# helper flow/layout.sh itself uses is what guarantees both sides of the
+# LVS compare select the same run's netlist.
+AS_BUILT_NETLIST="$(resolve_klt_artifact "$AS_BUILT_NETLIST")"
 
 if [[ ! -s "$AS_BUILT_NETLIST" ]]; then
     echo "error: no as-built netlist at $AS_BUILT_NETLIST -- flow/layout.sh did not reach place-and-route (see $LAYOUT_LOG)" >&2

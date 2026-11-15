@@ -147,6 +147,12 @@ if ! klt pdk find --pdk sky130A >/dev/null 2>&1; then
     exit 1
 fi
 
+# Shared with flow/layout.sh, flow/layout_routed.sh and flow/lvs.sh -- see
+# flow/klt_artifact.sh's own header comment (issue #261) for why the
+# .klt/<stage>/ artifact fallback is single-sourced there.
+# shellcheck source=./klt_artifact.sh
+source "$SCRIPT_DIR/klt_artifact.sh"
+
 # Resolve an Icarus Verilog 13.0+ toolchain for the gate-level legs.
 # `options.sdf`'s own documented minimum (klayout-tools docs/cli/
 # functional-verification.md, "Icarus 13.0 or newer") is `-ginterconnect`,
@@ -232,30 +238,16 @@ ROUTED_NETLIST="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.v"
 GENERATED_DEF="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.def"
 COMMITTED_DEF="$REPO_ROOT/layout/${TOP_MODULE}.def"
 
-# klt >= 0.6.0 writes stage artifacts under .klt/<stage>/run-<id>/ instead of
-# flat .klt/<stage>/ (observed with klt 0.6.0 / 0.7.0). Fall back to the
-# newest run-* directory when the flat (<= 0.5.x) path is absent. Prints the
-# flat path unchanged if nothing matches, so the callers' existing
-# "did not produce" errors still fire.
-resolve_klt_artifact() {
-    local flat="$1" dir base newest
-    if [[ -s "$flat" ]]; then echo "$flat"; return 0; fi
-    dir="$(dirname "$flat")"; base="$(basename "$flat")"
-    # shellcheck disable=SC2012
-    newest="$(ls -1dt "$dir"/run-*/"$base" 2>/dev/null | head -1 || true)"
-    echo "${newest:-$flat}"
-}
-
-cat >"$SYNTH_REQUEST" <<EOF
-{
-  "schema": "klt.synthesize.request/1",
-  "engine": "yosys",
-  "sources": ["${RTL_DIR}/lut4_slice.v", "${RTL_DIR}/logic_tile.v"],
-  "hdl_toplevel": "${TOP_MODULE}",
-  "pdk": { "cell_library": "sky130_fd_sc_hd", "corner": "tt_025C_1v80" },
-  "constraints": { "clock_period_ns": ${CLOCK_PERIOD_NS} }
-}
-EOF
+# Same request shape as flow/layout.sh -- single-sourced in
+# flow/synth_request.py (issue #261; the synthesize-stage sibling of
+# par_request.py's issue #44 dedup) so the two scripts cannot silently
+# diverge on the request they submit. This is the *same design run through
+# the same flow*.
+python3 "$SCRIPT_DIR/synth_request.py" "$SYNTH_REQUEST" \
+    --source "$RTL_DIR/lut4_slice.v" \
+    --source "$RTL_DIR/logic_tile.v" \
+    --hdl-toplevel "$TOP_MODULE" \
+    --clock-period-ns "$CLOCK_PERIOD_NS"
 
 echo "=== klt synthesize ${TOP_MODULE} (sky130_fd_sc_hd) ==="
 if ! klt synthesize "$SYNTH_REQUEST" --pdk sky130A --format json | tee "$SYNTH_RESPONSE"; then
