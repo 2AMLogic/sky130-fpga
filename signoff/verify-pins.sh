@@ -78,10 +78,15 @@
 #                                         its live bytes and checks the manifest
 #                                         pin against the set hash (issue #281).
 #                                         Items 9 and 10 pin their inventory's
-#                                         bytes; CI re-runs `--attest N --check`
-#                                         to re-hash their members. In both
-#                                         forms this script checks the pin
-#                                         chain envelope -> inputs -> manifest.
+#                                         bytes; their per-member hashes live
+#                                         only in attestation.checks, which
+#                                         this script re-hashes against live
+#                                         bytes too (issue #286), with CI's
+#                                         `--attest N --check` staying the
+#                                         authoritative grader. In both forms
+#                                         this script checks the pin chain
+#                                         envelope -> inputs -> members ->
+#                                         manifest.
 #
 #   items 2            artifact-anchored generic envelope (signoff/item-2-layout.json,
 #                                         klayout-tools#2718). Each names its
@@ -306,6 +311,7 @@ for item, env_rel, art_rel, pre in bound:
     if "path" in inp:
         # single-input envelope: the pin is the live hash of the one named
         # artifact (the inventory for --attest items, the GDS for item 2)
+        checked = set()
         in_path = inp["path"]
         if isinstance(in_path, dict):  # --attest form: {"path": repo-relative, "scope": "repo"}
             resolved = os.path.normpath(os.path.join(repo, in_path["path"]))
@@ -336,7 +342,9 @@ for item, env_rel, art_rel, pre in bound:
         # art_rel member (issue #281: a design-source edit otherwise passes
         # clean with a stale input-set hash). A member missing from the tree
         # is the mismatch, not a crash.
+        checked = set()
         for member_rel in sorted(members):
+            checked.add(member_rel)
             member_live = (sha256_of(member_rel)
                            if os.path.isfile(f"{repo}/{member_rel}")
                            else "<missing from the tree>")
@@ -347,6 +355,31 @@ for item, env_rel, art_rel, pre in bound:
         # the shared tail's label instead of reusing the live-bytes wording
         live = inp["content_hash"]
         pin_label = f"manifest item-{item} pin == envelope input-set hash"
+    # Beyond the provenance pins, an --attest envelope records a per-file hash
+    # in every attestation.checks entry that audited a file. Items 9 and 10
+    # (single-input) keep their member hashes ONLY here -- their inventory pin
+    # never moves when a member changes, so without this pass a testbench or
+    # hygiene-file edit passed clean with a stale recorded hash (issue #286;
+    # item 1's equivalent gap in the multi-input branch was issue #281's).
+    # Entries without a content_hash are command-style checks with no file to
+    # hash; filtering on "has both path and content_hash" skips them without
+    # interpreting klt's check vocabulary. Paths the input-set loop already
+    # checked (item 1's members) are skipped so nothing is reported twice.
+    att_remedy = (f"re-run the item-{item} attest command in signoff/README.md "
+                  f"(a member edit moves only the envelope's attestation.checks "
+                  f"hash -- the inventory pin and the manifest's item-{item} "
+                  f"content_hash do not change)")
+    for entry in env.get("attestation", {}).get("checks", []):
+        if "path" not in entry or "content_hash" not in entry:
+            continue
+        member_rel = os.path.normpath(entry["path"])
+        if member_rel in checked:
+            continue
+        member_live = (sha256_of(member_rel)
+                       if os.path.isfile(f"{repo}/{member_rel}")
+                       else "<missing from the tree>")
+        check(f"  item-{item} attestation pin for {member_rel} == live bytes",
+              entry["content_hash"], member_live, att_remedy)
     if item in ev:
         check(pin_label, ev[item].get("content_hash"), live, remedy)
     else:
