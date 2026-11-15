@@ -201,10 +201,9 @@ if [[ "$TARGET_MODE" == "target" ]]; then
     LAYOUT_DIR="$TARGET_DIR"
 fi
 
-if ! command -v klt >/dev/null 2>&1; then
-    echo "error: klt not found on PATH" >&2
-    exit 1
-fi
+# shellcheck source=./report_check.sh
+source "$SCRIPT_DIR/report_check.sh"
+require_klt
 
 COMMITTED_GDS="$LAYOUT_DIR/${GDS_NAME}"
 # The committed copy always lives under layout/, even when --target points
@@ -400,7 +399,7 @@ fi
 
 # --- 5. Trim + record content-addressed provenance ---
 
-LAYOUT_GDS_SHA256="sha256:$(python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$COMMITTED_GDS")"
+LAYOUT_GDS_SHA256="$(sha256_of "$COMMITTED_GDS")"
 RTL_INPUT_SHA256="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['provenance']['input']['content_hash'])" "$SYNTH_RESPONSE")"
 
 python3 "$SCRIPT_DIR/lvs_report_trim.py" "$LVS_RESPONSE" "$LAYOUT_GDS_SHA256" "$RTL_INPUT_SHA256" "$GENERATED_REPORT"

@@ -82,6 +82,9 @@ TOP_CELL="logic_tile"
 PDK_VARIANT="sky130A"
 ERC_PDK="sky130"
 
+# shellcheck source=./report_check.sh
+source "$SCRIPT_DIR/report_check.sh"
+
 MODE="check"
 TARGET_DIR=""
 while [[ $# -gt 0 ]]; do
@@ -117,6 +120,8 @@ done
 # Normalization and read-only guarantee identical to flow/drc.sh's: the
 # committed layout directory spelled explicitly behaves exactly as the
 # default; anything else refuses --update before anything is written.
+# (Own parse instead of report_check.sh's parse_update_mode, same reason
+# as flow/drc.sh: the argument surface is no longer exactly [--update].)
 TARGET_MODE="default"
 if [[ -n "$TARGET_DIR" ]]; then
     if [[ ! -d "$TARGET_DIR" ]]; then
@@ -139,10 +144,7 @@ if [[ "$TARGET_MODE" == "target" ]]; then
     LAYOUT_DIR="$TARGET_DIR"
 fi
 
-if ! command -v klt >/dev/null 2>&1; then
-    echo "error: klt not found on PATH" >&2
-    exit 1
-fi
+require_klt
 
 # Shared with flow/drc.sh, flow/layout.sh, flow/lvs.sh and
 # flow/sta-sweep.sh (issue #45). Only `require_pdk_resolvable` is used here:
@@ -250,8 +252,8 @@ if findings or violating:
     sys.exit(1)
 PY
 
-LAYOUT_SHA="sha256:$(python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$COMMITTED_GDS")"
-SPEC_SHA="sha256:$(python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$COMMITTED_SPEC")"
+LAYOUT_SHA="$(sha256_of "$COMMITTED_GDS")"
+SPEC_SHA="$(sha256_of "$COMMITTED_SPEC")"
 
 python3 "$SCRIPT_DIR/erc_report_trim.py" "$RAW_REPORT" "$LAYOUT_SHA" "$SPEC_SHA" \
     "${KLT_VERSION:-unknown}" "$GENERATED_REPORT"

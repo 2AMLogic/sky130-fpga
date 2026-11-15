@@ -41,19 +41,9 @@ BUILD_DIR="$SCRIPT_DIR/build"
 TOP_MODULE="logic_tile"
 NETLIST_NAME="logic_tile_netlist.v"
 
-MODE="check"
-case "${1:-}" in
-    --update)
-        MODE="update"
-        ;;
-    "")
-        MODE="check"
-        ;;
-    *)
-        echo "usage: $0 [--update]" >&2
-        exit 1
-        ;;
-esac
+# shellcheck source=./report_check.sh
+source "$SCRIPT_DIR/report_check.sh"
+parse_update_mode "$@"
 
 if ! command -v yosys >/dev/null 2>&1; then
     echo "error: yosys not found on PATH" >&2

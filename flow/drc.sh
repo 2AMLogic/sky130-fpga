@@ -65,6 +65,9 @@ REPORT_NAME="logic_tile.drc.json"
 DECK="sky130"
 PDK_VARIANT="sky130A"
 
+# shellcheck source=./report_check.sh
+source "$SCRIPT_DIR/report_check.sh"
+
 MODE="check"
 TARGET_DIR=""
 while [[ $# -gt 0 ]]; do
@@ -100,6 +103,9 @@ done
 # Normalization: the committed layout directory spelled explicitly behaves
 # exactly as the default. Anything else is a strictly read-only measurement:
 # --update is refused here, before anything is created or written.
+# (This script keeps its own parse instead of report_check.sh's
+# parse_update_mode: with --target its argument surface is no longer exactly
+# [--update] -- the helper's own documented cut-off, matching flow/lvs.sh.)
 TARGET_MODE="default"
 if [[ -n "$TARGET_DIR" ]]; then
     if [[ ! -d "$TARGET_DIR" ]]; then
@@ -122,10 +128,7 @@ if [[ "$TARGET_MODE" == "target" ]]; then
     LAYOUT_DIR="$TARGET_DIR"
 fi
 
-if ! command -v klt >/dev/null 2>&1; then
-    echo "error: klt not found on PATH" >&2
-    exit 1
-fi
+require_klt
 
 # shellcheck source=./pdk_root.sh
 source "$SCRIPT_DIR/pdk_root.sh"
