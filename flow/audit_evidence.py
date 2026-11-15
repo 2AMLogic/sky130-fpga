@@ -119,7 +119,7 @@ ALLOWED_INPUT_DRIFT = {
         "flow/synth_request.py, which writes the same request document "
         "(identical schema/engine/sources/toplevel/pdk/corner/clock-period "
         "fields and values; only JSON line-wrapping differs, and klt parses "
-        "the file). Same request bytes to klt, same invocations, same "
+        "the file). Same request document to klt, same invocations, same "
         "artifact resolution -- so this reproducibility run cannot come out "
         "different. Verified in the PR's before/after regeneration under one "
         "toolchain: GDS 2478d036..., DEF 149bb479... and synth netlist "

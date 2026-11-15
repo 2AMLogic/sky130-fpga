@@ -6,6 +6,13 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-15
+
+- **PR #280**: signoff: regrade tier report under pinned klayout-tools 0.9.1 (-75% report size, verdicts unchanged)
+- **PR #266**: sim: isolate the SDF INTERCONNECT rejection as a per-net fanout cap
+- **Issue #256** (closed): Regenerate signoff/tier-report.json with the current klt: 183 KB of it is the pre-#4286 ungated coverage echo
+- **Issue #250** (closed): Isolate why 28 port-sourced INTERCONNECT entries are not applied in the SDF-annotated run (minimal reproducer, no place-and-route)
+
 ### 2026-11-14
 
 - **PR #271**: chore: drop the loom-workspace package.json scaffolding stub
