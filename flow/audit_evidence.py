@@ -169,6 +169,23 @@ ALLOWED_INPUT_DRIFT = {
         "byte-identical and netlist 09777dce... unchanged in the PR's "
         "before/after regeneration under one toolchain."
     ),
+    ("20261114-sdf-port-interconnect-564db73", "sim/sdf_port_interconnect/run.sh"): (
+        "789bc21 (issue #269) relaxed only the harness's PDK-model "
+        "resolution so CI can run it: after the four path-pinned candidates "
+        "(unchanged list, unchanged acceptance) miss, a flat-layout model "
+        "directory is accepted only when sky130_fd_sc_hd.v and primitives.v "
+        "sha256-match the recorded values in flow/tool_versions.sh -- i.e. "
+        "byte-identical model inputs by construction -- and any other "
+        "directory still exits non-zero with the named pinned-revision "
+        "error before a simulation starts. Nothing downstream of resolution "
+        "changed, and this record's own run resolved through a pinned path, "
+        "so every input it pins is unchanged. Verified in the PR: with only "
+        "a hash-matching flat layout present, the guard re-runs to exit 0 "
+        "reproducing every verdict, rejected-entry count and the "
+        "committed-SDF 28-rejection prediction, byte-identical across two "
+        "consecutive runs; a one-byte-corrupted primitives.v is refused "
+        "with the named error."
+    ),
 }
 
 # Committed reports whose `provenance.pdk` may be null without failing
