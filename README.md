@@ -11,7 +11,11 @@ verification of the ratified fabric not yet done.** This is a tile-scoped
 canary, not a fabric. Each row is a pointer to the committed evidence; the
 machine-checkable cells carry a marker that `flow/check_status_claims.py`
 verifies against its source on every PR (see `flow/README.md`). Aggregated
-snapshot: [`measurements/characterization-summary.md`](measurements/characterization-summary.md);
+snapshot:
+[`measurements/characterization-summary.md`](measurements/characterization-summary.md)
+(its SDF rows are a hash-pinned signoff attestation and still name
+klayout-tools#2897 as the gap; re-pinning them is an item-8 re-attestation,
+tracked as [#262](https://github.com/2AMLogic/sky130-fpga/issues/262));
 full per-issue narrative: ["Current position" in `spec/framework-gaps.md`](spec/framework-gaps.md#current-position-moved-from-readme).
 
 | Rung | State | Detail |
@@ -19,7 +23,7 @@ full per-issue narrative: ["Current position" in `spec/framework-gaps.md`](spec/
 | Tile layout DRC | clean <!-- status-claim: drc=clean --> | [`layout/logic_tile.drc.json`](layout/logic_tile.drc.json) |
 | Tile layout LVS | match <!-- status-claim: lvs=match --> | [`layout/logic_tile.lvs.json`](layout/logic_tile.lvs.json) |
 | Timing characterization | setup/hold-clean at all 18 `sky130_fd_sc_hd` corners <!-- status-claim: corner-count=18 -->; binding corner `ss_n40C_1v28` <!-- status-claim: binding-corner=ss_n40C_1v28 -->; ratified ([ADR-0002](spec/decisions/0002-tile-timing-spec-ratification.md)) | [`measurements/characterization-summary.md`](measurements/characterization-summary.md) |
-| Gate-level SDF re-simulation | zero-delay passes; SDF-annotated blocked upstream ([klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) guard only, gap [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)) | [`measurements/README.md`](measurements/README.md) |
+| Gate-level SDF re-simulation | zero-delay passes; SDF-annotated **still blocked, but no longer on** [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897) -- that closed upstream on 2026-10-18 via [klayout-tools#3293](https://github.com/2AMLogic/klayout-tools/pull/3293) (escaped-divider instance names are now rewritten in build-directory copies of the SDF and its sources), first contained in tag `v0.8.0`, the version this repo pins, with no GitHub Release notes covering it. Item 7 is **not met**; it is held now by the renamed pair's partial annotation (28 of 179 `INTERCONNECT` entries, every one port-sourced, unapplied -- record [`20261017-sdf-sanitize-d811bcd`](measurements/timing-characterization/records/20261017-sdf-sanitize-d811bcd.md), worked as [#250](https://github.com/2AMLogic/sky130-fpga/issues/250); upstream [klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002) still **open**) and by the characterized geometry no longer reproducing on the current toolchain (records [`20261107-213000-9e83907`](measurements/layout-reproducibility/records/20261107-213000-9e83907.md), under the host's klt `0.9.2.dev246` development build, and [`20261114-043307-515714f`](measurements/layout-reproducibility/records/20261114-043307-515714f.md), under the pinned `klayout-tools==0.8.0`) -- [#162](https://github.com/2AMLogic/sky130-fpga/issues/162), [#213](https://github.com/2AMLogic/sky130-fpga/issues/213) | [`measurements/README.md`](measurements/README.md) |
 | FABulous tile description / nextpnr | accepted by the pinned generator and nextpnr (not a bitstream-correctness or timing claim) | G1 in [`spec/framework-gaps.md`](spec/framework-gaps.md) |
 | [ADR-0004](spec/decisions/0004-g1-tile-description-discrepancies.md) (G1 discrepancies) | Proposed <!-- status-claim: adr-0004=Proposed --> | pending operator ratification |
 | [ADR-0005](spec/decisions/0005-nextpnr-io-and-constant-handling.md) (nextpnr IO/constants) | Proposed <!-- status-claim: adr-0005=Proposed --> | pending operator ratification |

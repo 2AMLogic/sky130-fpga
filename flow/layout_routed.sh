@@ -11,7 +11,8 @@
 #
 # Scope: synthesis + floorplan/place/route + DEF->GDS only, through the same
 # klt synthesize / klt place-and-route request helpers as flow/layout.sh
-# (flow/par_request.py, flow/par_report_trim.py, flow/gds_canonicalize.py).
+# (flow/synth_request.py, flow/par_request.py, flow/par_report_trim.py,
+# flow/gds_canonicalize.py, flow/klt_artifact.sh).
 # No DRC/LVS/ERC, no extracted-parasitics timing, no nextpnr-routability and
 # no shared-reset compliance claim. The matrix is the same-index stand-in
 # (spec/decisions/0004 is Proposed); nothing here ratifies it.
@@ -72,6 +73,13 @@ command -v yosys >/dev/null 2>&1 || { echo "error: yosys not found on PATH" >&2;
 source "$SCRIPT_DIR/pdk_root.sh"
 require_pdk_resolvable "sky130A"
 
+# Shared with flow/layout.sh / flow/sdf-resim.sh / flow/lvs.sh -- see
+# flow/klt_artifact.sh's own header comment (issue #261). This replaces the
+# script's own `resolve()` one-liner, whose lexicographic-first semantics
+# had drifted from the other three copies.
+# shellcheck source=./klt_artifact.sh
+source "$SCRIPT_DIR/klt_artifact.sh"
+
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR" "$OUT_DIR" "$RECORD_DIR"
 
@@ -79,31 +87,33 @@ SYNTH_REQUEST="$BUILD_DIR/synth_request.json"
 PAR_REQUEST="$BUILD_DIR/par_request.json"
 SYNTH_RESPONSE="$BUILD_DIR/synth_response.json"
 PAR_RESPONSE="$BUILD_DIR/par_response.json"
-# klt >= 0.7 nests synthesis outputs under a per-run id directory; the build
-# dir is wiped each run so at most one run dir exists per stage. Paths are resolved
-# after each stage (see `resolve`).
-resolve() { ls -1 "$BUILD_DIR/.klt/$1/$2" "$BUILD_DIR/.klt/$1"/*/"$2" 2>/dev/null | head -1 || true; }
-SYNTH_NETLIST="" RAW_GDS="" GEN_DEF="" GEN_NETLIST=""
+# klt >= 0.6/0.7 nests stage outputs under a per-run id directory; the
+# build dir is wiped each run so at most one run dir exists per stage.
+# Paths are resolved after each stage via resolve_klt_artifact().
+SYNTH_NETLIST="$BUILD_DIR/.klt/synthesize/${TOP_MODULE}_synth.v"
+RAW_GDS="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.gds"
+GEN_DEF="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.def"
+GEN_NETLIST="$BUILD_DIR/.klt/place-and-route/${TOP_MODULE}.v"
 GEN_GDS="$BUILD_DIR/${TOP_MODULE}.gds"
 GEN_REPORT="$BUILD_DIR/${TOP_MODULE}.par.json"
 
-python3 - "$SYNTH_REQUEST" "$CLOCK_PERIOD_NS" "$TOP_MODULE" "${SOURCES[@]}" <<'PY'
-import json, sys
-out, period, top, *srcs = sys.argv[1:]
-json.dump({
-    "schema": "klt.synthesize.request/1", "engine": "yosys",
-    "sources": srcs, "hdl_toplevel": top,
-    "pdk": {"cell_library": "sky130_fd_sc_hd", "corner": "tt_025C_1v80"},
-    "constraints": {"clock_period_ns": int(period)},
-}, open(out, "w"), indent=2)
-PY
+# Shared with flow/layout.sh / flow/sdf-resim.sh -- see flow/synth_request.py's
+# own header comment (issue #261) for why the synthesize request body is
+# single-sourced there instead of an inline json.dump here (the same
+# rationale par_request.py applies to the place-and-route request, issue #44).
+synth_request_args=()
+for src in "${SOURCES[@]}"; do synth_request_args+=(--source "$src"); done
+python3 "$SCRIPT_DIR/synth_request.py" "$SYNTH_REQUEST" \
+    "${synth_request_args[@]}" \
+    --hdl-toplevel "$TOP_MODULE" \
+    --clock-period-ns "$CLOCK_PERIOD_NS"
 
 # klt resolves its working directory (.klt/) relative to the request file.
 echo "=== klt synthesize ${TOP_MODULE} (sky130_fd_sc_hd) ==="
 klt synthesize "$SYNTH_REQUEST" --pdk sky130A --format json | tee "$SYNTH_RESPONSE" >/dev/null
 python3 -c "import json,sys; sys.exit(0 if json.load(open('$SYNTH_RESPONSE')).get('status') == 'ok' else 1)" \
     || { echo "error: klt synthesize not ok (see $SYNTH_RESPONSE)" >&2; exit 1; }
-SYNTH_NETLIST="$(resolve synthesize "${TOP_MODULE}_synth.v")"
+SYNTH_NETLIST="$(resolve_klt_artifact "$SYNTH_NETLIST")"
 [[ -s "$SYNTH_NETLIST" ]] || { echo "error: no synth netlist at $SYNTH_NETLIST" >&2; exit 1; }
 
 python3 "$SCRIPT_DIR/par_request.py" "$SYNTH_NETLIST" "$PAR_REQUEST" \
@@ -116,9 +126,9 @@ if ! klt place-and-route "$PAR_REQUEST" --pdk sky130A --format json | tee "$PAR_
 fi
 python3 -c "import json,sys; sys.exit(0 if json.load(open('$PAR_RESPONSE')).get('stage_reached') == 'route' else 1)" \
     || { echo "error: place-and-route did not reach 'route' (see $PAR_RESPONSE)" >&2; exit 1; }
-RAW_GDS="$(resolve place-and-route "${TOP_MODULE}.gds")"
-GEN_DEF="$(resolve place-and-route "${TOP_MODULE}.def")"
-GEN_NETLIST="$(resolve place-and-route "${TOP_MODULE}.v")"
+RAW_GDS="$(resolve_klt_artifact "$RAW_GDS")"
+GEN_DEF="$(resolve_klt_artifact "$GEN_DEF")"
+GEN_NETLIST="$(resolve_klt_artifact "$GEN_NETLIST")"
 for f in "$RAW_GDS" "$GEN_DEF" "$GEN_NETLIST"; do
     [[ -s "$f" ]] || { echo "error: missing P&R output $f" >&2; exit 1; }
 done

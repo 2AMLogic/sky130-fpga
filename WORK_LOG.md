@@ -6,8 +6,24 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-15
+
+- **PR #280**: signoff: regrade tier report under pinned klayout-tools 0.9.1 (-75% report size, verdicts unchanged)
+- **PR #266**: sim: isolate the SDF INTERCONNECT rejection as a per-net fanout cap
+- **Issue #256** (closed): Regenerate signoff/tier-report.json with the current klt: 183 KB of it is the pre-#4286 ungated coverage echo
+- **Issue #250** (closed): Isolate why 28 port-sourced INTERCONNECT entries are not applied in the SDF-annotated run (minimal reproducer, no place-and-route)
+
 ### 2026-11-14
 
+- **PR #271**: chore: drop the loom-workspace package.json scaffolding stub
+- **PR #263**: docs: record klayout-tools#2897 as closed and name the two live item-7 blockers
+- **Issue #264** (closed): Remove the root package.json: a Loom scaffolding stub whose five scripts are four exit-0 no-ops
+- **Issue #251** (closed): Status text still names klayout-tools#2897 as the open blocker for T1 item 7; it closed
+- **PR #257**: docs(flow): record why the klt erc coverage enumeration stays in full
+- **PR #249**: docs: roadmap as of 2026-11-13
+- **PR #258**: docs: record DRC/LVS/ERC/18-corner STA on the klt-0.8.0 regenerated layout
+- **Issue #253** (closed): Summarize the klt erc coverage cross-product: 317 KB of the committed ERC evidence is derivable from gate_count
+- **Issue #252** (closed): Measure the regenerated layout under pinned klayout-tools==0.8.0: DRC, LVS, ERC and 18-corner STA as a decision-input record
 - **Issue #82** (closed): Auditor Capability Request: Python 3 for local evidence validation
 
 ### 2026-11-07

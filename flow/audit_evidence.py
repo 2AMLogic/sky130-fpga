@@ -126,6 +126,64 @@ ALLOWED_INPUT_DRIFT = {
         "default-path klt argv and cwd equality is additionally asserted "
         "mechanically by flow/test_signoff_target.sh's committed fixture."
     ),
+    ("20261107-213000-9e83907", "flow/layout.sh"): (
+        "20a9fc62 (PR #277, issue #261) single-sourced two pieces this script "
+        "carried inline: resolve_klt_artifact() moved verbatim into "
+        "flow/klt_artifact.sh (now sourced), and the hand-written "
+        "klt.synthesize.request heredoc was replaced by a call to "
+        "flow/synth_request.py, which writes the same request document "
+        "(identical schema/engine/sources/toplevel/pdk/corner/clock-period "
+        "fields and values; only JSON line-wrapping differs, and klt parses "
+        "the file). Same request bytes to klt, same invocations, same "
+        "artifact resolution -- so this reproducibility run cannot come out "
+        "different. Verified in the PR's before/after regeneration under one "
+        "toolchain: GDS 2478d036..., DEF 149bb479... and synth netlist "
+        "09777dce... byte-identical; the par report identical modulo the "
+        "pre-existing per-run run_id path volatility (random per klt "
+        "invocation, stamped on both sides of the refactor)."
+    ),
+    ("20261114-043307-515714f", "flow/layout.sh"): (
+        "20a9fc62 (PR #277, issue #261), the same harness edit already "
+        "accounted for 20261107-213000-9e83907 above: resolve_klt_artifact() "
+        "moved verbatim into flow/klt_artifact.sh (now sourced) and the "
+        "synthesize-request heredoc was replaced by flow/synth_request.py "
+        "writing the same request document (identical fields and values; "
+        "only JSON line-wrapping differs). No change to what the script "
+        "submits to klt or how it resolves stage artifacts, so this "
+        "reproducibility run cannot come out different. Verified in the "
+        "PR's before/after regeneration under one toolchain: GDS 2478d036..., "
+        "DEF 149bb479... and synth netlist 09777dce... byte-identical; the "
+        "par report identical modulo the pre-existing per-run run_id path "
+        "volatility."
+    ),
+    ("20261008-233733-23e6b5e", "flow/sdf-resim.sh"): (
+        "20a9fc62 (PR #277, issue #261) single-sourced two pieces this script "
+        "carried inline: resolve_klt_artifact() moved verbatim into "
+        "flow/klt_artifact.sh (now sourced), and the hand-written "
+        "klt.synthesize.request heredoc was replaced by a call to "
+        "flow/synth_request.py, which writes the same request document "
+        "(identical schema/engine/sources/toplevel/pdk/corner/clock-period "
+        "fields and values; only JSON line-wrapping differs, and klt parses "
+        "the file). The synthesize netlist sdf-resim consumes is therefore "
+        "unchanged, so this record's resim timing numbers cannot move. "
+        "Verified in the PR's before/after regeneration under one toolchain: "
+        "regenerated DEF 149bb479... byte-identical to layout.sh's DEF and "
+        "synth netlist 09777dce... unchanged; the DEF byte-diff gate fires "
+        "at the same place with the same verdict on both sides."
+    ),
+    ("20261017-sdf-sanitize-d811bcd", "flow/sdf-resim.sh"): (
+        "20a9fc62 (PR #277, issue #261), the same harness edit already "
+        "accounted for 20261008-233733-23e6b5e above: resolve_klt_artifact() "
+        "moved verbatim into flow/klt_artifact.sh (now sourced) and the "
+        "synthesize-request heredoc was replaced by flow/synth_request.py "
+        "writing the same request document (identical fields and values; "
+        "only JSON line-wrapping differs). This record's run drives "
+        "sdf-resim unmodified and stops at its DEF gate; the DEF gate "
+        "verdict and the netlist/SDF pair feeding the sanitize experiment "
+        "are unchanged by the refactor -- regenerated DEF 149bb479... "
+        "byte-identical and netlist 09777dce... unchanged in the PR's "
+        "before/after regeneration under one toolchain."
+    ),
 }
 
 # Committed reports whose `provenance.pdk` may be null without failing
