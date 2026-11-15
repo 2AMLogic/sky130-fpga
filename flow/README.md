@@ -18,6 +18,7 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | --- | --- | --- |
 | `tool_versions.sh` | single source of tool pins (sourced by the others) | all flow workflows |
 | `pdk_root.sh` | `$PDK_ROOT`/`$PDK` resolution, sourced by `drc.sh`, `layout.sh`, `lvs.sh`, `sta-sweep.sh` | - |
+| `report_check.sh` | `--update`/check argument parse (`parse_update_mode`), `require_klt` PATH guard and `sha256_of` provenance hash, sourced by `drc.sh`, `synth.sh`, `layout.sh`, `erc.sh`, `lvs.sh`, `routed_checks.sh`, `sta-sweep.sh` (issue #265) | - |
 | `klt_artifact.sh` | `.klt/<stage>/` artifact resolver (flat path vs. newest `run-*` copy), sourced by `layout.sh`, `sdf-resim.sh`, `layout_routed.sh`, `lvs.sh` (issue #261) | - |
 | `synth_request.py` | the `klt.synthesize.request/1` body shared by `layout.sh`, `sdf-resim.sh` and `layout_routed.sh` (issue #261, the synthesize-stage sibling of `par_request.py`) | - |
 | `fabulous.sh` | `design/fabulous/generator.log` and generated-versus-repository checks | `fabulous-nextpnr.yml` |

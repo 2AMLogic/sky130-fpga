@@ -213,6 +213,9 @@ source "$SCRIPT_DIR/pdk_root.sh"
 export_pdk_root_if_unset "$PDK_VARIANT"
 require_pdk_resolvable "$PDK_VARIANT"
 
+# shellcheck source=./report_check.sh
+source "$SCRIPT_DIR/report_check.sh"
+
 COMMITTED_GDS="$LAYOUT_DIR/${TOP_MODULE}.gds"
 COMMITTED_DEF="$LAYOUT_DIR/${TOP_MODULE}.def"
 for artifact in "$COMMITTED_GDS" "$COMMITTED_DEF"; do
@@ -293,9 +296,9 @@ fi
 
 python3 "$SCRIPT_DIR/sta_sanitize_names.py" spef-sanitize "$SPEF_RAW" "$SPEF"
 
-GDS_SHA256="sha256:$(python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$COMMITTED_GDS")"
-DEF_SHA256="sha256:$(python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$COMMITTED_DEF")"
-SPEF_SHA256="sha256:$(python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$SPEF")"
+GDS_SHA256="$(sha256_of "$COMMITTED_GDS")"
+DEF_SHA256="$(sha256_of "$COMMITTED_DEF")"
+SPEF_SHA256="$(sha256_of "$SPEF")"
 echo "=== extracted parasitics from ${GDS_SHA256} -> SPEF ${SPEF_SHA256} ==="
 
 # --- 3. Sweep every corner ---
