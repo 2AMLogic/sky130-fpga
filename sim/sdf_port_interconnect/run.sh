@@ -41,6 +41,17 @@
 # resolve would not be reproducible, and on at least one host that is a
 # different revision from the pinned one.
 #
+# One relaxation, added for CI (issue #269): after the four pinned-path
+# candidates miss, a flat-layout model directory
+# (<root>/sky130A/libs.ref/sky130_fd_sc_hd/verilog -- the layout ciel's
+# --pdk-root produces, which gate-sim.yml fetches) is accepted ONLY when its
+# sky130_fd_sc_hd.v and primitives.v sha256 both equal the recorded values
+# in flow/tool_versions.sh -- the same byte-identity gate-sim.yml asserts on
+# the models it fetches. Equality on the two hashes is the only accepted
+# substitute: never revision proximity, never a nearest-published-revision
+# fallback, and the strict refusal below remains what a local run without
+# either the pinned path or a hash-match gets.
+#
 # Verdicts come from parsing `SDF ERROR` / `SDF WARNING` / `VPI error` lines
 # out of the `vvp` transcript and mapping them onto each entry by SDF line
 # number -- never from `vvp`'s exit code, which is 0 even when every
@@ -56,6 +67,8 @@
 # Environment:
 #   ICARUS13_BIN_DIR   same override flow/sdf-resim.sh honours
 #   PDK_ROOT           volare/ciel root holding the pinned sky130A revision
+#                      (either its versioned layout or the flat ciel layout,
+#                      which must hash-match to be accepted -- see above)
 #
 # Exit status: 0 when every case produced a verdict AND every verdict and
 # rejected-entry count matches the expectation table below (so this doubles
@@ -169,6 +182,9 @@ source "$REPO_ROOT/flow/tool_versions.sh"
 PDK_SHA="${RECORDED_PDK_VERSION##* }"
 
 CELL_VERILOG_DIR=""
+# Pass 1: the path-pinned candidates. The revision is encoded in the path, so
+# presence of the pinned revision's model file is acceptance, as before
+# (issue #269 left this list unchanged).
 for candidate in \
     "${PDK_ROOT:+$PDK_ROOT}"/*/sky130/versions/"$PDK_SHA"/sky130A/libs.ref/sky130_fd_sc_hd/verilog \
     "${PDK_ROOT:+$PDK_ROOT}"/sky130/versions/"$PDK_SHA"/sky130A/libs.ref/sky130_fd_sc_hd/verilog \
@@ -179,11 +195,42 @@ for candidate in \
         break
     fi
 done
+# Pass 2 (issue #269): the flat ciel layout, which encodes no revision in its
+# path -- so it is accepted only when BOTH model files sha256-match the
+# recorded values above. A directory that fails the hash gate is skipped
+# (never accepted, never substituted on revision proximity); the first one
+# seen is remembered so the refusal below can name what was refused.
+HASH_MISMATCH_DIR=""
+HASH_MISMATCH_HASHES=""
+for candidate in \
+    "${PDK_ROOT:+$PDK_ROOT}"/sky130A/libs.ref/sky130_fd_sc_hd/verilog \
+    "$HOME"/.ciel/*/sky130A/libs.ref/sky130_fd_sc_hd/verilog; do
+    hashes=""
+    if [[ -f "$candidate/sky130_fd_sc_hd.v" && -f "$candidate/primitives.v" ]]; then
+        hashes="$(sha256sum "$candidate/sky130_fd_sc_hd.v" "$candidate/primitives.v" | awk '{print $1}' | tr '\n' ' ')"
+        hashes="${hashes% }"
+    fi
+    if [[ "$hashes" == "$RECORDED_PDK_MODELS_SHA256 $RECORDED_PDK_PRIMITIVES_SHA256" ]]; then
+        CELL_VERILOG_DIR="$candidate"
+        break
+    fi
+    if [[ -n "$hashes" && -z "$HASH_MISMATCH_DIR" ]]; then
+        HASH_MISMATCH_DIR="$candidate"
+        HASH_MISMATCH_HASHES="$hashes"
+    fi
+done
 if [[ -z "$CELL_VERILOG_DIR" ]]; then
     echo "error: the pinned sky130A revision was not found." >&2
     echo "       flow/tool_versions.sh pins: $RECORDED_PDK_VERSION" >&2
     echo "       looked for .../versions/$PDK_SHA/sky130A/libs.ref/sky130_fd_sc_hd/verilog under" >&2
-    echo "       \$PDK_ROOT, ~/.volare and ~/.ciel. Set PDK_ROOT to the root that holds it." >&2
+    echo "       \$PDK_ROOT, ~/.volare and ~/.ciel, and for a hash-matching flat" >&2
+    echo "       \$PDK_ROOT/sky130A/libs.ref/sky130_fd_sc_hd/verilog. Set PDK_ROOT to the root that holds one." >&2
+    if [[ -n "$HASH_MISMATCH_DIR" ]]; then
+        echo "       refused on hash mismatch: $HASH_MISMATCH_DIR" >&2
+        echo "       its models:  sha256 $HASH_MISMATCH_HASHES" >&2
+        echo "       expected:    sha256 $RECORDED_PDK_MODELS_SHA256 $RECORDED_PDK_PRIMITIVES_SHA256" >&2
+        echo "       a byte-identical model set is the only accepted substitute; a near revision is not one." >&2
+    fi
     if command -v klt >/dev/null 2>&1; then
         echo "       (\`klt pdk find\` currently resolves:" \
              "$(klt pdk find --pdk sky130A --format json 2>/dev/null \
