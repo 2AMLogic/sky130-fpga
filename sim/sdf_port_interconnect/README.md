@@ -10,7 +10,11 @@ Verilog 13.0+ and the pinned sky130A cell models.
 
 It is **not** part of `./sim/run.sh`. That loop compiles RTL with
 `-g2012 -Wall` and no `-gspecify`/`-ginterconnect`, so it cannot run this
-fixture at all.
+fixture at all. What does run it: CI — `.github/workflows/gate-sim.yml`
+executes it against the pinned models it fetches (since issue #269), so a
+behavioural regression against the recorded verdicts fails a PR instead of
+passing every hash check silently. `sim/test_pdk_gate.sh` is its hermetic
+PDK-resolution regression (no iverilog, no PDK needed).
 
 ## The question it answers
 
