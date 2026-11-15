@@ -65,6 +65,13 @@ jobs:
         # item 1's input set (flow/test_verify_pins.sh tampers a tempdir copy).
         run: ./flow/test_verify_pins.sh
 
+      - name: Regression-test the signoff --target flag (issue #259)
+        # python3 + git only, so it also runs before the klt install: the
+        # harnesses are exercised through stub binaries
+        # (flow/test_signoff_target.sh builds its own fake klt/openroad/yosys
+        # and needs no PDK or network), so this runs on a bare runner.
+        run: ./flow/test_signoff_target.sh
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
