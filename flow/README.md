@@ -49,7 +49,7 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | `lvs.sh`, `lvs_report_trim.py`, `lvs_declared_pins.py`, `lvs_sanitize_verilog.py` | `layout/logic_tile.lvs.json` | - |
 | `erc.sh`, `erc_report_trim.py`, `erc_supply_spec.json` | `layout/logic_tile.erc.json` | - |
 | `sta-sweep.sh`, `sta_report_trim.py`, `sta_sanitize_names.py`, `sta_envelope_check.py` | `measurements/timing-characterization/logic_tile.sta.json` | - |
-| `test_signoff_target.sh` | the read-only `--target <dir>` flag on `drc.sh`/`erc.sh`/`lvs.sh`/`sta-sweep.sh` (issue #259): default-path `klt` argv+cwd fixture, target argv, write-mode refusals, `--routed` alias. Stub `klt` on `PATH` — needs no klt, PDK or network (run manually: `./flow/test_signoff_target.sh`) | - |
+| `test_signoff_target.sh` | the read-only `--target <dir>` flag on `drc.sh`/`erc.sh`/`lvs.sh`/`sta-sweep.sh` (issue #259): default-path `klt` argv+cwd fixture, target argv, write-mode refusals, `--routed` alias. Stubs `klt`/`openroad`/`yosys` on `PATH` — needs no klt, PDK or network (run manually: `./flow/test_signoff_target.sh`) | `signoff.yml` |
 | `layout_routed.sh`, `layout_routed_record.py`, `routed_checks.sh`, `routed_pitch.py` | `layout/experimental/` composed-tile canary (EXPERIMENTAL) | - |
 | `_report_trim.py` | shared driver of the `*_report_trim.py` scripts | - |
 | `audit-evidence.sh`, `audit_evidence.py` | `measurements/claim-traceability.md` audit | `flow-evidence.yml` |

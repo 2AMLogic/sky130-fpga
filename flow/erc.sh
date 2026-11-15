@@ -183,7 +183,14 @@ COMMITTED_SPEC="$SCRIPT_DIR/${SPEC_NAME}"
 # target mode, so the variable is simply unused there.
 COMMITTED_REPORT="$REPO_ROOT/layout/${REPORT_NAME}"
 RAW_REPORT="$BUILD_DIR/${REPORT_NAME}.raw"
+# Target mode keeps its scratch report out of the default mode's path
+# (issue #259): a --target measurement must not overwrite the last
+# default-mode scratch copy -- mirrors sta-sweep.sh's build/sta_target/.
 GENERATED_REPORT="$BUILD_DIR/${REPORT_NAME}"
+if [[ "$TARGET_MODE" == "target" ]]; then
+    GENERATED_REPORT="$BUILD_DIR/target/${REPORT_NAME}"
+    mkdir -p "$BUILD_DIR/target"
+fi
 
 if [[ ! -f "$COMMITTED_GDS" ]]; then
     if [[ "$TARGET_MODE" == "target" ]]; then

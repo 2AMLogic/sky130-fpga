@@ -347,7 +347,14 @@ fi
 # alongside $LVS_REQUEST in $LVS_BUILD_DIR.
 LVS_REQUEST="$LVS_BUILD_DIR/lvs_request.json"
 LVS_RESPONSE="$LVS_BUILD_DIR/lvs_response.json"
+# Target mode keeps its scratch report out of the default mode's path
+# (issue #259): a --target measurement must not overwrite the last
+# default-mode scratch copy -- mirrors sta-sweep.sh's build/sta_target/.
 GENERATED_REPORT="$LVS_BUILD_DIR/${REPORT_NAME}"
+if [[ "$TARGET_MODE" == "target" ]]; then
+    GENERATED_REPORT="$LVS_BUILD_DIR/target/${REPORT_NAME}"
+    mkdir -p "$LVS_BUILD_DIR/target"
+fi
 
 # Power connectivity (issue #69): the request leaves `options` unset, so
 # `klt lvs` runs its inline power-connectivity check over the layout-side

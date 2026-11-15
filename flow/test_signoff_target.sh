@@ -20,9 +20,10 @@
 #       slash, `--target <repo>/layout`) fail loudly or behave as the
 #       default, never silently falling back.
 #
-# Needs no klt, no PDK, no network: a fake `klt` on PATH records every
+# Needs no klt, no PDK, no network: fake `klt`/`openroad`/`yosys` binaries
+# on PATH stand in for the toolchain (`klt` records every
 # invocation's cwd + argv as JSON lines and answers each verb with the
-# minimal deterministic response the harness proceeds on. The stub DRC
+# minimal deterministic response the harness proceeds on). The stub DRC
 # response embeds the committed report plus two version fields, so
 # drc_report_trim's output byte-matches the committed copy and the default
 # drc leg exercises the full path through `klt drc --check`. The
@@ -40,15 +41,16 @@ trap 'rm -rf "$T"' EXIT
 rc_all=0
 ok()  { echo "ok   $1"; }
 bad() { echo "FAIL $1"; rc_all=1; }
-# assert <name> <command...>: the command must exit 0
+# assert <name> <command...>: the command must exit 0. Returns nonzero on
+# failure so `assert ... || echo "$OUT"` diagnostics actually fire.
 assert() {
     local name="$1"; shift
-    if "$@" >/dev/null 2>&1; then ok "$name"; else bad "$name"; fi
+    if "$@" >/dev/null 2>&1; then ok "$name"; else bad "$name"; return 1; fi
 }
 # out_has <name> <glob-pattern>: the last run_h's output matches the pattern
 out_has() {
     local name="$1" pat="$2"
-    if [[ "$OUT" == $pat ]]; then ok "$name"; else bad "$name"; fi
+    if [[ "$OUT" == $pat ]]; then ok "$name"; else bad "$name"; return 1; fi
 }
 
 KLT_LOG="$T/klt-stub.log"
@@ -232,11 +234,16 @@ chmod +x "$T/bin/klt"
 printf '#!/usr/bin/env bash\necho "stub-openroad 1.0"\n' > "$T/bin/openroad"
 chmod +x "$T/bin/openroad"
 
+printf '#!/usr/bin/env bash\necho "Yosys 0.0 (stub)"\n' > "$T/bin/yosys"
+chmod +x "$T/bin/yosys"
+
 # Restricted PATH: stubs first, then system python3/coreutils only -- the
-# host's real klt/openroad (and anything else from ~/.local/bin) must be
-# invisible. /usr/bin/yosys may stay visible: flow/layout.sh (run by lvs.sh)
-# only checks for it, and the stubbed `klt synthesize` fails before yosys
-# is ever invoked.
+# host's real klt/openroad/yosys (and anything else from ~/.local/bin) must
+# be invisible. yosys needs a stub of its own: flow/layout.sh (run by lvs.sh)
+# hard-gates on `command -v yosys` before the stubbed `klt synthesize` ever
+# runs, so a host whose yosys lives outside this PATH (e.g. ~/.local/bin)
+# would kill the lvs legs at that gate; the stub answers it without a real
+# toolchain.
 PATH="$T/bin:/usr/bin:/bin"
 export PATH
 
@@ -271,7 +278,7 @@ with open(os.environ["KLT_STUB_LOG"], encoding="utf-8") as f:
     lines = [json.loads(l) for l in f if l.strip()]
 sys.exit(0 if any(l == expected for l in lines) else 1)
 PY
-    then ok "$name"; else bad "$name"; fi
+    then ok "$name"; else bad "$name"; return 1; fi
 }
 
 # assert_sta_requests <name> <default|target|routed>: every logged `sta`
@@ -315,7 +322,7 @@ if problems:
     sys.exit(1)
 sys.exit(0)
 PY
-    then ok "$name"; else bad "$name"; fi
+    then ok "$name"; else bad "$name"; return 1; fi
 }
 
 # no_invocations_since <name>: the log gained no lines since the marker
@@ -369,8 +376,8 @@ expect_invocation "drc target: argv names the target GDS" "$REPO" \
 assert "drc target: no klt drc --check (no committed counterpart)" \
     bash -c "! grep -q -- '--check' '$KLT_LOG'"
 assert "drc target: trimmed report in the build dir, location printed" \
-    bash -c "[[ -f '$REPO/flow/build/logic_tile.drc.json' ]]"
-out_has "drc target: location printed" '*flow/build*'
+    bash -c "[[ -f '$REPO/flow/build/target/logic_tile.drc.json' ]]"
+out_has "drc target: location printed" '*flow/build/target*'
 assert "drc target: wrote nothing committed" no_writes
 
 # edge: trailing slash behaves like the plain path
@@ -419,8 +426,8 @@ assert "erc target: clean measurement exits 0 (rc=$RC)" bash -c "[[ $RC -eq 0 ]]
 expect_invocation "erc target: argv names the target GDS" "$REPO" \
     "[\"erc\", \"$T/target/logic_tile.gds\", \"flow/erc_supply_spec.json\", \"--top\", \"logic_tile\", \"--pdk\", \"sky130\", \"--format\", \"json\"]"
 assert "erc target: trimmed report in the build dir" \
-    bash -c "[[ -f '$REPO/flow/build/logic_tile.erc.json' ]]"
-out_has "erc target: location printed" '*flow/build*'
+    bash -c "[[ -f '$REPO/flow/build/target/logic_tile.erc.json' ]]"
+out_has "erc target: location printed" '*flow/build/target*'
 assert "erc target: wrote nothing committed" no_writes
 
 # ---- 4. sta-sweep.sh ------------------------------------------------------
@@ -501,8 +508,8 @@ assert "lvs target: clean compare exits 0 (rc=$RC)" bash -c "[[ $RC -eq 0 ]]" ||
 expect_invocation "lvs target: extract argv names the target GDS" "$REPO" \
     "[\"extract\", \"$T/target/logic_tile.gds\", \"--deck\", \"sky130\", \"--abstract-cells\", \"sky130_fd_sc_hd__[!f]*\", \"--def-net-names\", \"--pins\", \"clk,rst,out\", \"-o\", \"$REPO/flow/build/lvs/logic_tile.gate.spice\", \"--format\", \"json\"]"
 assert "lvs target: trimmed report in the build dir" \
-    bash -c "[[ -f '$REPO/flow/build/lvs/logic_tile.lvs.json' ]]"
-out_has "lvs target: location printed" '*flow/build/lvs*'
+    bash -c "[[ -f '$REPO/flow/build/lvs/target/logic_tile.lvs.json' ]]"
+out_has "lvs target: location printed" '*flow/build/lvs/target*'
 assert "lvs target: wrote nothing committed" no_writes
 
 # ---- 6. the test itself never dirties the worktree ------------------------
