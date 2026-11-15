@@ -111,6 +111,43 @@ ALLOWED_INPUT_DRIFT = {
         "diffs are the SPEF *VERSION header / spef_sha256 from the installed "
         "klt build, which predate this change (toolchain drift)."
     ),
+    ("20261027-201500-9111a08", "flow/sta-sweep.sh"): (
+        "db5c038 (PR #279, issue #265) replaced the three inline "
+        "sha256:$(python3 -c ...) hash substitutions with sha256_of from the "
+        "new flow/report_check.sh, and added the (inert) source line for it -- "
+        "parse_update_mode is not called here; the script keeps its own "
+        "three-mode parse. The values feed only the extraction banner echo "
+        "and sta_report_trim.py's def/gds/spef sha fields. sha256_of returns "
+        "byte-for-byte the same sha256:<hex> string, verified by the full "
+        "18-corner main-vs-branch run recorded in PR #279: 51,436 lines each, "
+        "only diffs were the klt extract wall-clock floats, with the "
+        "=== extracted parasitics from sha256:... -> SPEF sha256:... === "
+        "banner byte-identical."
+    ),
+    ("20261107-213000-9e83907", "flow/layout.sh"): (
+        "db5c038 (PR #279, issue #265) replaced the 12-line --update/check "
+        "MODE case block with parse_update_mode from the new "
+        "flow/report_check.sh. Parse-only: no change to any MODE == "
+        "\"update\" body or to the klt openroad loop. The parse is "
+        "byte-identical by construction and its negative path was verified "
+        "in PR #279 (bad first argument -> same usage line, rc=1). The "
+        "post-synthesize stages were not re-run end to end on the shared "
+        "worker (klt synthesize cap), so what is attested here is the parse "
+        "equivalence -- which is the only thing this commit changed in the "
+        "harness the record runs."
+    ),
+    ("20261114-043307-515714f", "flow/layout.sh"): (
+        "db5c038 (PR #279, issue #265) replaced the 12-line --update/check "
+        "MODE case block with parse_update_mode from the new "
+        "flow/report_check.sh. Parse-only: no change to any MODE == "
+        "\"update\" body or to the klt openroad loop. The parse is "
+        "byte-identical by construction and its negative path was verified "
+        "in PR #279 (bad first argument -> same usage line, rc=1). The "
+        "post-synthesize stages were not re-run end to end on the shared "
+        "worker (klt synthesize cap), so what is attested here is the parse "
+        "equivalence -- which is the only thing this commit changed in the "
+        "harness the record runs."
+    ),
 }
 
 # Committed reports whose `provenance.pdk` may be null without failing
