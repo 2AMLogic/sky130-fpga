@@ -14,7 +14,8 @@ fixture at all. What does run it: CI — `.github/workflows/gate-sim.yml`
 executes it against the pinned models it fetches (since issue #269), so a
 behavioural regression against the recorded verdicts fails a PR instead of
 passing every hash check silently. `sim/sdf_port_interconnect/test_pdk_gate.sh` is its hermetic
-PDK-resolution regression (no iverilog, no PDK needed).
+PDK-resolution regression (no iverilog, no PDK needed), run by
+`.github/workflows/flow-evidence.yml` on every PR touching `sim/**`.
 
 ## The question it answers
 

@@ -84,3 +84,6 @@ jobs:
         run: |
           python3 flow/test_gen_bitstream_format.py
           python3 flow/gen_bitstream_format.py --check
+
+      - name: PDK-resolution gate regression (hermetic, issue #269)
+        run: ./sim/sdf_port_interconnect/test_pdk_gate.sh
