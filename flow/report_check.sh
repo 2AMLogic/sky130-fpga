@@ -23,7 +23,11 @@
 #     layout_def_sha256/spef_sha256, the check-record input pins), so a
 #     typo in the prefix or one site drifting to a different hash
 #     construction cannot produce committed evidence whose provenance is
-#     wrong while every gate still passes.
+#     wrong while every gate still passes. The hash command is the
+#     function's LAST command on purpose: its exit status is what the
+#     caller sees, so a read failure on an existing input aborts the
+#     driver under set -euo pipefail instead of recording an empty
+#     "sha256:" digest -- flow/test_report_check.sh pins this contract.
 
 # MODE is consumed by the sourcing driver's own body (check vs update
 # branches), not by this file, so standalone analysis flags every
@@ -53,5 +57,5 @@ require_klt() {
 }
 
 sha256_of() {
-    echo "sha256:$(python3 -c "import hashlib,sys; print(hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$1")"
+    python3 -c "import hashlib,sys; print('sha256:'+hashlib.sha256(open(sys.argv[1],'rb').read()).hexdigest())" "$1"
 }

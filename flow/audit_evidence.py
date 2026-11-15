@@ -122,7 +122,11 @@ ALLOWED_INPUT_DRIFT = {
         "18-corner main-vs-branch run recorded in PR #279: 51,436 lines each, "
         "only diffs were the klt extract wall-clock floats, with the "
         "=== extracted parasitics from sha256:... -> SPEF sha256:... === "
-        "banner byte-identical."
+        "banner byte-identical. The failure path matches too: the hash "
+        "command is sha256_of's last command, so an existing-but-unreadable "
+        "input aborts the driver under set -e (rc=1, no sha256: line) "
+        "exactly as the inline form did -- pinned by "
+        "flow/test_report_check.sh in the flow-evidence workflow."
     ),
     ("20261107-213000-9e83907", "flow/layout.sh"): (
         "Two reviewed harness edits, neither able to move this record's "
