@@ -45,7 +45,7 @@
         "role": "testbench",
         "path": "flow/audit_evidence.py",
         "passed": true,
-        "content_hash": "sha256:b9b4ef2a581a4c48a2cc8fd1143a09171c56b00de139208bd97254110a0e3ad5"
+        "content_hash": "sha256:30f36e6475c693bc432336b47b2ac58d16031b1f37b57132194933b7fe2b407d"
       },
       {
         "check": "present",
@@ -193,7 +193,7 @@
     ]
   },
   "provenance": {
-    "klt_version": "0.8.0",
+    "klt_version": "0.9.1",
     "klayout_version": null,
     "pdk": null,
     "deck": null,
