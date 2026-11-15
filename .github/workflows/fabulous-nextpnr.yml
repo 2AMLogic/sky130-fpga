@@ -38,6 +38,7 @@ on:
       - 'flow/pin_fixtures.py'
       - 'flow/check_regbel_fixtures.py'
       - 'flow/pin_experiment.py'
+      - 'sim/bitstream_load.vh'
       - 'sim/tb_logic_tile_bitstream.v'
       - 'sim/tb_lut_basis.v'
       - 'flow/lut_basis.py'

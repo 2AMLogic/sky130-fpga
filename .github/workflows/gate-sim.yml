@@ -63,6 +63,7 @@ on:
       - 'design/rtl/**'
       - 'layout/experimental/**'
       - 'sim/tb_logic_tile*.v'
+      - 'sim/bitstream_load.vh'
       - 'sim/tb_lut_basis.v'
       - 'flow/lut_basis.py'
       - 'flow/fasm_to_bitstream.py'
