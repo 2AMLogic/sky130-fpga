@@ -11,6 +11,7 @@
     "flow/audit_evidence.py",
     "flow/tool_versions.sh",
     "measurements/claim-traceability.md",
+    "sim/bitstream_load.vh",
     "sim/cocotb/fv_request.json",
     "sim/cocotb/test_bitstream_fabric.py",
     "sim/sdf_port_interconnect/buffered_port_all.sdf",

@@ -8,6 +8,16 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-15
 
+- **PR #292**: fix: re-hash attestation.checks member hashes in verify-pins.sh
+- **PR #289**: ci(gate-sim): run sdf_port_interconnect record guard on a shared model-hash gate
+- **PR #287**: docs(signoff): re-attest item 8 with klayout-tools#2897 stated as closed
+- **PR #274**: refactor: take route_diag_negative stream scaffolding from _stream_gen
+- **PR #273**: refactor(sim): route every python-unittest suite in run.sh through one helper
+- **Issue #286** (closed): verify-pins.sh never re-checks items 9/10's per-member hashes: a LICENSE or README drift passes clean
+- **Issue #270** (closed): Collapse the seven hand-expanded python-unittest blocks in sim/run.sh into the helper form the file already uses
+- **Issue #269** (closed): CI does not run sim/sdf_port_interconnect/run.sh: pinned-PDK gate vs gate-sim.yml's byte-identical revision
+- **Issue #267** (closed): Remove duplicated stream scaffolding in flow/route_diag_negative.py: flow/_stream_gen.py already provides it
+- **Issue #262** (closed): Pinned characterization-summary.md still names klayout-tools#2897 as the open gap; correcting it needs an item-8 signoff re-attestation
 - **PR #290**: fix: correct false "same request bytes" drift clause and give synth_request.py the exec bit
 - **PR #285**: fix(signoff): hash every multi-input envelope member in verify-pins.sh
 - **PR #277**: refactor(flow): single-source the klt synthesize request and .klt artifact resolver

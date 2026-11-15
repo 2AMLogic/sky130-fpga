@@ -3,14 +3,14 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 9,
-  "summary": "T1 item 9 (Testbenches shipped): 44/44 attestation checks passed (klt signoff --attest)",
+  "summary": "T1 item 9 (Testbenches shipped): 45/45 attestation checks passed (klt signoff --attest)",
   "source": "signoff/item-9-inventory.json",
   "attestation": {
     "producer": "klt signoff --attest",
     "inventory_schema_version": 1,
     "hash_algorithm": "sha256-raw-bytes",
-    "check_count": 44,
-    "passed_count": 44,
+    "check_count": 45,
+    "passed_count": 45,
     "checks": [
       {
         "check": "present",
@@ -60,6 +60,13 @@
         "path": "measurements/claim-traceability.md",
         "passed": true,
         "content_hash": "sha256:8f37ce93d014a4ba436e6a93ac37a2de9f37c81a54cd363b4409b54fe49bee40"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/bitstream_load.vh",
+        "passed": true,
+        "content_hash": "sha256:800e3821aa8085fe910a693ea502888d9fd4d02cd49a51895187ea7271ac3cbd"
       },
       {
         "check": "present",
@@ -234,7 +241,7 @@
         "role": "testbench",
         "path": "sim/tb_ctrl_route.v",
         "passed": true,
-        "content_hash": "sha256:a1c6a55b773c1510d980f5d1ff88ba79e509db1b7b64c4e4be229d26c869f603"
+        "content_hash": "sha256:f72b280abbfe83f9bc76f431677992a1fdb46dc2f4830316195f50af754111e0"
       },
       {
         "check": "present",
@@ -276,21 +283,21 @@
         "role": "testbench",
         "path": "sim/tb_lut_basis.v",
         "passed": true,
-        "content_hash": "sha256:45a7d48b418e09ce2264a8cbce20cfb757fff9140ee5369aa0b347a7913fdfd8"
+        "content_hash": "sha256:b7e6a554ee7d1894b2af4e25eb0b19b7a88924da99b002052111b607410d7211"
       },
       {
         "check": "present",
         "role": "testbench",
         "path": "sim/tb_output_route.v",
         "passed": true,
-        "content_hash": "sha256:ca6245b6c413371fe90f75eb1d134c9e8ebc154ccd6710a1a3736ef6817972b8"
+        "content_hash": "sha256:855d4e0c0442fa64059d293a1c585a3630db0d101496158749cbbd4fc01f7ca1"
       },
       {
         "check": "present",
         "role": "testbench",
         "path": "sim/tb_route_diag.v",
         "passed": true,
-        "content_hash": "sha256:5500be2c541dbaa48f990a2c431222237d104b58dcb06b3c4cd1b3145cb7214a"
+        "content_hash": "sha256:52335e977d65fbdbc9e365fec4fcdc68fb50797da4f82aec09548b7ea4e56ccc"
       },
       {
         "check": "present",
@@ -342,7 +349,7 @@
         "path": "signoff/item-9-inventory.json",
         "scope": "repo"
       },
-      "content_hash": "sha256:fa2b2c5241386de969350fefc560f6c61f379bd2ea42c1794b185210ecf48296"
+      "content_hash": "sha256:e4fe44ab6ce520613da64bd3d85b83c89763dd0c9b154d18210aa1cb0714b8c1"
     }
   }
 }
