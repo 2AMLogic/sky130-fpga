@@ -347,7 +347,7 @@ in the record:
 1. **Every one of the 28 affected entries carries `(0.000:0.000:0.000)`.**
    So do all 179 `INTERCONNECT` entries in that SDF -- the design's wire
    delays round to zero at its 1 ns timescale. All 215 `IOPATH` entries
-   carry real non-zero cell delays (0.140-0.453 ns). `INTERCONNECT` and
+   carry real non-zero cell delays (0.017-0.477 ns, typ). `INTERCONNECT` and
    `IOPATH` annotate independently, which `iopath_with_interconnect`
    confirms directly. **Dropping the 28 therefore removes no delay from the
    simulation**: numerically, the annotated run would be identical with or
