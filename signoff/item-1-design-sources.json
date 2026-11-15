@@ -63,16 +63,56 @@
     ]
   },
   "provenance": {
-    "klt_version": "0.8.0",
+    "klt_version": "0.9.1",
     "klayout_version": null,
     "pdk": null,
     "deck": null,
     "input": {
-      "path": {
-        "path": "signoff/item-1-inventory.json",
-        "scope": "repo"
-      },
-      "content_hash": "sha256:0d003bef171368cb61fba17899f1ccb77dbce72d6e1dc7e461d66370a7cfc257"
+      "paths": [
+        {
+          "path": {
+            "path": "design/netlist/logic_tile_netlist.v",
+            "scope": "repo"
+          },
+          "content_hash": "sha256:10e9d0b61db55dc4b1cfe60f35902290e23be6d345b5b5f773310c7ef4fc6022"
+        },
+        {
+          "path": {
+            "path": "design/rtl/logic_tile.v",
+            "scope": "repo"
+          },
+          "content_hash": "sha256:43eb20d40a2414d1a545cdf7718449e1eb498e0b63c9aee0ba82bc9c9c047446"
+        },
+        {
+          "path": {
+            "path": "design/rtl/logic_tile_routed.v",
+            "scope": "repo"
+          },
+          "content_hash": "sha256:6f5c0fee5e882ecff60851c8d9daf6a86486abab6eb0da3e82b45ff143670fd0"
+        },
+        {
+          "path": {
+            "path": "design/rtl/logic_tile_switch_matrix.v",
+            "scope": "repo"
+          },
+          "content_hash": "sha256:34f38f5837b7384e919dc4e21081124786600638aba41159379d95262636eb65"
+        },
+        {
+          "path": {
+            "path": "design/rtl/lut4_slice.v",
+            "scope": "repo"
+          },
+          "content_hash": "sha256:670559dfb7e57cb8b9b636a211187406e9c9f6e09a9b5ff2c044024030a7a4aa"
+        },
+        {
+          "path": {
+            "path": "signoff/item-1-inventory.json",
+            "scope": "repo"
+          },
+          "content_hash": "sha256:0d003bef171368cb61fba17899f1ccb77dbce72d6e1dc7e461d66370a7cfc257"
+        }
+      ],
+      "content_hash": "sha256:eb45249b48a3df70aa03be70070265648752c68d26ded284d1d30f6793b8934a"
     }
   }
 }

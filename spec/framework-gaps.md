@@ -29,9 +29,35 @@ ratified spec row ([ADR-0002](decisions/0002-tile-timing-spec-ratification.md)).
 A gate-level, SDF-annotated re-simulation of the routed tile was attempted:
 the zero-delay leg passes, but the SDF-annotated leg is blocked on a real
 upstream defect filed as
-[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)).
-See [`measurements/characterization-summary.md`](../measurements/characterization-summary.md)
-for the current aggregated snapshot of this evidence, and the detailed paragraph below
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked) and its successor gap [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897) (**closed upstream on 2026-10-18** via [klayout-tools#3293](https://github.com/2AMLogic/klayout-tools/pull/3293), which has `klt` rewrite escaped-divider instance names to plain identifiers in build-directory copies of the SDF and of each source that declares them, reported in a new `environment.sdf.renamed` field; first contained in tag `v0.8.0`, the version `.github/workflows/signoff.yml` already pins, and **no GitHub Release carries notes for it** -- upstream releases stop at v0.5.0, 2026-09-15).
+**That closure did not unblock item 7, which is still not met**, and
+klayout-tools#2897 is no longer what holds it. Two blockers do. **(a) The
+annotation is only partial.** With the rename workaround applied `vvp` no
+longer aborts, but 28 of 179 `INTERCONNECT` entries -- every one sourced at a
+top-level input port (`in[N]`, `ce[N]`) -- are rejected, and the cause was not
+isolated (record
+[`20261017-sdf-sanitize-d811bcd`](../measurements/timing-characterization/records/20261017-sdf-sanitize-d811bcd.md));
+that is [#250](https://github.com/2AMLogic/sky130-fpga/issues/250)'s work, and
+the matching upstream defect is still **open** as
+[klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)
+(`vvp` aborts in `vpi_scan` on a flat post-route SDF, filed 2026-11-05,
+successor to the `not_planned` klayout-tools#3740), whose own A/B isolates
+top-level-port `INTERCONNECT` entries -- the same shape. **(b) The
+characterized geometry no longer reproduces on the current toolchain**, so an
+annotated run today would not be on the geometry that was characterized: record
+[`20261107-213000-9e83907`](../measurements/layout-reproducibility/records/20261107-213000-9e83907.md)
+measured that under the host's development build (klt
+`0.9.2.dev246+g2faba5dec206`, **not** the pinned release), and record
+[`20261114-043307-515714f`](../measurements/layout-reproducibility/records/20261114-043307-515714f.md)
+confirmed it under the pinned `klayout-tools==0.8.0`.
+[#162](https://github.com/2AMLogic/sky130-fpga/issues/162) and
+[#213](https://github.com/2AMLogic/sky130-fpga/issues/213) track this.
+See
+[`measurements/characterization-summary.md`](../measurements/characterization-summary.md)
+for the current aggregated snapshot of this evidence (its SDF rows are a
+hash-pinned signoff attestation and still name klayout-tools#2897 as the gap;
+re-pinning them is an item-8 re-attestation, tracked as
+[#262](https://github.com/2AMLogic/sky130-fpga/issues/262)), and the detailed paragraph below
 for the full maturity-ladder detail. This is still a tile-scoped
 canary, not a fabric: bitstream-level verification of the demonstration
 fabric has not been done (an experimental single-tile harness test exists,
@@ -235,15 +261,39 @@ leg is blocked by a real, generically-reproducible upstream defect —
 `$sdf_annotate` crashes `vvp` (`NULL handle passed to vpi_scan`) on any
 escaped identifier containing `.`/`[]`, which is exactly what this design's
 `generate`-block RTL produces once flattened — filed as
-[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked; the remaining gap is [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897))
-and cited, not worked around with a fabricated substitute. `sim/
-tb_lut4_slice.v` was not attempted: `lut4_slice` has no independently
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked) and its successor gap [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897) (**closed upstream on 2026-10-18** via [klayout-tools#3293](https://github.com/2AMLogic/klayout-tools/pull/3293), which has `klt` rewrite escaped-divider instance names to plain identifiers in build-directory copies of the SDF and of each source that declares them, reported in a new `environment.sdf.renamed` field; first contained in tag `v0.8.0`, the version `.github/workflows/signoff.yml` already pins, and **no GitHub Release carries notes for it** -- upstream releases stop at v0.5.0, 2026-09-15)
+and cited, not worked around with a fabricated substitute.
+**That closure did not unblock item 7, which is still not met**, and
+klayout-tools#2897 is no longer what holds it. Two blockers do. **(a) The
+annotation is only partial.** With the rename workaround applied `vvp` no
+longer aborts, but 28 of 179 `INTERCONNECT` entries -- every one sourced at a
+top-level input port (`in[N]`, `ce[N]`) -- are rejected, and the cause was not
+isolated (record
+[`20261017-sdf-sanitize-d811bcd`](../measurements/timing-characterization/records/20261017-sdf-sanitize-d811bcd.md));
+that is [#250](https://github.com/2AMLogic/sky130-fpga/issues/250)'s work, and
+the matching upstream defect is still **open** as
+[klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)
+(`vvp` aborts in `vpi_scan` on a flat post-route SDF, filed 2026-11-05,
+successor to the `not_planned` klayout-tools#3740), whose own A/B isolates
+top-level-port `INTERCONNECT` entries -- the same shape. **(b) The
+characterized geometry no longer reproduces on the current toolchain**, so an
+annotated run today would not be on the geometry that was characterized: record
+[`20261107-213000-9e83907`](../measurements/layout-reproducibility/records/20261107-213000-9e83907.md)
+measured that under the host's development build (klt
+`0.9.2.dev246+g2faba5dec206`, **not** the pinned release), and record
+[`20261114-043307-515714f`](../measurements/layout-reproducibility/records/20261114-043307-515714f.md)
+confirmed it under the pinned `klayout-tools==0.8.0` -- that regenerated layout
+is DRC-, LVS- and ERC-clean and setup/hold-clean at all 18 corners, but it
+still does not reproduce the committed klt-0.5.0 GDS/DEF.
+[#162](https://github.com/2AMLogic/sky130-fpga/issues/162) and
+[#213](https://github.com/2AMLogic/sky130-fpga/issues/213) track this.
+`sim/tb_lut4_slice.v` was not attempted: `lut4_slice` has no independently
 placed-and-routed layout of its own (only as a sub-instance flattened
 inside the routed `logic_tile`), so a literal SDF-annotated re-run of that
 testbench would need a new physical-design artifact, out of scope here. See
 `measurements/timing-characterization/records/20260915-133517-234b13b.md`
 and `sim/README.md` for the full accounting. Still open under this item:
-the SDF-annotated pass/fail result itself (blocked: klayout-tools#1890 closed as a guard only, re-tried under #72; tracked as klayout-tools#2897)
+the SDF-annotated pass/fail result itself (still blocked, but no longer on klayout-tools#2897: #1890 closed as a guard only, and #2897 closed upstream on 2026-10-18; the live blockers are the renamed pair's partial annotation -- upstream klayout-tools#5002 still open -- and the characterized geometry's non-reproducibility, as above)
 and `tb_lut4_slice.v`'s own gate-level coverage.
 
 **Aggregated characterization report (T1 item 8, issue #33): in place.**
