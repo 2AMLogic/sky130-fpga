@@ -69,12 +69,19 @@
 #
 #   items 1, 9, 10     tool-produced attestation envelopes (issue #236,
 #                                         `klt signoff --attest N --inventory
-#                                         signoff/item-N-inventory.json`). The
-#                                         envelope pins the inventory's bytes; the
-#                                         inventory lists every member file, and CI
-#                                         re-runs `--attest N --check` to re-hash
-#                                         them (this script checks the pin chain
-#                                         envelope -> inventory -> manifest).
+#                                         signoff/item-N-inventory.json`). Item 1
+#                                         (klt 0.9.1) is multi-input:
+#                                         provenance.input.paths carries a hash
+#                                         for every member file and the envelope
+#                                         pins the whole input set -- this
+#                                         script re-hashes every member against
+#                                         its live bytes and checks the manifest
+#                                         pin against the set hash (issue #281).
+#                                         Items 9 and 10 pin their inventory's
+#                                         bytes; CI re-runs `--attest N --check`
+#                                         to re-hash their members. In both
+#                                         forms this script checks the pin
+#                                         chain envelope -> inputs -> manifest.
 #
 #   items 2            artifact-anchored generic envelope (signoff/item-2-layout.json,
 #                                         klayout-tools#2718). Each names its
@@ -268,6 +275,17 @@ if "11" in ev:
 
 print("items 1, 2, 9, 10 (generic envelopes): live audited bytes")
 import os
+
+def norm_member(env_rel, p):
+    # envelope member paths come in the two forms the single-input branch
+    # already tolerates for its own path (finding 2 of issue #281): a dict
+    # {"path": repo-relative, "scope": "repo"}, or a bare string resolved
+    # beside the envelope. Normalise both to a repo-relative key.
+    if isinstance(p, dict):
+        return os.path.normpath(p["path"])
+    return os.path.normpath(os.path.relpath(
+        os.path.join(os.path.dirname(f"{repo}/{env_rel}"), p), repo))
+
 bound = [
     ("1", "signoff/item-1-design-sources.json", "signoff/item-1-inventory.json",
      "re-run the item-1 attest command in signoff/README.md, then"),
@@ -300,24 +318,37 @@ for item, env_rel, art_rel, pre in bound:
               item, str(env.get("t1_item")), f"set t1_item in {env_rel}")
         check(f"  item-{item} envelope input pin == live {art_rel}",
               inp["content_hash"], live, remedy)
+        pin_label = f"manifest item-{item} pin == live {art_rel}"
     else:
         # multi-input envelope (klt 0.9.1 --attest): provenance.input.paths
         # lists every member with its own hash, and content_hash pins the
         # whole input set -- the manifest must carry that set hash (it is
         # what the grader compares against, not the single file's hash)
-        members = {e["path"]["path"]: e["content_hash"] for e in inp["paths"]}
+        members = {norm_member(env_rel, e["path"]): e["content_hash"]
+                   for e in inp["paths"]}
         check(f"  item-{item} envelope names {art_rel}",
               True, art_rel in members,
               f"re-run the item-{item} attest command in signoff/README.md so "
               f"{env_rel} lists {art_rel} in provenance.input.paths")
         check(f"  item-{item} envelope declares t1_item {item}",
               item, str(env.get("t1_item")), f"set t1_item in {env_rel}")
-        check(f"  item-{item} envelope pin for {art_rel} == live bytes",
-              members.get(art_rel), live, remedy)
+        # every member's own hash must match its live bytes -- not just the
+        # art_rel member (issue #281: a design-source edit otherwise passes
+        # clean with a stale input-set hash). A member missing from the tree
+        # is the mismatch, not a crash.
+        for member_rel in sorted(members):
+            member_live = (sha256_of(member_rel)
+                           if os.path.isfile(f"{repo}/{member_rel}")
+                           else "<missing from the tree>")
+            check(f"  item-{item} envelope pin for {member_rel} == live bytes",
+                  members[member_rel], member_live, remedy)
+        # the manifest pins the envelope's INPUT-SET hash (what the grader
+        # compares against), not any single artifact's live hash -- say so in
+        # the shared tail's label instead of reusing the live-bytes wording
         live = inp["content_hash"]
+        pin_label = f"manifest item-{item} pin == envelope input-set hash"
     if item in ev:
-        check(f"  manifest item-{item} pin == live {art_rel}",
-              ev[item].get("content_hash"), live, remedy)
+        check(pin_label, ev[item].get("content_hash"), live, remedy)
     else:
         check(f"  manifest cites item {item}", "cited", "missing",
               f"add item {item} to signoff/block-manifest.json")

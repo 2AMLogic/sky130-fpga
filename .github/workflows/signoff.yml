@@ -59,6 +59,12 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
+      - name: Regression-test the pin checker itself (issue #281)
+        # python3 + git only, so it runs before the klt install: signoff/
+        # verify-pins.sh's multi-input branch must catch a tampered member of
+        # item 1's input set (flow/test_verify_pins.sh tampers a tempdir copy).
+        run: ./flow/test_verify_pins.sh
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
