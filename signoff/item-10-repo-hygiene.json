@@ -31,7 +31,7 @@
         "role": "hygiene",
         "path": ".github/workflows/gate-sim.yml",
         "passed": true,
-        "content_hash": "sha256:42f9905191321d4cf818eff4e02568dceb181bdab8e1d13fbc3a161e6d6e9243"
+        "content_hash": "sha256:45fc093898e56eec15c248188eb9908cb1ac79da07723324a0dc204b79c98129"
       },
       {
         "check": "present",

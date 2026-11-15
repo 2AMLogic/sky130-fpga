@@ -8,6 +8,14 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-15
 
+- **PR #290**: fix: correct false "same request bytes" drift clause and give synth_request.py the exec bit
+- **PR #285**: fix(signoff): hash every multi-input envelope member in verify-pins.sh
+- **PR #277**: refactor(flow): single-source the klt synthesize request and .klt artifact resolver
+- **PR #272**: refactor(flow): share one driver across the three route diagnostics
+- **Issue #283** (closed): flow/audit_evidence.py: one #261 drift entry claims "Same request bytes to klt", which is false (and give flow/synth_request.py the exec bit its siblings have)
+- **Issue #281** (closed): verify-pins.sh checks only one member of item 1's new multi-input set: a design/rtl/*.v drift passes clean
+- **Issue #261** (closed): Single-source the klt synthesize request and the .klt artifact resolver: three copies of each across layout.sh, sdf-resim.sh and layout_routed.sh
+- **Issue #255** (closed): Factor the three near-identical route-diagnostic blocks in flow/generated_tile_replay.sh
 - **PR #280**: signoff: regrade tier report under pinned klayout-tools 0.9.1 (-75% report size, verdicts unchanged)
 - **PR #266**: sim: isolate the SDF INTERCONNECT rejection as a per-net fanout cap
 - **Issue #256** (closed): Regenerate signoff/tier-report.json with the current klt: 183 KB of it is the pre-#4286 ungated coverage echo
