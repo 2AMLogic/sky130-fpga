@@ -781,8 +781,8 @@ class (c).
 
 **Minimum stamp for class (b):** `flow/` (generators, `gate_sim_verdict.sh`,
 `sim_budget.py`), `sim/bitstream/` (at least `fabric_spec.json` and
-`logic4_configmem.map`), `design/rtl/` and `sim/` itself (benches and
-`switch_matrix_tb_gen.vh`).
+`logic4_configmem.map`), `design/rtl/` and `sim/` itself (benches,
+`bitstream_load.vh` and `switch_matrix_tb_gen.vh`).
 
 ### (c) Needs a FABulous run (not runnable from a stamp)
 
