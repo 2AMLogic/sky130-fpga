@@ -8,6 +8,8 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-16
 
+- **PR #315**: fix: shape_contract admits indented/local sha256_of assignments, rejects compound lines
+- **Issue #309** (closed): flow/test_report_check.sh: shape_contract regex is line-anchored — indented assignments false-positive, compound lines false-negative
 - **PR #311**: fix: guard conflict diagnosis survives a conflict inside an inventory JSON
 - **PR #308**: test: make the sha256_of argument-position guard per-statement and cross-driver
 - **Issue #307** (closed): signoff stale-base guard: conflict diagnosis dies when the conflicting file is itself an inventory JSON
