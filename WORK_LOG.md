@@ -8,6 +8,12 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-15
 
+- **PR #279**: refactor(flow): single-source sha256 hash, --update parse and klt guard into report_check.sh
+- **PR #278**: sim: deduplicate the frame-programming bitstream loader into one shared include
+- **PR #275**: feat: add read-only --target <dir> to the signoff harnesses
+- **Issue #268** (closed): Deduplicate the frame-programming bitstream loader: 101 identical lines copied across four sim/tb_*.v diagnostic benches
+- **Issue #265** (closed): Hoist three hand-copied fragments out of the flow/*.sh drivers (7x sha256, 4x arg parse, 4x klt guard)
+- **Issue #259** (closed): Signoff harnesses cannot measure a layout outside layout/, so every observation record re-implements their klt requests
 - **PR #292**: fix: re-hash attestation.checks member hashes in verify-pins.sh
 - **PR #289**: ci(gate-sim): run sdf_port_interconnect record guard on a shared model-hash gate
 - **PR #287**: docs(signoff): re-attest item 8 with klayout-tools#2897 stated as closed
