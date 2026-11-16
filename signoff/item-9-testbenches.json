@@ -3,14 +3,14 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 9,
-  "summary": "T1 item 9 (Testbenches shipped): 25/25 attestation checks passed (klt signoff --attest)",
+  "summary": "T1 item 9 (Testbenches shipped): 45/45 attestation checks passed (klt signoff --attest)",
   "source": "signoff/item-9-inventory.json",
   "attestation": {
     "producer": "klt signoff --attest",
     "inventory_schema_version": 1,
     "hash_algorithm": "sha256-raw-bytes",
-    "check_count": 25,
-    "passed_count": 25,
+    "check_count": 45,
+    "passed_count": 45,
     "checks": [
       {
         "check": "present",
@@ -81,6 +81,146 @@
         "path": "sim/cocotb/test_bitstream_fabric.py",
         "passed": true,
         "content_hash": "sha256:19b83097dcaab5cac93f88cbc51597f1cb0963012b96a20658edb24155cd6cb4"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/buffered_port_all.sdf",
+        "passed": true,
+        "content_hash": "sha256:52a7bb77a6b8e785c6eeb512a0df854d7cf6aa9fe6138e84cfceda54e24ddd5d"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/classify_sdf_log.py",
+        "passed": true,
+        "content_hash": "sha256:01c94d818b43c0b178077b359fa99861a3fe75da94590dcb0b68105c36913ba5"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/committed_shape_miniature.sdf",
+        "passed": true,
+        "content_hash": "sha256:7a457ad8fcc2c3aa4d931a310137f3583f143c941cfb7ab46a561c34a3c98406"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/fanout1_bitsel.sdf",
+        "passed": true,
+        "content_hash": "sha256:bcd06a381c8f6ab035b916b44808d1eacca0768858f599811e4cf52b1a7e0594"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/fanout1_bitsel_mux4_1.sdf",
+        "passed": true,
+        "content_hash": "sha256:19b644e315a9728292e32335d50c95ba0236778979076cccd574c784733900df"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/fanout2_bitsel_all.sdf",
+        "passed": true,
+        "content_hash": "sha256:376869df249a46cb3481fb2bcc45cf3b78f3b2a7880be8690e5d26abeb319a8c"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/fanout2_bitsel_first.sdf",
+        "passed": true,
+        "content_hash": "sha256:84ecb5d8f951490cfa0939474d5f65d0df9e6fff286f73586a9283c48c1c1499"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/fanout2_bitsel_nospecify.sdf",
+        "passed": true,
+        "content_hash": "sha256:86481075e5e613fe6a049f14550bab003a920612810eaedf7690d0bebdaccd1b"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/fanout4_bitsel_all.sdf",
+        "passed": true,
+        "content_hash": "sha256:b0f89892e27afa86352e92ac6c98b9122daff8df369c1cea0abb4f6284e859bb"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/fanout4_bitsel_first.sdf",
+        "passed": true,
+        "content_hash": "sha256:490f3b681414a39d8d5731f7242e1ac087932cdf05ae8296fdc5a66e37d7000b"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/fanout4_bitsel_last.sdf",
+        "passed": true,
+        "content_hash": "sha256:a16f691c832f69074eb46b3ae5554199c71217afa5e308d67b7545ffce087df9"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/fanout4_instpin_all.sdf",
+        "passed": true,
+        "content_hash": "sha256:d1e94093f53428b66cf61f4d03b5e0de3fa7771b207910ebf14c5741e41940f6"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/fanout4_scalar_all.sdf",
+        "passed": true,
+        "content_hash": "sha256:b54abc2786403ffcb452406b2ca6086c1efc11117338d6c84a3cdd833cf361c1"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/iopath_with_interconnect.sdf",
+        "passed": true,
+        "content_hash": "sha256:989a29874c11627106310ecfa8e2ab8bff447908c93ef5d2fd692ef458ede9ec"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/port_interconnect_dut.v",
+        "passed": true,
+        "content_hash": "sha256:b453bc146181e1e371e9dd20087a0e797434e1e14c875ddcb207a6ee17c949d1"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/predict_fanout_rejections.py",
+        "passed": true,
+        "content_hash": "sha256:c580b7cf3e341d24f43633f8ee791e07752e0fbf200e2103bb78385bd556e22a"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/run.sh",
+        "passed": true,
+        "content_hash": "sha256:c33bc62efff774724d397788fcc30cdfd5044b0ab0fff814cc577012c4b19595"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/tb_port_interconnect_drive.v",
+        "passed": true,
+        "content_hash": "sha256:b0d268af8c91c69238531af8b2c4efb9a927aaf8f793f04e9cb0a5b25eff983b"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/tb_port_interconnect_noop.v",
+        "passed": true,
+        "content_hash": "sha256:1e02d7efbfb4d5309c50a29caa77e98f9a7ef4e8c4b002f465572a30a8a31f5a"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/sdf_port_interconnect/test_pdk_gate.sh",
+        "passed": true,
+        "content_hash": "sha256:1779ec0c8bfbfa6701f7315b8d07faa56487f248d5a4f1a41390211d7af6c872"
       },
       {
         "check": "present",
@@ -209,7 +349,7 @@
         "path": "signoff/item-9-inventory.json",
         "scope": "repo"
       },
-      "content_hash": "sha256:93a3534e0e15a389c4908035e21e116a6e56a6dc019bad77435ac6806a437e04"
+      "content_hash": "sha256:e4fe44ab6ce520613da64bd3d85b83c89763dd0c9b154d18210aa1cb0714b8c1"
     }
   }
 }
