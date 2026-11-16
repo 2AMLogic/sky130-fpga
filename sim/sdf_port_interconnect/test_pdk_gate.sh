@@ -8,10 +8,19 @@
 # sha256-match flow/tool_versions.sh's recorded values.
 #
 # What this script can prove hermetically is the refusal direction: a
-# wrong-hash flat directory (or a half-matching one, or no models at all)
-# must FAIL the run with the named pinned-revision error -- never a warning
-# and never a substitution -- while the path-pinned candidates keep working
-# exactly as before. The acceptance direction (a hash-matching flat
+# wrong-hash flat directory (two of them, with different wrong bytes, or
+# no models at all) must FAIL the run with the named pinned-revision
+# error -- never a warning and never a substitution -- while the
+# path-pinned candidates keep working exactly as before.
+#
+# A genuine half-match (models match, primitives wrong) cannot be built
+# hermetically: it would require a file that sha256-matches
+# RECORDED_PDK_MODELS_SHA256, which is exactly what the hash prevents.
+# That direction was verified for real in PR #289: a one-byte corruption
+# appended to a copy of the real primitives.v, models file still
+# matching, was refused with exit 1.
+#
+# The acceptance direction (a hash-matching flat
 # directory is accepted and the full fixture then passes) cannot be faked
 # here -- fabricating files that hash to the recorded values is the one
 # thing sha256 prevents -- so it is exercised end-to-end by the gate-sim
@@ -98,14 +107,17 @@ else
     ok "no simulation ran past the refused resolution"
 fi
 
-# ---- 2. half-matching flat dir (models match, primitives wrong): refuse ----
-HALF_ROOT="$T/half-hash"
-mk_flat "$HALF_ROOT" "not the real cell models" "not the real primitives either"
-PDK_ROOT="$HALF_ROOT" run_fixture
+# ---- 2. second both-files-wrong flat dir (different bytes): refuse once ----
+# Like check 1 but with different fabricated bytes, and asserting the
+# refusal appears exactly once; a true models-match/primitives-wrong case
+# cannot be built hermetically (see the header note above).
+WRONG2_ROOT="$T/wrong-hash-2"
+mk_flat "$WRONG2_ROOT" "not the real cell models" "not the real primitives either"
+PDK_ROOT="$WRONG2_ROOT" run_fixture
 if [[ $RC -ne 0 && "$(grep -cF "$REFUSAL" "$T/err")" -eq 1 ]]; then
-    ok "half-matching flat dir (one file off) refused"
+    ok "second both-files-wrong flat dir refused exactly once"
 else
-    bad "half-matching flat dir not refused cleanly (rc=$RC)"
+    bad "second both-files-wrong flat dir not refused cleanly (rc=$RC)"
 fi
 
 # ---- 3. PDK_ROOT set but holds no models: the named refusal, not a crash ---
