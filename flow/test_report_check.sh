@@ -56,6 +56,48 @@ else
     ok "set -e assignment aborts under set -euo pipefail"
 fi
 
+# The argument-position contract (issue #296): routed_checks.sh passed
+# "$(sha256_of ...)" straight into lvs_report_trim.py / erc_report_trim.py.
+# A command substitution in argument position never reaches set -e, so a
+# failed hash passed the empty string through as layout_gds_sha256 /
+# provenance.input.content_hash while every gate passed -- the same class
+# the assignment contract above forecloses, reached through a different
+# call shape. Replay the script's actual sha256_of statements (extracted at
+# runtime, so a drifted call shape fails here) with the trim scripts
+# stubbed: a failed hash must abort before any consumer runs.
+argument_contract() (
+    set -euo pipefail
+    # shellcheck source=./report_check.sh
+    . "$HERE/report_check.sh"
+    # Stub only the trim-script consumers (invoked as `python3 <script>`),
+    # letting sha256_of's own `python3 -c` hashing call through to the real
+    # interpreter so the hash genuinely fails on the directory input.
+    # Invoked only via the eval'd statements below; shellcheck cannot see that.
+    # shellcheck disable=SC2317
+    python3() {
+        if [[ "${1:-}" == "-c" ]]; then command python3 "$@"
+        else echo "consumer saw args: $*"; fi
+    }
+    # Consumed by the eval'd statements below; shellcheck cannot see that.
+    # shellcheck disable=SC2034
+    SCRIPT_DIR="$HERE" BUILD_DIR="$T/build" TOP="t"
+    # shellcheck disable=SC2034
+    GDS="$T" SPEC="$T" RTL_HASH="unused"  # unreadable input = a directory
+    stmts="$(awk '
+        { s = $0
+          while (s ~ /\\$/) { sub(/\\$/, "", s); if ((getline nxt) <= 0) break; s = s nxt }
+          if (s ~ /sha256_of/) print s
+        }' "$HERE/routed_checks.sh")"
+    # shellcheck disable=SC2294  # replaying the driver's real statements is the test
+    eval "$stmts"
+)
+out="$(argument_contract 2>/dev/null)"; src=$?
+if [[ $src -ne 0 && -z "$out" ]]; then
+    ok "argument-position sha256_of aborts before the trim-script consumer"
+else
+    bad "argument-position sha256_of aborts" "rc=$src out=$out"
+fi
+
 # parse_update_mode: check (no argument), update (--update), and the
 # negative path (usage line + exit 1).
 m="$(parse_update_mode; echo "$MODE")"
