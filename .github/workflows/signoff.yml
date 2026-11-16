@@ -16,6 +16,22 @@
 #      klt change that is not accompanied by a fresh record fails the build
 #      instead of quietly diverging from what the repo claims.
 #
+# On pull_request runs there is a third, pre-merge gate before either of
+# those (issue #304): the checked-out ref is merged with the CURRENT
+# origin/main tip fetched at run time, so the gates judge the tree that
+# would actually land rather than GitHub's cached merge ref computed when
+# the run was queued. The gate enforces a cross-file invariant (an
+# envelope's content_hash pins another file's bytes), so two PRs with
+# disjoint file sets can each be green and still break it together where
+# they meet on main (#297/#298): one edits an inventoried file, the other
+# pins its pre-edit hash, git merges cleanly, and the stale pairing lands
+# red at the merge commit. The guard fails the run -- with the stale-base
+# diagnosis and the rebase-and-re-attest remedy -- when that run-time merge
+# conflicts, or when the gate passes on the PR ref alone but fails on the
+# merge. push-to-main runs skip the step: the checkout already is the
+# merged state.
+
+#
 # `klt signoff --manifest` exits 3 when the block is not yet T1 (some item is
 # unmet) -- that is a successful, expected run today, not a CI failure. The
 # gate is the diff, not the exit code; exit 0 (T1 reached) and 3 (not yet)
@@ -59,6 +75,64 @@ jobs:
       - name: Check out the repo
         uses: actions/checkout@v4
 
+      - name: Base-freshness guard (issue #304) -- merge the live main tip before gating
+        # pull_request-only (see the header comment): gate the tree that
+        # would actually land -- this PR merged with origin/main's CURRENT
+        # tip -- not the cached merge ref from when the run was queued.
+        # Runs before everything below, so every gate judges the merged
+        # tree. /tmp/pins-pr-branch.rc records whether the gate passes on
+        # the checked-out PR ref alone; the "Verify every manifest pin"
+        # step below reads it to tell the two failure shapes apart.
+        if: github.event_name == 'pull_request'
+        run: |
+          set -euo pipefail
+          if ./signoff/verify-pins.sh > /tmp/pins-pr-branch.log 2>&1; then
+            echo 0 > /tmp/pins-pr-branch.rc
+            echo "gate baseline on the checked-out PR ref: clean"
+          else
+            echo 1 > /tmp/pins-pr-branch.rc
+            echo "gate baseline on the checked-out PR ref: FAILED"
+            cat /tmp/pins-pr-branch.log
+            echo "(if the merged-tree gate below passes, origin/main already carries the fix -- rebase onto it)"
+          fi
+          git fetch origin main
+          git config user.name "signoff-base-freshness-guard"
+          git config user.email "signoff-base-freshness-guard@users.noreply.github.com"
+          if ! git merge origin/main --no-edit; then
+            echo "::error::stale base: merging the current origin/main tip into this PR head conflicts, so the signoff gate cannot evaluate the tree that would land"
+            git diff --name-only --diff-filter=U > /tmp/signoff-conflicted.txt
+            # exact member-path match only: raw-text grep would false-match
+            # inventory description prose that merely mentions the path
+          python3 - signoff/item-*-inventory.json /tmp/signoff-conflicted.txt <<'PY'
+          import json, sys
+          invs, conflicted = sys.argv[1:-1], [l.strip() for l in open(sys.argv[-1]) if l.strip()]
+          def walk(v):
+              if isinstance(v, str):
+                  yield v
+              elif isinstance(v, dict):
+                  for x in v.values():
+                      yield from walk(x)
+              elif isinstance(v, list):
+                  for x in v:
+                      yield from walk(x)
+          members = {}
+          for f in invs:
+              for s in walk(json.load(open(f))):
+                  members.setdefault(s, []).append(f)
+          print("conflicting files (inventoried ones named with their pinning inventory):")
+          for p in conflicted:
+              hits = members.get(p)
+              if hits:
+                  print(f"  {p} -> pinned by {' '.join(hits)}")
+              else:
+                  print(f"  {p} -> (not inventoried)")
+          PY
+            echo "remedy: git fetch origin main && git rebase origin/main, then re-attest the item(s) whose inventory contains the conflicting path(s) -- klt signoff --attest N --inventory signoff/item-N-inventory.json -o signoff/item-N-<name>.json -- and refresh the envelope + manifest pins + signoff/tier-report.json (see signoff/README.md, Regenerate and verify)"
+            git merge --abort || true
+            exit 1
+          fi
+          echo "run-time merge with origin/main: done (Already up to date == the common case, no new failure mode)"
+
       - name: Regression-test the pin checker itself (issue #281)
         # python3 + git only, so it runs before the klt install: signoff/
         # verify-pins.sh's multi-input branch must catch a tampered member of
@@ -82,7 +156,24 @@ jobs:
           klt --version
 
       - name: Verify every manifest pin against the live artifacts
-        run: ./signoff/verify-pins.sh
+        run: |
+          set +e
+          ./signoff/verify-pins.sh 2>&1 | tee /tmp/pins-merged.log
+          rc="${PIPESTATUS[0]}"
+          set -e
+          if [ "$rc" -ne 0 ]; then
+            if [ -f /tmp/pins-pr-branch.rc ] && [ "$(cat /tmp/pins-pr-branch.rc)" -eq 0 ]; then
+              echo "::error::STALE BASE: the signoff gate passes on this PR ref alone but fails once the current origin/main tip is merged in -- a concurrent PR moved bytes this PR's attestation pins (or vice versa) and git merged the disjoint file sets cleanly (the #297/#298 shape, issue #304)"
+              sed -nE 's/^ +FAIL +item-([0-9]+) attestation pin for ([^ ]+) == live bytes.*/re-attest item \1 (its inventory pins \2)/p' /tmp/pins-merged.log | sed 's/^/  remedy: /'
+              echo "rebase onto origin/main (git fetch origin main && git rebase origin/main), then re-attest the item(s) named above, refresh the envelope + manifest pins, and regenerate signoff/tier-report.json -- see signoff/README.md, Regenerate and verify"
+            fi
+            exit 1
+          fi
+          if [ -f /tmp/pins-pr-branch.rc ]; then
+            if [ "$(cat /tmp/pins-pr-branch.rc)" -eq 1 ]; then
+              echo "note: the gate failed on the checked-out PR ref but passes on the merge with origin/main -- origin/main appears to already carry the fix; rebase onto it"
+            fi
+          fi
 
       - name: Re-attest items 1, 9 and 10 against the committed envelopes
         run: |
