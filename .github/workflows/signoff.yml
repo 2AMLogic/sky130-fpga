@@ -74,6 +74,13 @@ jobs:
     steps:
       - name: Check out the repo
         uses: actions/checkout@v4
+        # Full history: the base-freshness guard below merges the live
+        # origin/main tip into this ref, which needs a shared ancestor. The
+        # default depth-1 clone leaves the two histories unrelated and git
+        # refuses the merge ("unrelated histories") on every pull_request
+        # run (same requirement as flow-evidence.yml's checkout).
+        with:
+          fetch-depth: 0
 
       - name: Base-freshness guard (issue #304) -- merge the live main tip before gating
         # pull_request-only (see the header comment): gate the tree that
@@ -98,9 +105,21 @@ jobs:
           git fetch origin main
           git config user.name "signoff-base-freshness-guard"
           git config user.email "signoff-base-freshness-guard@users.noreply.github.com"
-          if ! git merge origin/main --no-edit; then
-            echo "::error::stale base: merging the current origin/main tip into this PR head conflicts, so the signoff gate cannot evaluate the tree that would land"
+          if ! git merge origin/main --no-edit > /tmp/signoff-guard-merge.log 2>&1; then
             git diff --name-only --diff-filter=U > /tmp/signoff-conflicted.txt
+            if [ ! -s /tmp/signoff-conflicted.txt ]; then
+              # non-zero merge with zero unmerged paths: git refused to start
+              # the merge at all (e.g. "refusing to merge unrelated histories"
+              # under a shallow checkout) -- an environment/history problem,
+              # not a stale base, so it gets its own diagnosis rather than a
+              # phantom-conflict one.
+              echo "::error::run-time merge with origin/main was REFUSED with no unmerged paths: a git/environment problem, not a stale base. git said:"
+              sed 's/^/  | /' /tmp/signoff-guard-merge.log
+              echo "fix: this job's actions/checkout must use fetch-depth: 0 -- a depth-1 clone leaves origin/main with no common ancestor (see the checkout step above)"
+              exit 1
+            fi
+            echo "::error::stale base: merging the current origin/main tip into this PR head conflicts, so the signoff gate cannot evaluate the tree that would land"
+            cat /tmp/signoff-guard-merge.log
             # exact member-path match only: raw-text grep would false-match
             # inventory description prose that merely mentions the path
           python3 - signoff/item-*-inventory.json /tmp/signoff-conflicted.txt <<'PY'

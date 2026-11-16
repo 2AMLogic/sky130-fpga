@@ -105,6 +105,14 @@ The run fails with a stale-base diagnosis when either:
   signature of concurrent-PR drift (the failure output names the
   inventoried path and the item whose pin no longer matches).
 
+A run-time merge that is **refused with no unmerged paths** is a third,
+different shape: git never started the merge, so there is no stale base to
+diagnose — it is a git/environment problem (today only "refusing to merge
+unrelated histories", which a shallow checkout produces). The guard gives
+it its own message and points at the fix: the workflow's
+`actions/checkout` uses `fetch-depth: 0` because the run-time merge needs
+a shared ancestor, which the default depth-1 clone does not provide.
+
 **When it fires:** rebase onto `origin/main`
 (`git fetch origin main && git rebase origin/main`), then re-attest the
 item number the failure names (`klt signoff --attest N --inventory

@@ -53,7 +53,8 @@ bad() { echo "FAIL $1"; rc_all=1; }
 run_pins() { (cd "$T/repo" && ./signoff/verify-pins.sh) >"$T/out" 2>&1; }
 
 # ---- leg 0: the workflow still wires the base-freshness guard (this leg
-#      fails if the #304 guard step is removed from signoff.yml) ----
+#      fails if the #304 guard step is removed from signoff.yml, or if the
+#      checkout loses the full history that merge needs) ----
 if [[ -f "$REPO_ROOT/$WORKFLOW" ]]; then
     wf="$(cat "$REPO_ROOT/$WORKFLOW")"
 else
@@ -72,6 +73,13 @@ if [[ -n "$merge_line" && -n "$gate_line" && "$merge_line" -lt "$gate_line" ]]; 
     ok "leg0: the pin gate runs after the run-time merge (it judges the merged tree)"
 else
     bad "leg0: the pin gate does not run after the origin/main merge in signoff.yml"
+fi
+checkout_line="$(grep -n 'uses: actions/checkout@v4' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
+depth_line="$(grep -n 'fetch-depth: 0' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
+if [[ -n "$checkout_line" && -n "$depth_line" && "$depth_line" -gt "$checkout_line" ]]; then
+    ok "leg0: the checkout is full-history (fetch-depth: 0) so the run-time merge has a shared ancestor"
+else
+    bad "leg0: signoff.yml's checkout lost fetch-depth: 0 -- the guard's origin/main merge dies with 'unrelated histories' under the default depth-1 clone"
 fi
 
 # ---- leg 1: the #297/#298 semantic-conflict shape, verified against
