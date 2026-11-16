@@ -8,6 +8,10 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-16
 
+- **PR #311**: fix: guard conflict diagnosis survives a conflict inside an inventory JSON
+- **PR #308**: test: make the sha256_of argument-position guard per-statement and cross-driver
+- **Issue #307** (closed): signoff stale-base guard: conflict diagnosis dies when the conflicting file is itself an inventory JSON
+- **Issue #303** (closed): flow/test_report_check.sh: argument_contract only guards the first sha256_of site (erc re-drift passes 8/8)
 - **PR #306**: ci(signoff): gate PR runs against the live main tip (base-freshness guard, #304)
 - **PR #305**: fix(signoff): emit directory-relative link targets in the characterization summary
 - **PR #301**: fix: hoist routed_checks.sh sha256_of calls to assignment position
