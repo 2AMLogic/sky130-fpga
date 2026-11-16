@@ -25,6 +25,13 @@
 #      yet pinned, a branch that edits only the file, a branch that adds only
 #      the pin at the pre-edit hash -- each passes alone; the clean git merge
 #      of the two FAILS, naming the inventoried path and its item number.
+#   2. the #307 shape: the run-time merge conflicts INSIDE an inventory JSON
+#      (conflict markers make it unparseable). The guard step's whole run
+#      block is extracted from the working-tree workflow and replayed in a
+#      scratch repo whose main and branch both edit the inventory: it must
+#      still print the conflicted-path listing, still emit the remedy line,
+#      still report the unparseable inventory instead of dying on it, and
+#      still exit 1.
 #
 # Method: copy the COMMITTED tree (git archive HEAD) into a mktemp git repo,
 # trap-cleaned; every commit happens inside the copy -- the real tree is
@@ -35,8 +42,6 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 WORKFLOW=".github/workflows/signoff.yml"
 P="sim/sdf_port_interconnect/test_pdk_gate.sh"
-ENV9="signoff/item-9-testbenches.json"
-INV9="signoff/item-9-inventory.json"
 
 # The real tree must not be touched by anything below. leg 0 reads the
 # working-tree workflow, which legitimately carries uncommitted WIP in a
@@ -221,6 +226,116 @@ else
         ok "leg1 merged tree: gate FAILS, naming the inventoried path and its item number"
     else
         bad "leg1 merged tree: gate failed but did not name $P / item 9"; grep -m5 FAIL "$T/out"
+    fi
+fi
+
+# ---- leg 2 (issue #307): a conflict INSIDE an inventory JSON must not kill
+#      the guard's diagnosis ----
+# Replay the guard step's whole run block (extracted from the working-tree
+# workflow, like leg 0 reads it) in a scratch repo where main and the branch
+# BOTH edit signoff/item-9-inventory.json. git leaves conflict markers in it,
+# so the guard's per-inventory json.load hits unparseable JSON; the block
+# must still print the conflicted-path listing (with the unparseable one
+# named), still emit the remedy line, and still exit 1. A second conflicted
+# file pinned by item 10 (whose inventory parses fine) proves the other
+# inventories are still mapped in the same degraded run.
+GUARD_RUN="$T/guard-run.sh"
+# Extract the run block: from the guard step's `run: |` to the first line
+# dedented below the block-scalar content indentation, with that indentation
+# stripped -- i.e. exactly the script the CI runner would execute.
+awk '
+  BEGIN { in_step = 0; in_run = 0; ci = -1 }
+  !in_step && /^      - name: Base-freshness guard/ { in_step = 1; next }
+  in_step && !in_run && /^        run: \|/ { in_run = 1; next }
+  in_run {
+      if ($0 ~ /^[[:space:]]*$/) { print ""; next }
+      n = match($0, /[^ ]/) - 1
+      if (ci == -1) ci = n
+      if (n < ci) exit
+      print substr($0, ci + 1)
+  }
+' "$REPO_ROOT/$WORKFLOW" > "$GUARD_RUN"
+if [[ ! -s "$GUARD_RUN" ]]; then
+    bad "leg2: could not extract the guard run block from $WORKFLOW"
+elif ! grep -q "^set -euo pipefail$" "$GUARD_RUN" \
+    || ! grep -q "^if ! git merge FETCH_HEAD --no-edit" "$GUARD_RUN"; then
+    bad "leg2: extracted run block is not the guard script (missing set/merge lines)"
+else
+    cp -a "$T/pristine" "$T/repo2"
+    cp "$REPO_ROOT/signoff/verify-pins.sh" "$T/repo2/signoff/verify-pins.sh"
+    git -C "$T/repo2" init -q -b main
+    git -C "$T/repo2" config user.email "stale-base-gate@test.invalid"
+    git -C "$T/repo2" config user.name "stale-base-gate"
+    git -C "$T/repo2" add -A
+    git -C "$T/repo2" commit -qm "base: archive of the committed tree"
+
+    # branch side: a valid-but-different edit to the inventory, plus an edit
+    # to a workflow file item 10 pins
+    git -C "$T/repo2" checkout -qb pr-conflicts-inventory
+    python3 - "$T/repo2" <<'PY'
+import json, sys
+p = f"{sys.argv[1]}/signoff/item-9-inventory.json"
+inv = json.load(open(p))
+inv["testbenches"].append("sim/leg2_branch_probe.v")
+inv["testbenches"].sort()
+json.dump(inv, open(p, "w"), indent=1)
+PY
+    printf '\n# leg2 branch-side edit\n' >> "$T/repo2/.github/workflows/gate-sim.yml"
+    git -C "$T/repo2" add -A
+    git -C "$T/repo2" commit -qm "branch: edit the item-9 inventory and an item-10-pinned workflow"
+
+    # main side: overlapping edits to the same two files -> textual conflict
+    git -C "$T/repo2" checkout -q main
+    python3 - "$T/repo2" <<'PY'
+import json, sys
+p = f"{sys.argv[1]}/signoff/item-9-inventory.json"
+inv = json.load(open(p))
+inv["testbenches"].append("sim/leg2_main_probe.v")
+inv["testbenches"].sort()
+json.dump(inv, open(p, "w"), indent=1)
+PY
+    printf '\n# leg2 main-side edit\n' >> "$T/repo2/.github/workflows/gate-sim.yml"
+    git -C "$T/repo2" add -A
+    git -C "$T/repo2" commit -qm "main: conflicting edits to the same files"
+
+    git clone --bare -q "$T/repo2" "$T/origin.git"
+    git -C "$T/repo2" remote add origin "$T/origin.git"
+    git -C "$T/repo2" checkout -q pr-conflicts-inventory
+    git -C "$T/repo2" fetch -q origin main
+    # sanity: the conflict really is textual and really lands in the inventory
+    git -C "$T/repo2" merge FETCH_HEAD --no-edit >"$T/leg2merge" 2>&1
+    git -C "$T/repo2" diff --name-only --diff-filter=U > "$T/leg2conflicted"
+    if ! grep -qF "signoff/item-9-inventory.json" "$T/leg2conflicted"; then
+        bad "leg2 setup: the merge did not conflict in the inventory -- scenario broken"
+        sed -n '1,10p' "$T/leg2merge"
+    else
+        git -C "$T/repo2" merge --abort 2>/dev/null
+        git -C "$T/repo2" reset -q --hard
+        # replay the guard block: it re-merges FETCH_HEAD itself, hits the
+        # conflict, and must degrade gracefully instead of dying in json.load
+        (cd "$T/repo2" && bash "$GUARD_RUN") > "$T/leg2out" 2>&1
+        rc_guard=$?
+        if [[ "$rc_guard" -ne 1 ]]; then
+            bad "leg2: guard block exited $rc_guard on a conflicting-inventory merge (expected 1)"
+        fi
+        if ! grep -q "^remedy: git fetch origin main && git rebase origin/main" "$T/leg2out"; then
+            bad "leg2: remedy line missing -- the diagnosis died before it (issue #307)"
+            tail -20 "$T/leg2out"
+        fi
+        if ! grep -qF "signoff/item-9-inventory.json -> is an inventory that could not be parsed (conflict markers?)" "$T/leg2out"; then
+            bad "leg2: the unparseable inventory was not reported as parse-degraded"
+            tail -20 "$T/leg2out"
+        fi
+        if ! grep -qF ".github/workflows/gate-sim.yml -> pinned by signoff/item-10-inventory.json" "$T/leg2out"; then
+            bad "leg2: the item-10-pinned conflict was not mapped (other inventories must still work)"
+            tail -20 "$T/leg2out"
+        fi
+        if [[ "$rc_guard" -eq 1 ]] \
+            && grep -q "^remedy: git fetch origin main && git rebase origin/main" "$T/leg2out" \
+            && grep -qF "signoff/item-9-inventory.json -> is an inventory that could not be parsed (conflict markers?)" "$T/leg2out" \
+            && grep -qF ".github/workflows/gate-sim.yml -> pinned by signoff/item-10-inventory.json" "$T/leg2out"; then
+            ok "leg2: conflict inside an inventory -- listing, degraded-mapping note, remedy and exit 1 all survive"
+        fi
     fi
 fi
 
