@@ -72,11 +72,16 @@ argument_contract() (
     # Stub only the trim-script consumers (invoked as `python3 <script>`),
     # letting sha256_of's own `python3 -c` hashing call through to the real
     # interpreter so the hash genuinely fails on the directory input.
+    # Invoked only via the eval'd statements below; shellcheck cannot see that.
+    # shellcheck disable=SC2317
     python3() {
         if [[ "${1:-}" == "-c" ]]; then command python3 "$@"
         else echo "consumer saw args: $*"; fi
     }
+    # Consumed by the eval'd statements below; shellcheck cannot see that.
+    # shellcheck disable=SC2034
     SCRIPT_DIR="$HERE" BUILD_DIR="$T/build" TOP="t"
+    # shellcheck disable=SC2034
     GDS="$T" SPEC="$T" RTL_HASH="unused"  # unreadable input = a directory
     stmts="$(awk '
         { s = $0
