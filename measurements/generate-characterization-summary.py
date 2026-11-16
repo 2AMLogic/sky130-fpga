@@ -68,6 +68,7 @@ which would be misleading provenance in exactly the place this repo's
 traceability discipline lives.
 """
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -417,6 +418,10 @@ def rel(path: Path) -> str:
     return str(path.relative_to(REPO_ROOT))
 
 
+def link(path: Path) -> str:
+    return Path(os.path.relpath(path, OUTPUT_PATH.parent)).as_posix()
+
+
 def hash_prefix(content_hash: str) -> str:
     """`sha256:` + first 12 hex -- a stable lineage tag for the at-a-glance
     "Derived from" cells. Always a prefix of the full content hash the
@@ -457,39 +462,39 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
     lines.append("| --- | --- | --- | --- |")
     lines.append(
         f"| DRC | **{drc['status']}** ({drc['violation_count']} violations) "
-        f"| [`{rel(drc['path'])}`]({rel(drc['path'])}) "
+        f"| [`{rel(drc['path'])}`]({link(drc['path'])}) "
         f"| content hash `{hash_prefix(drc['input_hash'])}` |"
     )
     lines.append(
         f"| LVS | **{lvs['status']}** ({lvs['mismatch_count']} mismatches, "
         f"engine `{lvs['engine']}`) "
-        f"| [`{rel(lvs['path'])}`]({rel(lvs['path'])}) "
+        f"| [`{rel(lvs['path'])}`]({link(lvs['path'])}) "
         f"| layout GDS hash `{hash_prefix(lvs['layout_gds_sha256'])}` |"
     )
     lines.append(
         f"| ERC (supply connectivity + antenna) | **{erc['finding_count']} findings**, "
         f"0 antenna `violate` across {erc['gate_count']} gates "
-        f"| [`{rel(erc['path'])}`]({rel(erc['path'])}) "
+        f"| [`{rel(erc['path'])}`]({link(erc['path'])}) "
         f"| layout GDS hash `{hash_prefix(erc['layout_gds_sha256'])}` |"
     )
     lines.append(
         f"| 18-corner STA sweep | **setup/hold-clean at all "
         f"{sta['corner_count']} corners** (binding setup corner "
         f"`{sta['binding_corner']}`, SPEF WNS {sta['binding_wns_spef']} ns) "
-        f"| [`{rel(sta['path'])}`]({rel(sta['path'])}) "
+        f"| [`{rel(sta['path'])}`]({link(sta['path'])}) "
         f"| record `{sta['record_id']}`, git revision `{sta['git_revision'][:7]}` |"
     )
     lines.append(
         f"| Multi-corner `klt sta` envelope (T1 item 5 citation) | **"
         f"{sta['envelope_corner_count']} corners, every one `timing_status: "
         f"constrained`, setup/hold slack >= 0** "
-        f"| [`{rel(sta['envelope_path'])}`]({rel(sta['envelope_path'])}) "
+        f"| [`{rel(sta['envelope_path'])}`]({link(sta['envelope_path'])}) "
         f"| analysed-DEF hash `{hash_prefix(sta['envelope_input_hash'])}` |"
     )
     lines.append(
         f"| Ratified timing spec row | **RATIFIED** (ADR-0002) "
-        f"| [`{rel(spec_row['tile_spec_path'])}`]({rel(spec_row['tile_spec_path'])}), "
-        f"[`{rel(spec_row['adr_path'])}`]({rel(spec_row['adr_path'])}) "
+        f"| [`{rel(spec_row['tile_spec_path'])}`]({link(spec_row['tile_spec_path'])}), "
+        f"[`{rel(spec_row['adr_path'])}`]({link(spec_row['adr_path'])}) "
         f"| decision record ADR-0002 |"
     )
     lines.append(
@@ -500,7 +505,7 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"notes -- #2897 is no longer the blocker: 28 of 179 port-sourced "
         f"`INTERCONNECT` entries unapplied (upstream klayout-tools#5002 open) and "
         f"the characterized geometry non-reproducible (#162, #213)) "
-        f"| [`{rel(sdf['path'])}`]({rel(sdf['path'])}) "
+        f"| [`{rel(sdf['path'])}`]({link(sdf['path'])}) "
         f"| record `{sdf['record_id']}`, git revision `{sdf['git_revision'][:7]}` |"
     )
     lines.append("")
@@ -512,7 +517,7 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"deck: `{drc['deck']}`"
     )
     lines.append(
-        f"- **Source**: [`{rel(drc['path'])}`]({rel(drc['path'])}) "
+        f"- **Source**: [`{rel(drc['path'])}`]({link(drc['path'])}) "
         f"(analysed-input hash `{drc['input_hash']}`)"
     )
     lines.append("")
@@ -524,7 +529,7 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"engine: `{lvs['engine']}`, top: `{lvs['top']}`"
     )
     lines.append(
-        f"- **Source**: [`{rel(lvs['path'])}`]({rel(lvs['path'])}) "
+        f"- **Source**: [`{rel(lvs['path'])}`]({link(lvs['path'])}) "
         f"(layout GDS hash `{lvs['layout_gds_sha256']}`)"
     )
     if lvs["warning_categories"]:
@@ -563,7 +568,7 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         "graded level of every gate is necessarily `unchecked`."
     )
     lines.append(
-        f"- **Source**: [`{rel(erc['path'])}`]({rel(erc['path'])}) "
+        f"- **Source**: [`{rel(erc['path'])}`]({link(erc['path'])}) "
         f"(layout GDS hash `{erc['layout_gds_sha256']}`, "
         f"produced by klt `{erc['klt_version']}`)"
     )
@@ -595,7 +600,7 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
     )
     lines.append(
         f"- **Multi-corner envelope** (the T1 item-5 citation, "
-        f"[`{rel(sta['envelope_path'])}`]({rel(sta['envelope_path'])})): one `klt sta` "
+        f"[`{rel(sta['envelope_path'])}`]({link(sta['envelope_path'])})): one `klt sta` "
         f"response covering exactly these {sta['envelope_corner_count']} corners, each "
         "`timing_status: constrained` with non-negative setup and hold slack, and "
         "identical corner-for-corner to the per-corner SPEF reports on WNS, hold WS, "
@@ -628,7 +633,7 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         "figure is ratified anywhere in this repo."
     )
     lines.append(
-        f"- **Source**: [`{rel(sta['path'])}`]({rel(sta['path'])}), harness "
+        f"- **Source**: [`{rel(sta['path'])}`]({link(sta['path'])}), harness "
         f"`{sta['harness']}`."
     )
     lines.append(
@@ -648,8 +653,8 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
     lines.append("")
     lines.append(
         f"- **Source**: [`{rel(spec_row['tile_spec_path'])}`]"
-        f"({rel(spec_row['tile_spec_path'])}) (summary table), decision record "
-        f"[`{rel(spec_row['adr_path'])}`]({rel(spec_row['adr_path'])})."
+        f"({link(spec_row['tile_spec_path'])}) (summary table), decision record "
+        f"[`{rel(spec_row['adr_path'])}`]({link(spec_row['adr_path'])})."
     )
     lines.append("")
 
@@ -687,8 +692,8 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         "non-matching netlist, so supporting only."
     )
     lines.append(
-        f"- **Source**: [`{rel(sdf['path'])}`]({rel(sdf['path'])}); post-route SDF "
-        f"artifact: [`{rel(sdf['sdf_path'])}`]({rel(sdf['sdf_path'])})."
+        f"- **Source**: [`{rel(sdf['path'])}`]({link(sdf['path'])}); post-route SDF "
+        f"artifact: [`{rel(sdf['sdf_path'])}`]({link(sdf['sdf_path'])})."
     )
     lines.append(
         f"- **Record / git revision**: `{sdf['record_id']}`, produced at git revision "
