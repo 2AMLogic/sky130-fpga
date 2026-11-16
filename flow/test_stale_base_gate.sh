@@ -70,15 +70,15 @@ run_pins() { (cd "$T/repo" && ./signoff/verify-pins.sh) >"$T/out" 2>&1; }
 # ---- leg 0: the workflow still wires the base-freshness guard (this leg
 #      fails if the #304 guard step is removed from signoff.yml, or if the
 #      checkout loses the full history that merge needs) ----
-if [[ -f "$REPO_ROOT/$WORKFLOW" ]]; then
-    wf="$(cat "$REPO_ROOT/$WORKFLOW")"
-else
-    wf=""
-fi
-merge_line="$(grep -n 'git merge FETCH_HEAD --no-edit' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
-gate_line="$(grep -n 'name: Verify every manifest pin' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
-if grep -Fq "github.event_name == 'pull_request'" "$REPO_ROOT/$WORKFLOW" \
-    && grep -Fq "git fetch origin main" "$REPO_ROOT/$WORKFLOW" \
+# Every needle below is anchored to the whole YAML/shell line (leading
+# indentation, then the wiring, nothing else): the guard step's error prose
+# and comments quote several of these strings, so an unanchored grep matches
+# the echo text and the assertion survives deletion of the very wiring it
+# pins -- the blocking defect the previous review round demonstrated.
+merge_line="$(grep -nE '^[[:space:]]*if ! git merge FETCH_HEAD --no-edit' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
+gate_line="$(grep -nE '^[[:space:]]*- name: Verify every manifest pin' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
+if grep -qE "^[[:space:]]*if: github.event_name == 'pull_request'[[:space:]]*$" "$REPO_ROOT/$WORKFLOW" \
+    && grep -qE '^[[:space:]]+git fetch origin main[[:space:]]*$' "$REPO_ROOT/$WORKFLOW" \
     && [[ -n "$merge_line" ]]; then
     ok "leg0: signoff.yml fetches and merges the live origin/main tip on pull_request runs"
 else
@@ -89,8 +89,8 @@ if [[ -n "$merge_line" && -n "$gate_line" && "$merge_line" -lt "$gate_line" ]]; 
 else
     bad "leg0: the pin gate does not run after the origin/main merge in signoff.yml"
 fi
-checkout_line="$(grep -n 'uses: actions/checkout@v4' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
-depth_line="$(grep -n 'fetch-depth: 0' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
+checkout_line="$(grep -nE '^[[:space:]]+uses: actions/checkout@v4[[:space:]]*$' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
+depth_line="$(grep -nE '^[[:space:]]+fetch-depth: 0[[:space:]]*$' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
 if [[ -n "$checkout_line" && -n "$depth_line" && "$depth_line" -gt "$checkout_line" ]]; then
     ok "leg0: the checkout is full-history (fetch-depth: 0) so the run-time merge has a shared ancestor"
 else
