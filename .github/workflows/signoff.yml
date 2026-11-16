@@ -140,16 +140,29 @@ jobs:
                   for x in v:
                       yield from walk(x)
           members = {}
+          unparsed = []
           for f in invs:
-              for s in walk(json.load(open(f))):
+              try:
+                  data = json.load(open(f))
+              except Exception:
+                  # a conflict marker block inside an inventory itself makes
+                  # it unparseable: degrade that one mapping (issue #307)
+                  # instead of aborting the whole diagnosis here
+                  unparsed.append(f)
+                  continue
+              for s in walk(data):
                   members.setdefault(s, []).append(f)
           print("conflicting files (inventoried ones named with their pinning inventory):")
           for p in conflicted:
               hits = members.get(p)
               if hits:
                   print(f"  {p} -> pinned by {' '.join(hits)}")
+              elif p in unparsed:
+                  print(f"  {p} -> is an inventory that could not be parsed (conflict markers?)")
               else:
                   print(f"  {p} -> (not inventoried)")
+          if unparsed:
+              print("inventories that could not be parsed (conflict markers?): " + " ".join(unparsed))
           PY
             echo "remedy: git fetch origin main && git rebase origin/main, then re-attest the item(s) whose inventory contains the conflicting path(s) -- klt signoff --attest N --inventory signoff/item-N-inventory.json -o signoff/item-N-<name>.json -- and refresh the envelope + manifest pins + signoff/tier-report.json (see signoff/README.md, Regenerate and verify)"
             git merge --abort || true
