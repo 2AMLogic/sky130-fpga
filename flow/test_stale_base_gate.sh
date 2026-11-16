@@ -38,6 +38,21 @@ P="sim/sdf_port_interconnect/test_pdk_gate.sh"
 ENV9="signoff/item-9-testbenches.json"
 INV9="signoff/item-9-inventory.json"
 
+# The real tree must not be touched by anything below. leg 0 reads the
+# working-tree workflow, which legitimately carries uncommitted WIP in a
+# pre-commit run, so the assertion is "no further mutation": snapshot the
+# dirtiness up front -- BEFORE any work -- and compare against a fresh
+# snapshot at the end. Porcelain alone is file-level, so appending to a
+# file that is already dirty would be invisible; the `git diff HEAD` text
+# makes the snapshot hunk-level, and porcelain contributes untracked
+# paths. Snapshotting only at the end (and comparing it to itself) would
+# make the guard a tautology that can never fail.
+tree_state() {
+    git -C "$REPO_ROOT" status --porcelain -- signoff/ "$P" "$WORKFLOW"
+    git -C "$REPO_ROOT" diff HEAD -- signoff/ "$P" "$WORKFLOW"
+}
+dirty_before="$(tree_state)"
+
 T="$(mktemp -d)"; trap 'rm -rf "$T"' EXIT
 mkdir -p "$T/pristine"
 git -C "$REPO_ROOT" archive HEAD | tar -x -C "$T/pristine"
@@ -60,7 +75,7 @@ if [[ -f "$REPO_ROOT/$WORKFLOW" ]]; then
 else
     wf=""
 fi
-merge_line="$(grep -n 'git merge origin/main --no-edit' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
+merge_line="$(grep -n 'git merge FETCH_HEAD --no-edit' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
 gate_line="$(grep -n 'name: Verify every manifest pin' "$REPO_ROOT/$WORKFLOW" 2>/dev/null | head -1 | cut -d: -f1)"
 if grep -Fq "github.event_name == 'pull_request'" "$REPO_ROOT/$WORKFLOW" \
     && grep -Fq "git fetch origin main" "$REPO_ROOT/$WORKFLOW" \
@@ -95,9 +110,6 @@ git -C "$T/repo" commit -qm "base: archive of the committed tree"
 # two PRs did. The envelope's checks entry, counts, provenance.input pin (the
 # inventory's hash) and the manifest's item-9 pin must all move together, or
 # the base itself is already red and the legs prove nothing.
-pre_edit_sha() { "sha256:$("$HASH_BIN" "$T/repo/$P" | cut -d" " -f1)"; }
-HASH_BIN="sha256sum"
-if ! command -v sha256sum >/dev/null; then HASH_BIN="shasum -a 256"; fi
 python3 - "$T/repo" "$P" <<'PY'
 import hashlib, json, sys
 repo, p = sys.argv[1], sys.argv[2]
@@ -212,11 +224,11 @@ else
     fi
 fi
 
-# ---- the real tree was never touched (no further mutation: leg 0 reads the
-#      working-tree workflow, which legitimately carries uncommitted WIP in a
-#      pre-commit run, so compare dirtiness before vs. after, not to zero) ----
-dirty_before="$(git -C "$REPO_ROOT" status --porcelain -- signoff/ "$P" "$WORKFLOW")"
-dirty_after="$(git -C "$REPO_ROOT" status --porcelain -- signoff/ "$P" "$WORKFLOW")"
+# ---- the real tree was never touched: tree_state was snapshotted before
+#      any work (leg 0 reads the working-tree workflow, which legitimately
+#      carries uncommitted WIP in a pre-commit run, so compare before vs.
+#      after, not to zero) ----
+dirty_after="$(tree_state)"
 [[ "$dirty_before" == "$dirty_after" ]] || bad "real tree mutated by the test: $(diff <(echo "$dirty_before") <(echo "$dirty_after"))"
 
 if [[ "$rc_all" -ne 0 ]]; then echo "test_stale_base_gate: FAIL"; exit 1; fi

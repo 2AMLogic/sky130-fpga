@@ -105,7 +105,12 @@ jobs:
           git fetch origin main
           git config user.name "signoff-base-freshness-guard"
           git config user.email "signoff-base-freshness-guard@users.noreply.github.com"
-          if ! git merge origin/main --no-edit > /tmp/signoff-guard-merge.log 2>&1; then
+          # merge FETCH_HEAD, not origin/main: the fetch above only guarantees
+          # FETCH_HEAD (refs/remotes/origin/main is populated by the checkout's
+          # depth-0 fetch seconds earlier, but merging FETCH_HEAD matches the
+          # "fetched at run time" intent unconditionally, even if the checkout
+          # depth ever changes).
+          if ! git merge FETCH_HEAD --no-edit > /tmp/signoff-guard-merge.log 2>&1; then
             git diff --name-only --diff-filter=U > /tmp/signoff-conflicted.txt
             if [ ! -s /tmp/signoff-conflicted.txt ]; then
               # non-zero merge with zero unmerged paths: git refused to start
@@ -164,6 +169,15 @@ jobs:
         # (flow/test_signoff_target.sh builds its own fake klt/openroad/yosys
         # and needs no PDK or network), so this runs on a bare runner.
         run: ./flow/test_signoff_target.sh
+
+      - name: Regression-test the base-freshness guard (issue #304)
+        # python3 + git only, so it also runs before the klt install. Its
+        # leg 0 re-reads THIS workflow file and fails when the guard step
+        # above is removed, runs below the pin gate, or loses the
+        # fetch-depth: 0 checkout; leg 1 replays the #297/#298 stale-pairing
+        # shape end to end against verify-pins.sh (see signoff/README.md,
+        # "Stale-base guard").
+        run: ./flow/test_stale_base_gate.sh
 
       - name: Install uv
         uses: astral-sh/setup-uv@v5
