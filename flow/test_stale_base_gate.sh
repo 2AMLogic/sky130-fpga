@@ -238,7 +238,10 @@ fi
 # must still print the conflicted-path listing (with the unparseable one
 # named), still emit the remedy line, and still exit 1. A second conflicted
 # file pinned by item 10 (whose inventory parses fine) proves the other
-# inventories are still mapped in the same degraded run.
+# inventories are still mapped in the same degraded run. The block's
+# hard-coded /tmp/ paths are rewritten to a per-run scratch dir first: in CI
+# a later step in the SAME job reads /tmp/pins-pr-branch.rc, and the replay
+# (whose scratch-repo pin check fails) must not clobber it.
 GUARD_RUN="$T/guard-run.sh"
 # Extract the run block: from the guard step's `run: |` to the first line
 # dedented below the block-scalar content indentation, with that indentation
@@ -261,6 +264,27 @@ elif ! grep -q "^set -euo pipefail$" "$GUARD_RUN" \
     || ! grep -q "^if ! git merge FETCH_HEAD --no-edit" "$GUARD_RUN"; then
     bad "leg2: extracted run block is not the guard script (missing set/merge lines)"
 else
+    # Isolate the replay's /tmp writes (the guard block hard-codes job-scoped
+    # /tmp/ paths; see the leg-2 header): rewrite them under a per-run
+    # scratch dir, and assert the rewrite actually matched so the isolation
+    # cannot silently lapse.
+    GUARD_TMP="$T/guardtmp"
+    mkdir -p "$GUARD_TMP"
+    tmp_hits="$(grep -c "/tmp" "$GUARD_RUN")"
+    if [[ "$tmp_hits" -eq 0 ]]; then
+        bad "leg2: extracted guard block has no /tmp paths -- the isolation rewrite matched nothing (workflow guard changed shape?)"
+    fi
+    sed -i "s#/tmp/#$GUARD_TMP/#g" "$GUARD_RUN"
+    leftover="$(sed "s#$GUARD_TMP/#<I>#g" "$GUARD_RUN" | grep -E "/tmp([^/]|$)" || true)"
+    if [[ -n "$leftover" ]]; then
+        bad "leg2: replay isolation incomplete -- /tmp references remain outside $GUARD_TMP after the rewrite"
+        echo "$leftover" | head -5
+    fi
+    # Teeth for the isolation: the job-scoped rc file the "Verify every
+    # manifest pin" step reads later in the same CI job must be
+    # byte-identical across the replay.
+    PIN_RC=/tmp/pins-pr-branch.rc
+    pin_rc_before=$([[ -f "$PIN_RC" ]] && cat "$PIN_RC" || echo ABSENT)
     cp -a "$T/pristine" "$T/repo2"
     cp "$REPO_ROOT/signoff/verify-pins.sh" "$T/repo2/signoff/verify-pins.sh"
     git -C "$T/repo2" init -q -b main
@@ -315,6 +339,15 @@ PY
         # conflict, and must degrade gracefully instead of dying in json.load
         (cd "$T/repo2" && bash "$GUARD_RUN") > "$T/leg2out" 2>&1
         rc_guard=$?
+        pin_rc_after=$([[ -f "$PIN_RC" ]] && cat "$PIN_RC" || echo ABSENT)
+        if [[ "$pin_rc_before" != "$pin_rc_after" ]]; then
+            bad "leg2: the replay clobbered the job-scoped $PIN_RC ($pin_rc_before -> $pin_rc_after) -- the 'Verify every manifest pin' step reads it later in the same CI job"
+        fi
+        if [[ "$pin_rc_before" == "$pin_rc_after" ]] \
+            && [[ "$tmp_hits" -gt 0 ]] \
+            && [[ -z "$(sed "s#$GUARD_TMP/#<I>#g" "$GUARD_RUN" | grep -E "/tmp([^/]|$)" || true)" ]]; then
+            ok "leg2: the replay's /tmp writes stayed under $GUARD_TMP (job-scoped $PIN_RC untouched)"
+        fi
         if [[ "$rc_guard" -ne 1 ]]; then
             bad "leg2: guard block exited $rc_guard on a conflicting-inventory merge (expected 1)"
         fi
