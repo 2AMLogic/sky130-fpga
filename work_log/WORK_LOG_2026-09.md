@@ -2,6 +2,23 @@
 
 Sections moved byte-for-byte from [WORK_LOG.md](../WORK_LOG.md) by `loom-daemon work-docs archive`.
 
+### 2026-09-15
+
+- **PR #40**: audit: trace every published claim to a committed harness + pinned PDK (#34)
+- **PR #38**: docs: refresh README status line to reflect current tile state
+- **PR #37**: feat(measurements): aggregated characterization summary (T1 item 8)
+- **PR #36**: fix: guard merge-pr.sh champion:hold-state extraction against set -e abort
+- **PR #32**: feat: SDF-annotated gate-level re-simulation of the routed tile
+- **PR #30**: spec: ratify tile timing spec row from PR #22 STA record (ADR-0002)
+- **Issue #4** (closed): Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
+- **Issue #34** (closed): [Epic #4] T1 item 9: testbenches-shipped / pinned-PDK audit
+- **Issue #39** (closed): Remove stale 'just opened' status line in README.md
+- **Issue #35** (closed): [Epic #4] T1 item 10: repo hygiene — README status refresh
+- **Issue #33** (closed): [Epic #4] T1 item 8: aggregated characterization report
+- **Issue #31** (closed): merge-pr.sh: _check_champion_hold_state_staleness aborts merge (set -e + pipefail + grep -o no-match)
+- **Issue #29** (closed): [Epic #4] T1 item 7: SDF-annotated gate-level re-simulation
+- **Issue #28** (closed): [Epic #4] T1 item 5: ratify tile timing spec rows (decision record)
+
 ### 2026-09-12
 
 - **PR #27**: Update README maturity-ladder — timing characterization landed

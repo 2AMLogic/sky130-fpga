@@ -6,6 +6,19 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-16
+
+- **PR #306**: ci(signoff): gate PR runs against the live main tip (base-freshness guard, #304)
+- **PR #305**: fix(signoff): emit directory-relative link targets in the characterization summary
+- **PR #301**: fix: hoist routed_checks.sh sha256_of calls to assignment position
+- **PR #298**: signoff: pin the sim/sdf_port_interconnect harness into item 9's attestation
+- **PR #297**: ci: run the hermetic PDK gate regression in flow-evidence; fix mislabelled check
+- **Issue #304** (closed): 45a1c3e re-attested item 10, but test_pdk_gate.sh is an item-9 attestation member (main signoff CI red)
+- **Issue #296** (closed): flow/routed_checks.sh: a failed sha256_of in argument position is still silent (3 call sites)
+- **Issue #294** (closed): sim/sdf_port_interconnect/ is absent from item 9's attestation inventory, which claims to cover every committed harness
+- **Issue #293** (closed): test_pdk_gate.sh is run by no CI lane, and its "half-matching" check does not half-match
+- **Issue #288** (closed): Generated characterization-summary.md's relative links do not resolve on the forge (17 of 18 targets)
+
 ### 2026-11-15
 
 - **PR #279**: refactor(flow): single-source sha256 hash, --update parse and klt guard into report_check.sh
@@ -258,21 +271,4 @@ Chronological record of merged pull requests and closed issues, maintained by th
 - **Issue #45** (closed): Deduplicate PDK_ROOT resolution block across flow/*.sh (mirrors #15)
 - **Issue #43** (closed): flow/sdf-resim.sh rejects a PATH-resolved Icarus 13 (resolve_icarus13 conflates 'found on PATH' with 'not found')
 - **Issue #44** (closed): The klt place-and-route request is hand-duplicated in flow/layout.sh and flow/sdf-resim.sh; only a byte-diff catches a divergence
-
-### 2026-09-15
-
-- **PR #40**: audit: trace every published claim to a committed harness + pinned PDK (#34)
-- **PR #38**: docs: refresh README status line to reflect current tile state
-- **PR #37**: feat(measurements): aggregated characterization summary (T1 item 8)
-- **PR #36**: fix: guard merge-pr.sh champion:hold-state extraction against set -e abort
-- **PR #32**: feat: SDF-annotated gate-level re-simulation of the routed tile
-- **PR #30**: spec: ratify tile timing spec row from PR #22 STA record (ADR-0002)
-- **Issue #4** (closed): Track the gap to T1 sim-validated / bronze (klayout-tools design-evidence tiers)
-- **Issue #34** (closed): [Epic #4] T1 item 9: testbenches-shipped / pinned-PDK audit
-- **Issue #39** (closed): Remove stale 'just opened' status line in README.md
-- **Issue #35** (closed): [Epic #4] T1 item 10: repo hygiene — README status refresh
-- **Issue #33** (closed): [Epic #4] T1 item 8: aggregated characterization report
-- **Issue #31** (closed): merge-pr.sh: _check_champion_hold_state_staleness aborts merge (set -e + pipefail + grep -o no-match)
-- **Issue #29** (closed): [Epic #4] T1 item 7: SDF-annotated gate-level re-simulation
-- **Issue #28** (closed): [Epic #4] T1 item 5: ratify tile timing spec rows (decision record)
 
