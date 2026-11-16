@@ -146,10 +146,23 @@ fi
 # VAR="$(sha256_of ...)" assignment form. No ordering or fixture
 # dependence, and the file list comes from the grep itself rather than a
 # hardcoded set of names, so a new driver is covered on arrival.
+#
+# Per-line policy (issue #309): the anchor admits leading whitespace and
+# an optional local/declare prefix so an assignment inside an if block or
+# function is not a false positive, and the greedy .* is closed off by
+# rejecting any line that still carries sha256_of after the assignment's
+# closing `)"` -- the regex alone would otherwise backtrack across
+# `; cmd "$(sha256_of ...)"` and accept a compound statement.
+shape_line_ok() {
+    local line="$1"
+    local re='^[[:space:]]*((local|declare)[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*"\$\(sha256_of .*\)"[\\[:space:]]*$'
+    [[ "$line" =~ $re ]] || return 1
+    local rest="${line#*\)\"}"   # text after the first `)"`, i.e. past the assignment
+    [[ "$rest" != *sha256_of* ]]
+}
 shape_contract() (
     set -euo pipefail
     self="$(basename "${BASH_SOURCE[0]}")"
-    re='^[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*"\$\(sha256_of .*\)"[\\[:space:]]*$'
     bad=0
     while IFS= read -r f; do
         base="$(basename "$f")"
@@ -161,7 +174,7 @@ shape_contract() (
             line="${entry#*:}"
             # comment lines carry the policy, not a call shape
             if [[ "$line" =~ ^[[:space:]]*# ]]; then continue; fi
-            if [[ ! "$line" =~ $re ]]; then
+            if ! shape_line_ok "$line"; then
                 echo "FAIL shape_contract: $base:$lineno sha256_of not in VAR=\"\$(sha256_of ...)\" assignment form" >&2
                 bad=1
             fi
@@ -175,6 +188,32 @@ if [[ $src -eq 0 && -z "$out" ]]; then
 else
     bad "sha256_of assignment-form shape across drivers" "rc=$src out=$out"
 fi
+
+# shape_line_ok probes (issue #309): the per-line policy must accept the
+# shapes the column-0-only anchor false-positived on (indented, local- and
+# declare-prefixed, continuation) and must still reject bare argument
+# position and the compound statement shapes the greedy .* used to accept.
+# Probe lines are intentionally literal data (no expansion); shellcheck
+# cannot see that each is fed to the shape policy as text, not run.
+# shellcheck disable=SC2016
+while IFS='|' read -r expect desc line; do
+    if shape_line_ok "$line"; then got=pass; else got=fail; fi
+    if [[ "$got" == "$expect" ]]; then
+        ok "shape_line_ok $desc"
+    else
+        bad "shape_line_ok $desc" "expected $expect, got $got"
+    fi
+done <<'EOF'
+pass|column-0 assignment|GDS_SHA="$(sha256_of "$GDS")"
+pass|indented assignment|    GDS_SHA="$(sha256_of "$GDS")"
+pass|local-prefixed assignment|local GDS_SHA="$(sha256_of "$GDS")"
+pass|declare-prefixed assignment|declare GDS_SHA="$(sha256_of "$GDS")"
+pass|continuation line|GDS_SHA="$(sha256_of "$GDS")" \
+pass|nested substitution|X="$(sha256_of "$(dirname "$F")/g")"
+fail|bare argument position|python3 trim.py "$(sha256_of "$SPEC")"
+fail|compound ; second call|X="$(sha256_of a)"; python3 trim.py "$(sha256_of b)"
+fail|compound env-prefix call|X="$(sha256_of a)" python3 trim.py "$(sha256_of b)"
+EOF
 
 # parse_update_mode: check (no argument), update (--update), and the
 # negative path (usage line + exit 1).
