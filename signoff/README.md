@@ -290,7 +290,7 @@ byte-identical signoff code.
   | Item | Envelope | Inventory members |
   | ---- | -------- | ----------------- |
   | 1 Design sources | `item-1-design-sources.json` | all four `design/rtl/*.v` files plus `design/netlist/logic_tile_netlist.v`, whose freshness command is `./flow/synth.sh` (yosys; `local_only`) |
-  | 9 Testbenches shipped | `item-9-testbenches.json` | every `sim/tb_*.v`, the cocotb test, the FABulous equivalence benches, the `sim/sdf_port_interconnect/` regression harness (scripts, benches, DUT) and its `.sdf` fixtures, `measurements/claim-traceability.md`, the audit scripts; cold start `./flow/audit-evidence.sh`; PDK and tool pins |
+  | 9 Testbenches shipped | `item-9-testbenches.json` | every `sim/tb_*.v` plus the two `sim/*.vh` bench includes, the cocotb test and its `fv_request.json` request fixture, the FABulous equivalence benches, the `sim/sdf_port_interconnect/` regression harness (scripts, benches, DUT) and its `.sdf` fixtures, `measurements/claim-traceability.md`, the audit scripts; cold start `./flow/audit-evidence.sh`; PDK and tool pins |
   | 10 Repo hygiene | `item-10-repo-hygiene.json` | `README.md`, `LICENSE`, `spec/tile-spec.md`, every `.github/workflows/*.yml`; check: the status-claim checker's unit tests |
 
   Limits: item 1's yosys freshness command cannot run on the CI runner, so
