@@ -32,6 +32,12 @@
 #      still print the conflicted-path listing, still emit the remedy line,
 #      still report the unparseable inventory instead of dying on it, and
 #      still exit 1.
+#   3. the #312 shape: a non-zero exit INSIDE the conflict-diagnosis python
+#      block itself (any failure the #311 per-file try/except does not
+#      cover -- a future exception site, a resource error). python3 is
+#      stubbed on PATH to emit partial diagnosis output and then die; the
+#      block must still be non-fatal to the step: the remedy line is still
+#      emitted, still last, and the block still exits 1.
 #
 # Method: copy the COMMITTED tree (git archive HEAD) into a mktemp git repo,
 # trap-cleaned; every commit happens inside the copy -- the real tree is
@@ -369,6 +375,129 @@ PY
             && grep -qF ".github/workflows/gate-sim.yml -> pinned by signoff/item-10-inventory.json" "$T/leg2out"; then
             ok "leg2: conflict inside an inventory -- listing, degraded-mapping note, remedy and exit 1 all survive"
         fi
+    fi
+fi
+
+# ---- leg 3 (issue #312): a non-zero exit INSIDE the conflict-diagnosis
+#      python block must not kill the guard before the remedy line ----
+# #311 made the per-inventory json.load tolerant, but the block still runs
+# under the step's `set -euo pipefail`: any OTHER non-zero exit from it (an
+# edit introducing a new exception site, a resource error, python3 missing)
+# would abort the step before the remedy echo and the `git merge --abort`,
+# reproducing the #307 loss-of-diagnosis shape from a different trigger.
+# The workflow pins the block non-fatal (`|| true` on the invocation
+# line); this leg proves the shape by replaying the extracted guard block
+# (fresh extraction, same awk as leg 2, same /tmp isolation) in a scratch
+# repo whose run-time merge conflicts, with python3 stubbed on PATH to
+# intercept ONLY the diagnosis invocation: argv[1] == "-" (a program on
+# stdin) AND the conflicted-paths file in the remaining args -- only the
+# diagnosis call passes signoff-conflicted.txt, so verify-pins.sh's own
+# python block (also argv[1] == "-", but just "$REPO_ROOT") keeps working
+# and falls through to the real interpreter. The stub prints partial
+# diagnosis output and exits non-zero. The stub's marker line proves the
+# interception actually happened; without the workflow fix the step's
+# set -e aborts on the stub and the remedy line is lost. The marker
+# assertion is discriminating in both directions: strip the `|| true` and
+# the remedy is lost; delete the whole diagnosis block and verify-pins.sh
+# is no longer intercepted either, so the marker never appears and this
+# leg fails.
+GUARD_RUN3="$T/guard-run3.sh"
+awk '
+  BEGIN { in_step = 0; in_run = 0; ci = -1 }
+  !in_step && /^      - name: Base-freshness guard/ { in_step = 1; next }
+  in_step && !in_run && /^        run: \|/ { in_run = 1; next }
+  in_run {
+      if ($0 ~ /^[[:space:]]*$/) { print ""; next }
+      n = match($0, /[^ ]/) - 1
+      if (ci == -1) ci = n
+      if (n < ci) exit
+      print substr($0, ci + 1)
+  }
+' "$REPO_ROOT/$WORKFLOW" > "$GUARD_RUN3"
+if [[ ! -s "$GUARD_RUN3" ]]; then
+    bad "leg3: could not extract the guard run block from $WORKFLOW"
+elif ! grep -q "^set -euo pipefail$" "$GUARD_RUN3" \
+    || ! grep -q "^if ! git merge FETCH_HEAD --no-edit" "$GUARD_RUN3"; then
+    bad "leg3: extracted run block is not the guard script (missing set/merge lines)"
+else
+    GUARD_TMP3="$T/guardtmp3"
+    mkdir -p "$GUARD_TMP3"
+    if [[ "$(grep -c "/tmp" "$GUARD_RUN3")" -eq 0 ]]; then
+        bad "leg3: extracted guard block has no /tmp paths -- the isolation rewrite matched nothing (workflow guard changed shape?)"
+    fi
+    sed -i "s#/tmp/#$GUARD_TMP3/#g" "$GUARD_RUN3"
+    leftover3="$(sed "s#$GUARD_TMP3/#<I>#g" "$GUARD_RUN3" | grep -E "/tmp([^/]|$)" || true)"
+    if [[ -n "$leftover3" ]]; then
+        bad "leg3: replay isolation incomplete -- /tmp references remain outside $GUARD_TMP3 after the rewrite"
+        echo "$leftover3" | head -5
+    fi
+
+    # Scratch repo whose run-time merge conflicts (same minimal shape as
+    # leg 2's; the specific conflicted file is irrelevant here since the
+    # diagnosis python is stubbed, but gate-sim.yml keeps it identical).
+    cp -a "$T/pristine" "$T/repo3"
+    cp "$REPO_ROOT/signoff/verify-pins.sh" "$T/repo3/signoff/verify-pins.sh"
+    git -C "$T/repo3" init -q -b main
+    git -C "$T/repo3" config user.email "stale-base-gate@test.invalid"
+    git -C "$T/repo3" config user.name "stale-base-gate"
+    git -C "$T/repo3" add -A
+    git -C "$T/repo3" commit -qm "base: archive of the committed tree"
+    git -C "$T/repo3" checkout -qb pr-leg3-python-crash
+    printf '\n# leg3 branch-side edit\n' >> "$T/repo3/.github/workflows/gate-sim.yml"
+    git -C "$T/repo3" add -A
+    git -C "$T/repo3" commit -qm "branch: leg3 edit to gate-sim.yml"
+    git -C "$T/repo3" checkout -q main
+    printf '\n# leg3 main-side edit\n' >> "$T/repo3/.github/workflows/gate-sim.yml"
+    git -C "$T/repo3" add -A
+    git -C "$T/repo3" commit -qm "main: leg3 conflicting edit to gate-sim.yml"
+    git clone --bare -q "$T/repo3" "$T/origin3.git"
+    git -C "$T/repo3" remote add origin "$T/origin3.git"
+    git -C "$T/repo3" checkout -q pr-leg3-python-crash
+    git -C "$T/repo3" fetch -q origin main
+
+    # The stub: dies only on the diagnosis invocation. The discriminator is
+    # the conflicted-paths argv file: the diagnosis call passes
+    # signoff-conflicted.txt, while verify-pins.sh's own stdin-program
+    # python block passes only $REPO_ROOT, so it falls through to the real
+    # interpreter. REAL_PY is baked in so the stub cannot re-resolve itself
+    # through the prefixed PATH.
+    REAL_PY="$(command -v python3)"
+    STUB_BIN="$T/fakebin"
+    mkdir -p "$STUB_BIN"
+    cat > "$STUB_BIN/python3" <<STUB
+#!/usr/bin/env bash
+if [[ "\${1:-}" == "-" && "\$*" == *signoff-conflicted.txt* ]]; then
+    echo "conflicting files (inventoried ones named with their pinning inventory):"
+    echo "  .github/workflows/gate-sim.yml -> (partial listing before the simulated crash)"
+    echo "python3 stub (issue #312): simulated non-zero exit mid-diagnosis" >&2
+    exit 1
+fi
+exec "$REAL_PY" "\$@"
+STUB
+    chmod +x "$STUB_BIN/python3"
+
+    (cd "$T/repo3" && PATH="$STUB_BIN:$PATH" bash "$GUARD_RUN3") > "$T/leg3out" 2>&1
+    rc_leg3=$?
+    if [[ "$rc_leg3" -ne 1 ]]; then
+        bad "leg3: guard block exited $rc_leg3 with a crashing diagnosis block (expected 1)"
+    fi
+    if ! grep -qF "python3 stub (issue #312): simulated non-zero exit mid-diagnosis" "$T/leg3out"; then
+        bad "leg3: the stubbed python3 never intercepted the diagnosis -- the replay did not reach the conflict branch"
+        tail -20 "$T/leg3out"
+    fi
+    if ! grep -q "^remedy: git fetch origin main && git rebase origin/main" "$T/leg3out"; then
+        bad "leg3: remedy line missing -- a non-zero exit inside the python block still kills the diagnosis (issue #312)"
+        tail -20 "$T/leg3out"
+    fi
+    last_line="$(grep -ve '^[[:space:]]*$' "$T/leg3out" | tail -1)"
+    if [[ "$last_line" != remedy:* ]]; then
+        bad "leg3: the remedy line is not the block's last output (got: $last_line)"
+    fi
+    if [[ "$rc_leg3" -eq 1 ]] \
+        && grep -qF "python3 stub (issue #312): simulated non-zero exit mid-diagnosis" "$T/leg3out" \
+        && grep -q "^remedy: git fetch origin main && git rebase origin/main" "$T/leg3out" \
+        && [[ "$(grep -ve '^[[:space:]]*$' "$T/leg3out" | tail -1)" == remedy:* ]]; then
+        ok "leg3: python block dies mid-print -- remedy survives, is last, and the block still exits 1"
     fi
 fi
 
