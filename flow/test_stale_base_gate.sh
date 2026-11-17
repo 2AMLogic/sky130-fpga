@@ -389,11 +389,18 @@ fi
 # line); this leg proves the shape by replaying the extracted guard block
 # (fresh extraction, same awk as leg 2, same /tmp isolation) in a scratch
 # repo whose run-time merge conflicts, with python3 stubbed on PATH to
-# intercept ONLY the diagnosis invocation (argv[1] == "-", a program on
-# stdin -- verify-pins.sh's own python block must keep working), print
-# partial diagnosis output, and exit non-zero. The stub's marker line
-# proves the interception actually happened; without the workflow fix the
-# step's set -e aborts on the stub and the remedy line is lost.
+# intercept ONLY the diagnosis invocation: argv[1] == "-" (a program on
+# stdin) AND the conflicted-paths file in the remaining args -- only the
+# diagnosis call passes signoff-conflicted.txt, so verify-pins.sh's own
+# python block (also argv[1] == "-", but just "$REPO_ROOT") keeps working
+# and falls through to the real interpreter. The stub prints partial
+# diagnosis output and exits non-zero. The stub's marker line proves the
+# interception actually happened; without the workflow fix the step's
+# set -e aborts on the stub and the remedy line is lost. The marker
+# assertion is discriminating in both directions: strip the `|| true` and
+# the remedy is lost; delete the whole diagnosis block and verify-pins.sh
+# is no longer intercepted either, so the marker never appears and this
+# leg fails.
 GUARD_RUN3="$T/guard-run3.sh"
 awk '
   BEGIN { in_step = 0; in_run = 0; ci = -1 }
@@ -448,15 +455,18 @@ else
     git -C "$T/repo3" checkout -q pr-leg3-python-crash
     git -C "$T/repo3" fetch -q origin main
 
-    # The stub: dies only on the diagnosis invocation; every other python3
-    # call falls through to the real interpreter. REAL_PY is baked in so
-    # the stub cannot re-resolve itself through the prefixed PATH.
+    # The stub: dies only on the diagnosis invocation. The discriminator is
+    # the conflicted-paths argv file: the diagnosis call passes
+    # signoff-conflicted.txt, while verify-pins.sh's own stdin-program
+    # python block passes only $REPO_ROOT, so it falls through to the real
+    # interpreter. REAL_PY is baked in so the stub cannot re-resolve itself
+    # through the prefixed PATH.
     REAL_PY="$(command -v python3)"
     STUB_BIN="$T/fakebin"
     mkdir -p "$STUB_BIN"
     cat > "$STUB_BIN/python3" <<STUB
 #!/usr/bin/env bash
-if [[ "\${1:-}" == "-" ]]; then
+if [[ "\${1:-}" == "-" && "\$*" == *signoff-conflicted.txt* ]]; then
     echo "conflicting files (inventoried ones named with their pinning inventory):"
     echo "  .github/workflows/gate-sim.yml -> (partial listing before the simulated crash)"
     echo "python3 stub (issue #312): simulated non-zero exit mid-diagnosis" >&2
