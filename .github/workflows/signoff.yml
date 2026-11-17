@@ -127,7 +127,13 @@ jobs:
             cat /tmp/signoff-guard-merge.log
             # exact member-path match only: raw-text grep would false-match
             # inventory description prose that merely mentions the path
-          python3 - signoff/item-*-inventory.json /tmp/signoff-conflicted.txt <<'PY'
+            # the block must never be fatal to the step: it runs under
+            # `set -e` above, and a non-zero exit from it (any failure the
+            # per-inventory try/except does not cover) would otherwise kill
+            # the step before the remedy line and the merge --abort below
+            # (issue #312). Its exit status carries no signal: the step
+            # exits 1 either way once the diagnosis is printed.
+          python3 - signoff/item-*-inventory.json /tmp/signoff-conflicted.txt <<'PY' || true
           import json, sys
           invs, conflicted = sys.argv[1:-1], [l.strip() for l in open(sys.argv[-1]) if l.strip()]
           def walk(v):
