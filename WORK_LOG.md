@@ -8,6 +8,8 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-17
 
+- **PR #300**: docs: name .vh bench includes and cocotb request fixture in item-9 inventory row
+- **Issue #299** (closed): signoff/README.md's item-9 row omits three inventoried members (two .vh includes + fv_request.json)
 - **PR #317**: fix: make the signoff guard's conflict-diagnosis python block non-fatal so the remedy line survives
 - **Issue #312** (closed): signoff guard: make the conflict-diagnosis python block non-fatal so the remedy line always survives
 
