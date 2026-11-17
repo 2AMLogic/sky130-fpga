@@ -117,7 +117,12 @@ klt lvs "$BUILD_DIR/lvs_request.json" --format json > "$BUILD_DIR/lvs.raw" || tr
 python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$BUILD_DIR/lvs.raw" \
     || { echo "error: klt lvs produced no JSON report" >&2; exit 1; }
 RTL_HASH="$(python3 -c "import json,sys; print(json.load(open(sys.argv[1]))['provenance']['input']['content_hash'])" "$PAR")"
-python3 "$SCRIPT_DIR/lvs_report_trim.py" "$BUILD_DIR/lvs.raw" "$(sha256_of "$GDS")" "$RTL_HASH" \
+# sha256_of goes through an assignment on purpose: in argument position a
+# command substitution's failure never reaches set -e, so a failed hash
+# would hand the trim scripts an empty digest and the driver would continue
+# (issue #296).
+GDS_SHA="$(sha256_of "$GDS")"
+python3 "$SCRIPT_DIR/lvs_report_trim.py" "$BUILD_DIR/lvs.raw" "$GDS_SHA" "$RTL_HASH" \
     "$BUILD_DIR/${TOP}.lvs.json"
 
 # --- ERC ------------------------------------------------------------------
@@ -126,7 +131,8 @@ echo "=== klt erc ${TOP}.gds (spec: flow/erc_supply_spec.json; experimental obse
     --top "$TOP" --pdk sky130 --format json ) > "$BUILD_DIR/erc.raw" 2>"$BUILD_DIR/erc.err" || true
 python3 -c "import json,sys; json.load(open(sys.argv[1]))" "$BUILD_DIR/erc.raw" \
     || { echo "error: klt erc produced no JSON report (see $BUILD_DIR/erc.err)" >&2; exit 1; }
-python3 "$SCRIPT_DIR/erc_report_trim.py" "$BUILD_DIR/erc.raw" "$(sha256_of "$GDS")" "$(sha256_of "$SPEC")" \
+SPEC_SHA="$(sha256_of "$SPEC")"
+python3 "$SCRIPT_DIR/erc_report_trim.py" "$BUILD_DIR/erc.raw" "$GDS_SHA" "$SPEC_SHA" \
     "$(klt --version | awk '{print $2}')" "$BUILD_DIR/${TOP}.erc.json"
 
 # --- routing pitch / utilization measurement ------------------------------

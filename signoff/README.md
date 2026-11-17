@@ -78,6 +78,63 @@ klt signoff --manifest signoff/block-manifest.json --format json > signoff/tier-
 the fresh grade against the committed `tier-report.json` — a manifest citing
 an artifact that has since changed fails the build rather than rotting.
 
+## Stale-base guard (pull_request runs)
+
+On `pull_request` runs the workflow first fetches the **current**
+`origin/main` tip at run time and merges it into the checked-out ref, so
+every gate below it (`verify-pins.sh`, the re-attest checks, the
+`tier-report.json` diff) judges the tree that would actually land — not
+GitHub's cached merge ref computed when the run was queued. `push`-to-`main`
+runs skip this step: the checkout there already is the merged state. The
+regression test is `./flow/test_stale_base_gate.sh` (`python3` + `git`
+only), which runs in CI before the `klt` install and fails if the guard is
+removed.
+
+Why: the gate enforces a **cross-file** invariant — an envelope's
+`content_hash` pins another file's bytes — so two PRs with disjoint file
+sets can each be individually green and still break it together where they
+meet on `main` (#297/#298): one edits an inventoried file, the other adds
+that same file to an inventory pinned at its pre-edit hash, git merges the
+disjoint sets cleanly, and the stale pairing first exists at the merge
+commit. Issue #304 added this guard after exactly that happened.
+
+The run fails with a stale-base diagnosis when either:
+
+- the run-time merge **conflicts**, or
+- the gate **passes on the PR ref alone but fails on the merge** — the
+  signature of concurrent-PR drift (the failure output names the
+  inventoried path and the item whose pin no longer matches).
+
+The explicit stale-base diagnosis lives on the "Verify every manifest pin"
+step, which runs first and is the step the attestation-pin shape trips; a
+stale base that instead trips the re-attest step or the `tier-report.json`
+diff fails with those steps' ordinary output.
+
+Note that any PR whose branch textually conflicts with `main` fails this
+check with the conflict shape — even when the conflicting files are
+unrelated to signoff — because the gate cannot evaluate the tree that
+would land. That red is the guard working, not a signoff problem: resolve
+the conflict and the gate re-runs on the merged tree.
+
+A run-time merge that is **refused with no unmerged paths** is a third,
+different shape: git never started the merge, so there is no stale base to
+diagnose — it is a git/environment problem (today only "refusing to merge
+unrelated histories", which a shallow checkout produces). The guard gives
+it its own message and points at the fix: the workflow's
+`actions/checkout` uses `fetch-depth: 0` because the run-time merge needs
+a shared ancestor, which the default depth-1 clone does not provide.
+
+**When it fires:** rebase onto `origin/main`
+(`git fetch origin main && git rebase origin/main`), then re-attest the
+item number the failure names (`klt signoff --attest N --inventory
+signoff/item-N-inventory.json -o signoff/item-N-<name>.json`), refresh the
+envelope and manifest pins, and regenerate `signoff/tier-report.json` —
+i.e. the "Regenerate and verify" sequence above, after the rebase. GitHub's
+"require branches to be up to date before merging" setting would prevent
+this failure class outright, but it is a repo-admin setting that also
+serializes every PR, so the workflow-level merge is the enforcement this
+repo actually has.
+
 klt is pinned in the workflow to the exact upstream commit whose bundled
 checklist graded the committed record; a klt bump must land together with a
 regenerated `tier-report.json`. Order matters: finalize

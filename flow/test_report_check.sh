@@ -56,6 +56,165 @@ else
     ok "set -e assignment aborts under set -euo pipefail"
 fi
 
+# The argument-position contract (issue #296; replay strengthened per
+# issue #303): routed_checks.sh passed "$(sha256_of ...)" straight into
+# lvs_report_trim.py / erc_report_trim.py. A command substitution in
+# argument position never reaches set -e, so a failed hash passed the
+# empty string through as layout_gds_sha256 /
+# provenance.input.content_hash while every gate passed -- the same class
+# the assignment contract above forecloses, reached through a different
+# call shape.
+#
+# Per-statement isolation is the load-bearing property (issue #303): the
+# original guard eval'd the extracted statements as one block, so under
+# set -e the first failing statement aborted the whole replay and no later
+# statement was ever reached -- re-introducing the #296 defect at the erc
+# site left the suite green, and which site was guarded depended on file
+# order. Each extracted statement therefore replays in its OWN subshell
+# and is judged on its own.
+#
+# The per-statement assertion is "no consumer output", not "every
+# statement fails": with GDS/SPEC set to directories every assignment
+# statement fails on the hash (expected), but the invariant that matters
+# is that no trim-script consumer ever receives a digest derived from a
+# failed hash.
+argument_contract() (
+    set -euo pipefail
+    # shellcheck source=./report_check.sh
+    . "$HERE/report_check.sh"
+    # Stub the trim-script consumers (invoked as `python3 <script>`) and
+    # the read-only `klt --version` probe a consumer statement carries, so
+    # the suite needs neither a trim script nor klt; sha256_of's own
+    # `python3 -c` hashing call goes through to the real interpreter so the
+    # hash genuinely fails on the directory input.
+    # Invoked only via the eval'd statements below; shellcheck cannot see that.
+    # shellcheck disable=SC2317
+    python3() {
+        if [[ "${1:-}" == "-c" ]]; then command python3 "$@"
+        else echo "consumer saw args: $*"; fi
+    }
+    # shellcheck disable=SC2317
+    klt() { echo "klt-stub 0.0"; }
+    # Consumed by the eval'd statements below; shellcheck cannot see that.
+    # shellcheck disable=SC2034
+    SCRIPT_DIR="$HERE" BUILD_DIR="$T/build" TOP="t"
+    # shellcheck disable=SC2034
+    GDS="$T" SPEC="$T" RTL_HASH="unused"  # unreadable input = a directory
+    # In per-statement isolation a consumer statement no longer sees an
+    # earlier assignment's digest: pre-set the placeholders or set -u
+    # aborts it on an unbound variable before the consumer stub runs --
+    # a vacuous pass indistinguishable from the guard working.
+    # shellcheck disable=SC2034
+    GDS_SHA="fixture-placeholder" SPEC_SHA="fixture-placeholder"
+    # Extract non-comment sha256_of-bearing statements (line continuations
+    # joined), each prefixed with its first physical line number so a
+    # failure names the site. The non-empty assertion keeps a future
+    # extraction change that matches nothing from passing vacuously.
+    lines=()
+    mapfile -t lines < <(awk '
+        { s = $0; lnr = NR
+          while (s ~ /\\$/) { sub(/\\$/, "", s); if ((getline nxt) <= 0) break; s = s nxt }
+          if (s ~ /^[[:space:]]*#/) next
+          if (s ~ /sha256_of/) print lnr ":" s
+        }' "$HERE/routed_checks.sh")
+    if (( ${#lines[@]} == 0 )); then
+        echo "FAIL argument_contract: extracted zero sha256_of statements from routed_checks.sh" >&2
+        exit 1
+    fi
+    for entry in "${lines[@]}"; do
+        lineno="${entry%%:*}"
+        stmt="${entry#*:}"
+        # shellcheck disable=SC2294  # replaying the driver's real statements is the test
+        out_stmt="$(eval "$stmt" 2>/dev/null)" || :
+        if [[ -n "$out_stmt" ]]; then
+            echo "FAIL argument_contract: routed_checks.sh:$lineno reached a consumer on a failed hash: $out_stmt" >&2
+            exit 1
+        fi
+    done
+)
+out="$(argument_contract 2>&1)"; src=$?
+if [[ $src -eq 0 && -z "$out" ]]; then
+    ok "argument-position sha256_of never reaches the trim-script consumer (per-statement replay)"
+else
+    bad "argument-position sha256_of replay" "rc=$src out=$out"
+fi
+
+# Static shape assertion (issue #303): the behavioural replay above is
+# scoped to routed_checks.sh by its variable fixture, but sha256_of is
+# called from every driver. Assert across every report_check.sh-sourcing
+# driver under flow/ that every non-comment sha256_of call site is in
+# VAR="$(sha256_of ...)" assignment form. No ordering or fixture
+# dependence, and the file list comes from the grep itself rather than a
+# hardcoded set of names, so a new driver is covered on arrival.
+#
+# Per-line policy (issue #309): the anchor admits leading whitespace and
+# an optional local/declare prefix so an assignment inside an if block or
+# function is not a false positive, and the greedy .* is closed off by
+# rejecting any line that still carries sha256_of after the assignment's
+# closing `)"` -- the regex alone would otherwise backtrack across
+# `; cmd "$(sha256_of ...)"` and accept a compound statement.
+shape_line_ok() {
+    local line="$1"
+    local re='^[[:space:]]*((local|declare)[[:space:]]+)?[A-Za-z_][A-Za-z0-9_]*[[:space:]]*=[[:space:]]*"\$\(sha256_of .*\)"[\\[:space:]]*$'
+    [[ "$line" =~ $re ]] || return 1
+    local rest="${line#*\)\"}"   # text after the first `)"`, i.e. past the assignment
+    [[ "$rest" != *sha256_of* ]]
+}
+shape_contract() (
+    set -euo pipefail
+    self="$(basename "${BASH_SOURCE[0]}")"
+    bad=0
+    while IFS= read -r f; do
+        base="$(basename "$f")"
+        # report_check.sh defines sha256_of (no call sites) and this
+        # harness is the checker itself; neither is a driver.
+        if [[ "$base" == "report_check.sh" || "$base" == "$self" ]]; then continue; fi
+        while IFS= read -r entry; do
+            lineno="${entry%%:*}"
+            line="${entry#*:}"
+            # comment lines carry the policy, not a call shape
+            if [[ "$line" =~ ^[[:space:]]*# ]]; then continue; fi
+            if ! shape_line_ok "$line"; then
+                echo "FAIL shape_contract: $base:$lineno sha256_of not in VAR=\"\$(sha256_of ...)\" assignment form" >&2
+                bad=1
+            fi
+        done < <(grep -n 'sha256_of' "$f")
+    done < <(grep -ln 'report_check\.sh' "$HERE"/*.sh)
+    exit "$bad"
+)
+out="$(shape_contract 2>&1)"; src=$?
+if [[ $src -eq 0 && -z "$out" ]]; then
+    ok "sha256_of call sites across all report_check.sh drivers are in assignment form"
+else
+    bad "sha256_of assignment-form shape across drivers" "rc=$src out=$out"
+fi
+
+# shape_line_ok probes (issue #309): the per-line policy must accept the
+# shapes the column-0-only anchor false-positived on (indented, local- and
+# declare-prefixed, continuation) and must still reject bare argument
+# position and the compound statement shapes the greedy .* used to accept.
+# Probe lines are intentionally literal data (no expansion); shellcheck
+# cannot see that each is fed to the shape policy as text, not run.
+# shellcheck disable=SC2016
+while IFS='|' read -r expect desc line; do
+    if shape_line_ok "$line"; then got=pass; else got=fail; fi
+    if [[ "$got" == "$expect" ]]; then
+        ok "shape_line_ok $desc"
+    else
+        bad "shape_line_ok $desc" "expected $expect, got $got"
+    fi
+done <<'EOF'
+pass|column-0 assignment|GDS_SHA="$(sha256_of "$GDS")"
+pass|indented assignment|    GDS_SHA="$(sha256_of "$GDS")"
+pass|local-prefixed assignment|local GDS_SHA="$(sha256_of "$GDS")"
+pass|declare-prefixed assignment|declare GDS_SHA="$(sha256_of "$GDS")"
+pass|continuation line|GDS_SHA="$(sha256_of "$GDS")" \
+pass|nested substitution|X="$(sha256_of "$(dirname "$F")/g")"
+fail|bare argument position|python3 trim.py "$(sha256_of "$SPEC")"
+fail|compound ; second call|X="$(sha256_of a)"; python3 trim.py "$(sha256_of b)"
+fail|compound env-prefix call|X="$(sha256_of a)" python3 trim.py "$(sha256_of b)"
+EOF
+
 # parse_update_mode: check (no argument), update (--update), and the
 # negative path (usage line + exit 1).
 m="$(parse_update_mode; echo "$MODE")"
