@@ -26,7 +26,7 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-- **#312**: signoff guard: make the conflict-diagnosis python block non-fatal so the remedy line always survives
+_None._
 
 ## In Progress
 
@@ -53,7 +53,6 @@ Issues carrying `loom:curated`.
 - **#117**: G4: identify the binding path of the composed-tile STA (cfg-input vs datapath) once klt exposes path reports *(curated)*
 - **#213**: T1 item 7: SDF-annotated post-route functional run, via name sanitization or klayout-tools#2897 *(curated)*
 - **#299**: signoff/README.md's item-9 row omits three inventoried members (two .vh includes + fv_request.json) *(curated)*
-- **#312**: signoff guard: make the conflict-diagnosis python block non-fatal so the remedy line always survives *(curated)*
 
 ## Proposed (Architect / Hermit)
 
@@ -71,11 +70,11 @@ _None._
 | Operator merge-risk holds | 0 |
 | Very important | 0 |
 | Important | 2 |
-| Ready (`loom:issue`) | 1 |
+| Ready (`loom:issue`) | 0 |
 | In Progress (`loom:building`) | 1 |
 | PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 4 |
+| Curated | 3 |
 | Architect / Hermit proposals | 2 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->
