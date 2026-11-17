@@ -6,6 +6,11 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-17
+
+- **PR #317**: fix: make the signoff guard's conflict-diagnosis python block non-fatal so the remedy line survives
+- **Issue #312** (closed): signoff guard: make the conflict-diagnosis python block non-fatal so the remedy line always survives
+
 ### 2026-11-16
 
 - **PR #315**: fix: shape_contract admits indented/local sha256_of assignments, rejects compound lines
