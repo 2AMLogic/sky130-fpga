@@ -100,6 +100,17 @@ and re-verified → shuttle seat → measured silicon.
 (experimental observations, issue references) lives in
 [`spec/framework-gaps.md`](spec/framework-gaps.md#current-position-moved-from-readme).
 
+## Size and cost
+
+The committed experimental composed-tile layout
+([`layout/experimental/`](layout/README.md#experimental-composed-tile-physical-canary-layoutexperimental-issue-102))
+converts to an area-per-LUT4 figure and an illustrative cost-per-LUT4
+estimate against a dated public shuttle price:
+[`measurements/cost-per-lut.md`](measurements/cost-per-lut.md).
+It is **generated, not hand-typed** — regenerate it with
+`python3 measurements/generate-cost-per-lut.py` after the underlying
+P&R report changes.
+
 ## Repo layout
 
 ```
