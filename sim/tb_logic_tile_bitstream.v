@@ -94,17 +94,11 @@ module tb_logic_tile_bitstream;
     endtask
 
     // ------------------------------------------------------------- plusargs
-    reg [8*256-1:0] f_bin, f_map, f_wire;
+    reg [8*256-1:0] f_map, f_wire;   // f_bin comes from bitstream_parse.vh
     reg [8*8-1:0]   design_name;
     reg             is_comb, do_mutate, expect_reject;
 
-    // ------------------------------------------------- FABulous stream format
-    localparam CFG_N = 158;
-    localparam FBITS = 32, NFR = 20, SELW = 5, DESYNC_BIT = 20;
-    localparam [159:0] SYNC = 160'h00AAFF01000000010000000000000000FAB0FAB1;
-
     // ------------------------------------------------- manifest / wiring state
-    integer grid_cols, grid_rows, lx, ly;
     // input-track source: 0 = unused (harness constant/random), 1 = pad slot, 2 = loopback from an output track
     integer tin_kind [0:15];
     integer tin_arg  [0:15];
@@ -156,25 +150,19 @@ module tb_logic_tile_bitstream;
     endfunction
 
     // ------------------------------------------------------------ the loader
-    reg [8*80-1:0] reject_reason;
-    reg            load_ok;
-    integer cb_pos [0:CFG_N-1];
-    reg [31:0] mapped_mask [0:NFR-1];
-    reg [31:0] logic_frame [0:NFR-1];
-    reg        seen_frame  [0:(8*NFR)-1];
-    integer    fd, c0;
+    // The wire-format parser is shared with the four diagnostic benches
+    // (sim/bitstream_load.vh -> sim/bitstream_parse.vh, issue #338):
+    // bitstream_parse.vh declares the format constants and the parser state
+    // (f_bin, fd, grid_cols/grid_rows/lx/ly, cb_pos, logic_frame, seen_frame,
+    // load_ok, reject_reason) and defines rd_word, reject and parse_bitstream
+    // with the eleven wire-format checks. What stays here is corpus-specific:
+    // mapped_mask and the unmapped-bit rejection, cfg reconstruction in both
+    // DUT modes, and the frame writer that remembers each stored frame so
+    // perturbation and restoration rewrite only changed frames.
+    `include "bitstream_parse.vh"
 
-    task rd_word(output [31:0] w, output ok);
-        integer i, b;
-        begin
-            w = 0; ok = 1'b1;
-            for (i = 0; i < FBITS/8; i = i + 1) begin
-                b = $fgetc(fd);
-                if (b < 0) ok = 1'b0;
-                else w = {w[23:0], b[7:0]};
-            end
-        end
-    endtask
+    reg [31:0] mapped_mask [0:NFR-1];
+    integer    c0;
 
     // ------------------------------------- GEN_TILE: real frame-port writes
     // One legal frame write into the generated tile: data, one-hot strobe,
@@ -215,82 +203,20 @@ module tb_logic_tile_bitstream;
         end
     endtask
 
-    task reject(input [8*80-1:0] why);
-        begin
-            if (load_ok) reject_reason = why;
-            load_ok = 1'b0;
-        end
-    endtask
-
+    // parse_bitstream owns the wire-format checks; on success the corpus bench
+    // adds its own: every set bit must lie inside the configuration map, and
+    // cfg is rebuilt from the decoded frames in both DUT modes.
     task load_bitstream;
-        reg [31:0] w, fw;
-        reg ok;
-        integer i, col, frame, nframes, row, order, strobe_pop, done;
-        reg [FBITS-NFR-SELW-1:0] reserved;
-        reg [NFR-1:0] strobe;
-        reg [159:0] hdr;
-        integer b;
+        integer i;
         begin
-            load_ok = 1'b1; reject_reason = "";
-            for (i = 0; i < NFR; i = i + 1) logic_frame[i] = 32'b0;
-            for (i = 0; i < 8*NFR; i = i + 1) seen_frame[i] = 1'b0;
-            fd = $fopen(f_bin, "rb");
-            if (fd == 0) begin reject("cannot open bitstream"); disable load_bitstream; end
-            // sync header
-            hdr = 0;
-            for (i = 0; i < 20; i = i + 1) begin
-                b = $fgetc(fd);
-                if (b < 0) begin reject("truncated sync header"); i = 99; end
-                else hdr = {hdr[151:0], b[7:0]};
-            end
-            if (load_ok && hdr !== SYNC) reject("bad sync header");
-            nframes = 0; done = 0;
-            while (load_ok && !done) begin
-                rd_word(w, ok);
-                if (!ok) reject("truncated: no desync word");
-                else if (w[DESYNC_BIT] && w[FBITS-1:FBITS-SELW] == 0 && w[NFR-1:0] == 0) begin
-                    if (w !== (32'b1 << DESYNC_BIT)) reject("malformed desync word");
-                    done = 1;
-                end else begin
-                    col = w[FBITS-1:FBITS-SELW];
-                    reserved = w[FBITS-SELW-1:NFR];
-                    strobe = w[NFR-1:0];
-                    strobe_pop = 0;
-                    for (i = 0; i < NFR; i = i + 1) if (strobe[i]) begin strobe_pop = strobe_pop + 1; frame = i; end
-                    if (reserved != 0 || strobe_pop != 1 || col >= grid_cols) begin
-                        reject("invalid frame-select word");
-                    end else if (seen_frame[col*NFR + frame]) begin
-                        reject("duplicate frame");
-                    end else begin
-                        seen_frame[col*NFR + frame] = 1'b1;
-                        nframes = nframes + 1;
-                        // interior rows, Y descending: row index grid_rows-2 .. 1
-                        for (order = 0; order < grid_rows - 2; order = order + 1) begin
-                            rd_word(fw, ok);
-                            if (!ok) reject("truncated frame data");
-                            else if (col == lx && (grid_rows - 2 - order) == ly) begin
-                                logic_frame[frame] = fw;
-                                write_frame(frame, fw);   // GEN_TILE: real frame port
-                            end else if (fw != 0) begin
-                                reject("data for a tile without config bits");
-                            end
-                        end
-                    end
-                end
-            end
-            if (load_ok) begin
-                if ($fgetc(fd) >= 0) reject("trailing data after desync");
-                if (nframes != grid_cols * NFR) reject("incomplete frame set");
-            end
-            $fclose(fd);
-            // frame bits -> cfg through the generated ConfigMem map
+            parse_bitstream;
             if (load_ok) begin
                 for (i = 0; i < NFR; i = i + 1)
                     if ((logic_frame[i] & ~mapped_mask[i]) != 0) reject("set bit at an unmapped frame position");
+                if (load_ok)
+                    for (i = 0; i < CFG_N; i = i + 1)
+                        cfg[i] = logic_frame[cb_pos[i] / FBITS][cb_pos[i] % FBITS];
             end
-            if (load_ok)
-                for (i = 0; i < CFG_N; i = i + 1)
-                    cfg[i] = logic_frame[cb_pos[i] / FBITS][cb_pos[i] % FBITS];
         end
     endtask
 
