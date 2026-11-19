@@ -8,6 +8,18 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-19
 
+- **PR #343**: docs: link the blinky divider demo from the nextpnr examples
+- **Issue #341** (closed): design/README.md: record the #324 blinky nextpnr fixture alongside top.v / top_io.v / top_reg.v
+- **PR #337**: feat: one-command blinky demo (RTL -> bitstream -> simulated blink)
+- **Issue #324** (closed): A timed blinky from a clean checkout with the open flow
+- **PR #340**: fix: drop dangling " at " from zero-match g_slice diagnostic
+- **Issue #339** (closed): cost-per-LUT generator: the zero-header g_slice diagnostic ends in a dangling "at "
+- **PR #336**: fix: require exactly one g_slice loop header in the cost-per-LUT divisor
+- **Issue #335** (closed): collect_lut_count() still takes the first g_slice loop when the label is duplicated in a nested generate scope
+- **PR #334**: fix: scope the LUT divisor to g_slice and check measurement notes in CI
+- **Issue #331** (closed): Harden the cost-per-LUT divisor parse and wire generator --check into CI
+- **PR #332**: docs(spec): mark ADR-0007 index entry as proposed
+- **Issue #330** (closed): docs: ADR-0007's index entry reads as settled though the record is Proposed
 - **PR #329**: docs: index proposed decision records ADR-0004 through ADR-0006
 - **Issue #328** (closed): docs: backfill ADR-0004..0006 in spec/README.md decision index
 - **PR #327**: docs: publish generated cost-per-LUT4 estimate from committed tile layout
@@ -284,13 +296,4 @@ Chronological record of merged pull requests and closed issues, maintained by th
 - **Issue #50** (closed): klt lvs power_connectivity reports VPB reaching 12 nets across 47 instances — real PDN gap or abstracted-cell extraction artifact?
 - **Issue #41** (closed): logic_tile.gds has no power grid (15 isolated met1 rails, 0 straps/vias/tapcells) — the LVS 'match' is signal-only and README cites it for T1 item 4
 - **Issue #51** (closed): T1 item 11 (power delivery, structural): no klt erc supply spec or report in this repo
-
-### 2026-09-18
-
-- **PR #48**: refactor: deduplicate PDK_ROOT resolution across flow/*.sh
-- **PR #46**: fix: resolve_icarus13() no longer mistakes a found-on-PATH result for not-found
-- **PR #47**: Single-source the klt place-and-route request across layout.sh/sdf-resim.sh
-- **Issue #45** (closed): Deduplicate PDK_ROOT resolution block across flow/*.sh (mirrors #15)
-- **Issue #43** (closed): flow/sdf-resim.sh rejects a PATH-resolved Icarus 13 (resolve_icarus13 conflates 'found on PATH' with 'not found')
-- **Issue #44** (closed): The klt place-and-route request is hand-duplicated in flow/layout.sh and flow/sdf-resim.sh; only a byte-diff catches a divergence
 
