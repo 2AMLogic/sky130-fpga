@@ -23,10 +23,9 @@ Sources read and cross-checked:
     `UNITS DISTANCE MICRONS` factor must agree with the P&R report's
     `die_area_um2` to the report's 2-decimal precision.
 - design/rtl/logic_tile_routed.v
-    the divisor: the `genvar i` generate loop that instantiates the
-    `lut4_slice` BELs. The loop bound is parsed out of the RTL rather
-    than hardcoded, so a fabric change that silently alters the slice
-    count fails the derivation instead of dividing by a stale constant.
+    the divisor: the literal bound of the `g_slice` generate loop in
+    `logic_tile_routed`. The loop must start at zero, advance by one
+    and contain a `lut4_slice` instance.
 - layout/logic_tile.par.json
     cited for contrast only: the BEL-only tile's die area (no switch
     matrix), so the note can say explicitly it is not the basis of the
@@ -135,21 +134,54 @@ def collect_bel_only_area() -> float:
 
 
 def collect_lut_count() -> int:
-    """The slice divisor, parsed from the RTL generate loop (not hardcoded)."""
-    rtl = RTL_PATH.read_text()
-    require(re.search(r"\bmodule\s+logic_tile_routed\b", rtl) is not None,
-            f"{RTL_PATH}: module logic_tile_routed not found")
-    m = re.search(
-        r"generate\s+.*?\bfor\s*\(\s*\w+\s*=\s*0\s*;\s*\w+\s*<\s*(\d+)\s*;",
-        rtl, re.S,
+    """Read the iteration count of logic_tile_routed's named slice loop."""
+    rtl = re.sub(
+        r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"',
+        " ",
+        RTL_PATH.read_text(),
+        flags=re.DOTALL,
     )
-    require(m is not None,
-            f"{RTL_PATH}: lut4_slice generate loop not found")
-    count = int(m.group(1))
-    require(count > 0, f"{RTL_PATH}: generate loop bound is {count}")
-    require(re.search(r"\blut4_slice\s+\w+\s*\(", rtl) is not None,
-            f"{RTL_PATH}: no lut4_slice instantiation inside the loop")
-    return count
+    module = re.search(
+        r"(?<![\w$])module\s+logic_tile_routed(?![\w$])(.*?)(?<![\w$])endmodule(?![\w$])",
+        rtl,
+        re.DOTALL,
+    )
+    require(module is not None, f"{RTL_PATH}: module logic_tile_routed not found")
+    tile = module.group(1)
+    loop = re.search(
+        r"\bfor\s*\(\s*(?:genvar\s+)?(?P<index>[A-Za-z_][\w$]*)\s*=\s*0\s*;\s*"
+        r"(?P=index)\s*<\s*(?P<bound>[0-9]+)\s*;\s*(?P<step>[^();]+)\)"
+        r"\s*begin\s*:\s*g_slice(?![\w$])",
+        tile,
+    )
+    require(
+        loop is not None,
+        f"{RTL_PATH}: expected g_slice loop with a literal bound in logic_tile_routed",
+    )
+    count = int(loop["bound"])
+    require(count > 0, f"{RTL_PATH}: g_slice loop bound must be positive, got {count}")
+    index = loop["index"]
+    step = re.sub(r"\s+", "", loop["step"])
+    require(
+        step in (f"{index}={index}+1", f"{index}+=1", f"{index}++", f"++{index}"),
+        f"{RTL_PATH}: expected {index} to advance by one in g_slice",
+    )
+
+    # Match g_slice's own end even if another begin/end pair is nested in it.
+    depth = 1
+    for token in re.compile(r"(?<![\w$])(?:begin|end)(?![\w$])").finditer(
+        tile, loop.end()
+    ):
+        depth += 1 if token[0] == "begin" else -1
+        if depth == 0:
+            body = tile[loop.end() : token.start()]
+            require(
+                re.search(r"(?<![\w$])lut4_slice\s+[A-Za-z_][\w$]*\s*\(", body)
+                is not None,
+                f"{RTL_PATH}: no lut4_slice instance inside g_slice",
+            )
+            return count
+    raise AssertionError(f"{RTL_PATH}: missing end for g_slice")
 
 
 def render(die_area: float, def_dbu: tuple, dbu_per_um: int,
