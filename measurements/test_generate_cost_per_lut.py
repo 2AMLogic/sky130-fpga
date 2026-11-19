@@ -65,9 +65,15 @@ class SliceCountTests(unittest.TestCase):
         for name in ("g_renamed", "g_slice$old"):
             with (
                 self.subTest(name=name),
-                self.assertRaisesRegex(AssertionError, "g_slice"),
+                self.assertRaisesRegex(AssertionError, "g_slice") as caught,
             ):
                 self.count(SLICE_LOOP.replace("g_slice", name))
+            self.assertTrue(
+                str(caught.exception).endswith(
+                    "expected exactly one g_slice loop in "
+                    "logic_tile_routed, found 0"
+                )
+            )
 
     def test_loop_in_another_module(self):
         other = f"module other; genvar i; generate {SLICE_LOOP} endgenerate endmodule"
