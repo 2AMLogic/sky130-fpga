@@ -33,6 +33,7 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | `gate_sim_verdict.sh` | PASS / FUNC_FAIL / INFRA classifier and `SIM_TIMEOUT_SECONDS` budget helpers, sourced by the gate and replay scripts | `gate-sim.yml`, `fabulous-nextpnr.yml` |
 | `sim_budget.py` | the same wall-clock budget for the Python drivers (reads the default from `gate_sim_verdict.sh`) | `gate-sim.yml` |
 | `corpus.sh`, `corpus_run.py` | `design/fabulous/corpus/results.txt` (routability corpus, opt-in) | - |
+| `blinky.sh` | one-command blinky demo: RTL -> bitstream -> simulated blink (issue #324); measured wall clock in `README.md`'s quick start | `fabulous-nextpnr.yml` |
 | `check_regbel_fixtures.py` | registered-BEL fixture metadata check (`design/fabulous/corpus/corpus.json`) | `gate-sim.yml`, `fabulous-nextpnr.yml` |
 | `pin_experiment.sh`, `pin_experiment.py` | `design/fabulous/corpus/pin_experiment_results.txt` (opt-in pin-index experiment, issue #137) | `pin_experiment.py` path-triggers `fabulous-nextpnr.yml`; the `.sh` driver is not run |
 | `pin_fixtures.py` | index/provenance check of `sim/bitstream/pin_experiment/` fixtures | `fabulous-nextpnr.yml` |
@@ -389,6 +390,26 @@ simulated against an independent oracle; any deviation from the recorded
 `sim/bitstream/corpus/`; `--append-record FILE` appends a dated record. Needs
 the `flow/nextpnr.sh` prerequisites plus Icarus Verilog. See
 `design/fabulous/corpus/README.md`.
+
+### `flow/blinky.sh` - the one-command blinky demo (issue #324)
+
+Takes `design/fabulous/nextpnr/blinky.v` (a one-bit divider: after a
+synchronous reset the output toggles on every rising edge with `en` held high,
+so the blink period is two input clocks) from RTL to a simulated blink in one
+command: the pinned OSS CAD Suite is fetched/unpacked *before*
+`flow/fabulous.sh` (FABulous shells out to yosys -- the CI workflow's order,
+so a clean checkout with an empty `flow/build/` works), the harness pad
+overlay is applied, yosys + `nextpnr-generic --uarch fabulous` map the design
+at a fixed recorded seed, `flow/fasm_to_bitstream.py` freezes the spec
+snapshot (byte-checked against the committed `sim/bitstream/` copies) and
+assembles the FASM into a frame stream (byte-compared with FABulous
+`bit_gen genBitstream`), and `sim/tb_logic_tile_bitstream.v` runs
+`+design=blinky` with `+mutate`. Exits 0 only on the bench's terminal PASS
+line (`flow/gate_sim_verdict.sh` PASS/FUNC_FAIL/INFRA classifier under the
+`SIM_TIMEOUT_SECONDS` budget) with the cfg cross-check (sim loader == python
+decoder == recorded cfg) agreeing. EXPERIMENTAL single-LOGIC4 harness. Needs
+the `flow/nextpnr.sh` prerequisites plus Icarus Verilog and `uv`; the
+measured wall clock and tool versions are in `README.md`'s quick start.
 
 ### `flow/synth.sh` — generic-cell netlist (T1 item 1 follow-up)
 

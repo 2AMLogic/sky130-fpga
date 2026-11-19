@@ -31,6 +31,48 @@ full per-issue narrative: ["Current position" in `spec/framework-gaps.md`](spec/
 | Bitstream-level verification | experimental single-tile harness only; ratified fabric not verified (G5, G6 not closed) | `sim/README.md` |
 | klt T1 evidence tier | 9 <!-- status-claim: t1-met=9 --> of 11 <!-- status-claim: t1-items=11 --> items met | [`signoff/tier-report.json`](signoff/tier-report.json) |
 
+## Quick start: RTL to a simulated blink (experimental single-tile harness)
+
+One command takes the repo's tiny blinky design from Verilog to a bitstream to
+a simulated blinking output with open tools only:
+
+```bash
+./flow/blinky.sh
+```
+
+[`design/fabulous/nextpnr/blinky.v`](design/fabulous/nextpnr/blinky.v) is a
+one-bit divider: after a synchronous reset, its output toggles on every rising
+clock edge while `en` is held high — one full blink period per two input
+clocks. The script fetches the pinned tools into the gitignored `flow/build/`
+(nothing is installed host-wide), regenerates the fabric model with the pinned
+FABulous generator, maps the design with yosys + nextpnr-generic, assembles
+the frame stream (byte-checked against FABulous's own `bit_gen genBitstream`),
+loads it into the simulated tile
+([`sim/tb_logic_tile_bitstream.v`](sim/tb_logic_tile_bitstream.v)) and checks
+the output pad against an independent expected sequence: it exits 0 only on
+the bench's `PASS: tb_logic_tile_bitstream[blinky]` line, with every flip of a
+used bitstream bit required to change the simulated output — a green run means
+the bitstream is what blinks.
+
+Prerequisites: `bash`, `python3`, `uv` (for the FABulous venv), Icarus
+Verilog (`iverilog` + `vvp`), and `curl`/`tar`/`sha256sum` for the first run
+(~750 MB tool download). Measured wall clock on a shared 8-vCPU Linux host,
+2026-11-19 (base `7fa81b8` with the flow of this section): **38 s** cold — no
+`flow/build/`, tools fetched — and **17 s** with the tools already cached.
+Both vary with the host and the network; CI runs the same command without
+asserting a time. Tools: FABulous `fabulous-fpga` 2.2.0
+<!-- status-claim: fabulous-version=2.2.0 -->, OSS CAD Suite 2026-10-08
+<!-- status-claim: oss-cad-tag=2026-10-08 --> — yosys 0.69+260
+<!-- status-claim: yosys-version=0.69+260 -->,
+nextpnr-0.11.1-54-g861c57be
+<!-- status-claim: nextpnr-version=nextpnr-0.11.1-54-g861c57be -->; the pins
+live in [`flow/tool_versions.sh`](flow/tool_versions.sh).
+
+This is evidence about the **experimental single-LOGIC4 harness**
+(`sim/README.md`), not the ratified fabric: no inter-tile routing, no timing
+content — the blink period is stated in clock cycles only. Evidence record:
+`sim/logic_tile_bitstream_results.txt`.
+
 **Built agent-native.** Every specification, decision record, testbench, and
 line of documentation here is produced by AI agents working from a ratified
 spec and an append-only evidence trail — not human-authored work that agents

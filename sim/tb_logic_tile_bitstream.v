@@ -14,10 +14,11 @@
 //   +bin=<frame stream>   FABulous bit_gen output
 //   +map=<file>           "cfg_index frame_position" per line (from ConfigMem.v)
 //   +wiring=<file>        pad/loopback/placement manifest derived from the FASM
-//   +design=comb|reg|quad4|casc2|fan4|casc_fan|regcasc|regbel
+//   +design=comb|reg|quad4|casc2|fan4|casc_fan|regcasc|regbel|blinky
 //                         which mapped design's functional spec is the oracle
 //                         (comb/reg: issue #74; the rest: issue #115 corpus,
-//                         design/fabulous/corpus/*.v)
+//                         design/fabulous/corpus/*.v; blinky: issue #324,
+//                         design/fabulous/nextpnr/blinky.v)
 //   +mutate               also flip each used routing-select bit, and LUT/FF
 //                         bits of each used BEL; every flip must be DETECTED
 //   +expect_reject        the loader must reject +bin (malformed-input test)
@@ -580,12 +581,40 @@ module tb_logic_tile_bitstream;
         end
     endtask
 
+    // ------------------------------- oracle 7: blinky divider (issue #324)
+    //   @(posedge clk)  q <= rst ? 0 : (en ? ~q : q)
+    // Written from design/fabulous/nextpnr/blinky.v. After a synchronous reset
+    // the output pad starts at 0 and, with en held high, toggles on every
+    // rising edge: one full blink period per two input clocks. An independent
+    // reference register predicts the whole sequence; the === comparisons
+    // reject an unknown (X) value, and the between-edges checks catch a stuck
+    // or free-running output (wrong phase). Twelve toggles = six blink periods.
+    task run_blinky;
+        integer i;
+        reg en, rst, refq;
+        begin
+            // synchronous reset through the programmed fabric: q must be 0
+            pad_in[4] = 1; pad_in[5] = 1; #1; pulse;
+            chk(pad_out(2) === 1'b0, "blinky: reset state");
+            refq = 1'b0;
+            pad_in[5] = 0; pad_in[4] = 1;   // rst released, en held high
+            for (i = 0; i < 12; i = i + 1) begin
+                #1;
+                chk(pad_out(2) === refq, "blinky: q holds until the clock edge");
+                pulse;
+                refq = ~refq;
+                chk(pad_out(2) === refq, "blinky: q toggles after edge");
+            end
+        end
+    endtask
+
     task run_design;
         begin
             if (is_comb) run_comb;
             else if (design_name == "reg") run_reg;
             else if (design_name == "regcasc") run_regcasc;
             else if (design_name == "regbel") run_regbel;
+            else if (design_name == "blinky") run_blinky;
             else run_corpus_comb;
         end
     endtask
@@ -636,6 +665,7 @@ module tb_logic_tile_bitstream;
             "regcasc":  need_ok = &slot_wired_in[3:0] && slot_wired_in[4] && slot_wired_in[5] &&
                                   slot_wired_in[6] && slot_wired_out[2];
             "regbel":   need_ok = &slot_wired_in[5:0] && slot_wired_out[2];
+            "blinky":   need_ok = slot_wired_in[4] && slot_wired_in[5] && slot_wired_out[2];
             default:    need_ok = 1'b0;
         endcase
         if (!need_ok) begin $display("FAIL: tb_logic_tile_bitstream[%0s]: manifest lacks required ports", design_name); $finish; end

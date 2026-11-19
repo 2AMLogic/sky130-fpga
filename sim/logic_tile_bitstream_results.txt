@@ -99,3 +99,35 @@
   Negative control (manual, not committed): XOR-ing cfg bit 95 failed 4/6 tests, bit 140 failed 1/6.
   Not covered: +mutate perturbation sweep, Verilog-side loader checks, corpus designs (still
     sim/tb_logic_tile_bitstream.v only); ratified fabric, inter-tile routing, timing.
+
+2026-11-19  flow/blinky.sh (issue #324; EXPERIMENTAL single-LOGIC4 harness)
+  Design  : design/fabulous/nextpnr/blinky.v -- q <= rst ? 0 : (en ? ~q : q), a one-bit
+            divider: after a synchronous reset the output toggles on every rising edge with
+            en held high (blink period = 2 input clocks). Registered path as top_reg.v
+            (flop on a FF=1 BEL via ff_map.v, EN/SR routed; inverter LUT on BEL A; feedback
+            net Q -> switch matrix -> I0; output pad q on X1Y2/A), mapped at nextpnr seed 2.
+            Seed 0 is recorded as rejected: its placement loops the feedback net back on a
+            track that is also a selectable source of the S1BEG0 mux driving q, so a flip
+            of that select (cfg[94]) is genuinely redundant and survives perturbation.
+  Oracle  : new `blinky` design in sim/tb_logic_tile_bitstream.v: reset state, then 12
+            toggles checked between edges and after each edge against an independent
+            reference register (=== rejects an unknown value; the between-edge checks
+            catch a stuck or wrong-phase output), repeated per env pattern.
+  Reproduce: ./flow/blinky.sh  (one command from a clean checkout, empty flow/build/;
+            nothing installed host-wide; measured 38 s cold (tools fetched) / 17 s cached
+            on a shared 8-vCPU Linux host, 2026-11-19; CI runs the same command without
+            asserting the time)
+  Results (flow/blinky.sh, exit 0):
+    PASS: tb_logic_tile_bitstream[blinky] (3926 checks, 0 failures; 24/24 perturbations detected)
+    assembler stream == FABulous bit_gen genBitstream (byte-identical); blinky.bin sha256
+      bb8ce321852018754b9e81511ee891bbe28efef8734e718cc04a8aaee8bf6a98
+    cfg cross-check: simulation loader == python decoder == recorded cfg
+    snapshot drift guards: regenerated ConfigMem map and fabric_spec byte-equal the
+      committed sim/bitstream/ copies
+  Negatives: truncated frame stream -> loader rejection, wrapper exit 1; wrong but complete
+    program (sim/bitstream/top_reg.bin against blinky wiring/oracle) -> completed functional
+    FAIL (169 failures).
+  Portability: same PASS/check counts under the OSS CAD Suite iverilog/vvp pair (used by
+    flow/blinky.sh) and host Icarus 13.0.
+  Not covered: ratified fabric, inter-tile routing, timing (blink period stated in clock
+    cycles only), tile types other than LOGIC4.

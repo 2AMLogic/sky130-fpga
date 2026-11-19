@@ -55,6 +55,9 @@ on:
       - 'flow/fasm_to_bitstream.py'
       - 'flow/corpus.sh'
       - 'flow/corpus_run.py'
+      - 'flow/blinky.sh'
+      - 'design/fabulous/nextpnr/blinky.v'
+      - 'design/fabulous/nextpnr/blinky.pcf'
       - 'sim/bitstream/**'
       - 'flow/tool_versions.sh'
       - '.github/workflows/fabulous-nextpnr.yml'
@@ -144,6 +147,12 @@ jobs:
       # files or any outcome that differs from design/fabulous/corpus/corpus.json.
       - name: Reproduce routability-corpus fixtures (flow/corpus.sh)
         run: ./flow/corpus.sh
+
+      # Issue #324: the one-command blinky demo (README quick start): RTL ->
+      # bitstream -> simulated blink on the experimental single-LOGIC4 harness,
+      # same pinned toolchain. Elapsed time is an observation, not a threshold.
+      - name: Blinky demo (flow/blinky.sh)
+        run: ./flow/blinky.sh
 
       - name: Confirm committed logs and fixtures are untouched
         run: git diff --exit-code -- design/fabulous sim/bitstream
