@@ -259,6 +259,8 @@ module tb_logic_tile_bitstream;
     task read_manifest;
         reg [8*8-1:0] kw, nm;
         reg [8*16-1:0] nm2, nm3, nm4, nm5;
+        reg [8*256-1:0] red_line;
+        reg [7:0] extra;
         integer d, k, a, b, s, r, ok_all, i, end_seen;
         begin
             for (i = 0; i < 16; i = i + 1) begin tin_kind[i] = 0; tin_arg[i] = 0; end
@@ -290,7 +292,12 @@ module tb_logic_tile_bitstream;
                 end else if (kw == "BEL") begin r = $fscanf(fd, "%d", a); bel_list[nbel] = a; nbel = nbel + 1; end
                 else if (kw == "SEL") begin r = $fscanf(fd, "%d", a); sel_list[nsel] = a; nsel = nsel + 1; end
                 else if (kw == "RED") begin
-                    r = $fscanf(fd, "%d %s %s %s %s", a, nm2, nm3, nm4, nm5);
+                    // A proof occupies one line. A short proof must never borrow
+                    // fields from the next SEL, which would also skip its flip.
+                    r = $fgets(red_line, fd);
+                    if (r > 0 && red_line[7:0] == 8'h0a)
+                        r = $sscanf(red_line, "%d %s %s %s %s %s", a, nm2, nm3, nm4, nm5, extra);
+                    else r = 0;
                     if (r != 5) ok_all = 0;
                     else begin
                         red_bit[nred] = a; red_mux[nred] = nm2; red_from[nred] = nm3;
