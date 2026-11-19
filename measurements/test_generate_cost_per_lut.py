@@ -21,6 +21,13 @@ OTHER_LOOP = """
         wire unused;
     end
 """
+NESTED_DUPLICATE = """
+    if (1) begin : g_wrap
+        for (k = 0; k < 158; k = k + 1) begin : g_slice
+            lut4_slice u_fake ();
+        end
+    end
+"""
 
 
 class SliceCountTests(unittest.TestCase):
@@ -28,7 +35,7 @@ class SliceCountTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             rtl = Path(temp) / "logic_tile_routed.v"
             rtl.write_text(
-                f"module logic_tile_routed;\ngenvar i, j;\ngenerate\n{loops}\n"
+                f"module logic_tile_routed;\ngenvar i, j, k;\ngenerate\n{loops}\n"
                 f"endgenerate\nendmodule\n{extra_module}"
             )
             with patch.object(generator, "RTL_PATH", rtl):
@@ -47,7 +54,7 @@ class SliceCountTests(unittest.TestCase):
             self.count(SLICE_LOOP.replace("i + 1", "i + 2"))
 
     def test_bound_must_be_a_positive_literal(self):
-        for bound in ("0", "NUM_SLICES"):
+        for bound in ("0", "NUM_SLICES", "(4)", "4'd4"):
             with (
                 self.subTest(bound=bound),
                 self.assertRaisesRegex(AssertionError, "g_slice"),
@@ -78,6 +85,66 @@ class SliceCountTests(unittest.TestCase):
         self.assertEqual(
             self.count(SLICE_LOOP.replace("lut4_slice", nested + "lut4_slice")), 4
         )
+
+    def test_duplicate_g_slice_in_nested_scope(self):
+        for duplicate_first in (True, False):
+            loops = (
+                NESTED_DUPLICATE + SLICE_LOOP
+                if duplicate_first
+                else SLICE_LOOP + NESTED_DUPLICATE
+            )
+            with self.subTest(duplicate_first=duplicate_first):
+                with self.assertRaisesRegex(AssertionError, "g_slice") as caught:
+                    self.count(loops)
+                message = str(caught.exception)
+                self.assertIn("exactly one g_slice", message)
+                self.assertIn("found 2", message)
+
+    def test_duplicate_with_unsupported_bound_still_detected(self):
+        # The real four-slice loop's bound is not a bare decimal literal
+        # (`(4)`); the nested 158-slice duplicate is. Counting only
+        # supported headers would silently cost the 158 loop -- the
+        # duplicate must be reported in both source orders, with both
+        # header lines.
+        paren = SLICE_LOOP.replace("< 4", "< (4)")
+        for duplicate_first in (True, False):
+            loops = (
+                NESTED_DUPLICATE + paren
+                if duplicate_first
+                else paren + NESTED_DUPLICATE
+            )
+            with self.subTest(duplicate_first=duplicate_first):
+                rtl_text = (
+                    "module logic_tile_routed;\ngenvar i, j, k;\ngenerate\n"
+                    f"{loops}\nendgenerate\nendmodule\n"
+                )
+                first = rtl_text.index("begin : g_slice")
+                second = rtl_text.index("begin : g_slice", first + 1)
+                expected = sorted(
+                    rtl_text.count("\n", 0, rtl_text.rindex("for", 0, at)) + 1
+                    for at in (first, second)
+                )
+                with self.assertRaisesRegex(
+                    AssertionError, "exactly one g_slice"
+                ) as caught:
+                    self.count(loops)
+                message = str(caught.exception)
+                self.assertIn("found 2", message)
+                for number in expected:
+                    self.assertIn(f"line {number}", message)
+
+    def test_conditional_labeled_g_slice_is_not_a_loop_header(self):
+        conditional = OTHER_LOOP.replace(
+            "wire unused;", "if (1) begin : g_slice wire unused; end"
+        )
+        for conditional_first in (True, False):
+            loops = (
+                conditional + SLICE_LOOP
+                if conditional_first
+                else SLICE_LOOP + conditional
+            )
+            with self.subTest(conditional_first=conditional_first):
+                self.assertEqual(self.count(loops), 4)
 
 
 if __name__ == "__main__":
