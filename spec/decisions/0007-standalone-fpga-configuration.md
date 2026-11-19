@@ -61,7 +61,7 @@ configuration is out of scope; no timing claim is made or implied).
 
 | Quantity | Value | Source (file, date) |
 |---|---|---|
-| LUT4s per tile | 4 | `spec/tile-spec.md` summary table, "LUT count per tile" row (as of `7fa81b8`, 2026-11-19) |
+| LUT4s per tile | 4 | `spec/tile-spec.md` summary table, "LUT count per tile" row (as of `7fa81b8`, 2026-11-17) |
 | Target LUT range | 256–1024 LUTs → **64–256 tiles** | issue #325's "a few hundred to about a thousand LUTs", divided by 4 LUTs/tile |
 | Composed tile, die | 5527.18 µm² (core 4754.56 µm², 43.7% utilization) | `layout/experimental/logic_tile_routed.par.json`, landed `84a5927` 2026-10-09 (klt 0.7.0, OpenROAD 26Q3-1510, issue #102) — **experimental**, stand-in same-index matrix |
 | BEL-only tile, die | 1965.15 µm² (core 1523.96 µm²) | `layout/logic_tile.par.json`, post-PDN record landed `0054e5e` 2026-09-21 — the committed deliverable, but it contains **no switch matrix** |
