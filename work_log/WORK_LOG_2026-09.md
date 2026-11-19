@@ -2,6 +2,15 @@
 
 Sections moved byte-for-byte from [WORK_LOG.md](../WORK_LOG.md) by `loom-daemon work-docs archive`.
 
+### 2026-09-18
+
+- **PR #48**: refactor: deduplicate PDK_ROOT resolution across flow/*.sh
+- **PR #46**: fix: resolve_icarus13() no longer mistakes a found-on-PATH result for not-found
+- **PR #47**: Single-source the klt place-and-route request across layout.sh/sdf-resim.sh
+- **Issue #45** (closed): Deduplicate PDK_ROOT resolution block across flow/*.sh (mirrors #15)
+- **Issue #43** (closed): flow/sdf-resim.sh rejects a PATH-resolved Icarus 13 (resolve_icarus13 conflates 'found on PATH' with 'not found')
+- **Issue #44** (closed): The klt place-and-route request is hand-duplicated in flow/layout.sh and flow/sdf-resim.sh; only a byte-diff catches a divergence
+
 ### 2026-09-15
 
 - **PR #40**: audit: trace every published claim to a committed harness + pinned PDK (#34)
