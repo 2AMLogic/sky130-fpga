@@ -3,6 +3,7 @@
 This roadmap is generated from the current GitHub label state by the Loom Guide role.
 
 <!-- guide:plan-body:start -->
+_Generated: 2026-11-19T09:30:00Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
@@ -26,19 +27,20 @@ _None._
 
 Human-approved issues ready for implementation (`loom:issue`).
 
-_None._
+- **#338**: Share the bitstream frame parser with the corpus testbench
+- **#342**: Verify when a surviving routing-select flip in +mutate is structurally redundant
 
 ## In Progress
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#341**: design/README.md: record the #324 blinky nextpnr fixture alongside top.v / top_io.v / top_reg.v
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#343**: docs: link the blinky divider demo from the nextpnr examples
 
 ## Approved (Awaiting Merge)
 
@@ -50,6 +52,8 @@ _None._
 
 Issues carrying `loom:curated`.
 
+- **#341**: design/README.md: record the #324 blinky nextpnr fixture alongside top.v / top_io.v / top_reg.v *(curated)*
+- **#342**: Verify when a surviving routing-select flip in +mutate is structurally redundant *(curated)*
 - **#117**: G4: identify the binding path of the composed-tile STA (cfg-input vs datapath) once klt exposes path reports *(curated)* *(held)*
 - **#213**: T1 item 7: SDF-annotated post-route functional run, via name sanitization or klayout-tools#2897 *(curated)* *(held)*
 
@@ -69,11 +73,11 @@ _None._
 | Operator merge-risk holds | 0 |
 | Very important | 0 |
 | Important | 2 |
-| Ready (`loom:issue`) | 0 |
-| In Progress (`loom:building`) | 0 |
-| PRs awaiting review | 0 |
+| Ready (`loom:issue`) | 2 |
+| In Progress (`loom:building`) | 1 |
+| PRs awaiting review | 1 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 2 |
+| Curated | 4 |
 | Architect / Hermit proposals | 2 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->

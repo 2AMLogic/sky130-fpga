@@ -8,6 +8,16 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-19
 
+- **PR #340**: fix: drop dangling " at " from zero-match g_slice diagnostic
+- **Issue #339** (closed): cost-per-LUT generator: the zero-header g_slice diagnostic ends in a dangling "at "
+- **PR #337**: feat: one-command blinky demo (RTL -> bitstream -> simulated blink)
+- **Issue #324** (closed): A timed blinky from a clean checkout with the open flow
+- **PR #336**: fix: require exactly one g_slice loop header in the cost-per-LUT divisor
+- **Issue #335** (closed): collect_lut_count() still takes the first g_slice loop when the label is duplicated in a nested generate scope
+- **PR #334**: fix: scope the LUT divisor to g_slice and check measurement notes in CI
+- **Issue #331** (closed): Harden the cost-per-LUT divisor parse and wire generator --check into CI
+- **PR #332**: docs(spec): mark ADR-0007 index entry as proposed
+- **Issue #330** (closed): docs: ADR-0007's index entry reads as settled though the record is Proposed
 - **PR #329**: docs: index proposed decision records ADR-0004 through ADR-0006
 - **Issue #328** (closed): docs: backfill ADR-0004..0006 in spec/README.md decision index
 - **PR #327**: docs: publish generated cost-per-LUT4 estimate from committed tile layout
