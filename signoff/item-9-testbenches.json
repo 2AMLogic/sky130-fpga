@@ -255,7 +255,7 @@
         "role": "testbench",
         "path": "sim/tb_logic_tile_bitstream.v",
         "passed": true,
-        "content_hash": "sha256:20b42058541902130769c0e4791462fc585e4edcd7632a2b0635ebd20d43e1f9"
+        "content_hash": "sha256:660d2697e9b9292dfca7692cb65b2623d3466589513efce4a4b8bd658909e81a"
       },
       {
         "check": "present",

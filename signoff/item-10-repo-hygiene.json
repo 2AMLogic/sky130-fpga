@@ -17,7 +17,7 @@
         "role": "hygiene",
         "path": ".github/workflows/fabulous-nextpnr.yml",
         "passed": true,
-        "content_hash": "sha256:869b6d8a6f68f3b6acf07d1b01393e6e5f12e9c46c0ddf468ee6f3784c9ab687"
+        "content_hash": "sha256:aa0caf5a3e391e333cc63f9136ceb0bf52dd21dd94f22c5a2032e09273fa8980"
       },
       {
         "check": "present",
@@ -59,7 +59,7 @@
         "role": "hygiene",
         "path": "README.md",
         "passed": true,
-        "content_hash": "sha256:fc059833e38a4f648eede10b0a4f71e15f71b7bf9c0731d730c063781e91aedc"
+        "content_hash": "sha256:333f9f792f0daed9015d4f4a40a2dd9731c40a2a26256961af36083566e9df0c"
       },
       {
         "check": "present",
