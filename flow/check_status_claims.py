@@ -17,6 +17,10 @@ parsed beyond these enumerated facts. Keys:
   binding-corner       "binding setup corner `X`" (same summary)
   t1-met               t1_met_count in signoff/tier-report.json
   t1-items             t1_item_count in signoff/tier-report.json
+  fabulous-version     RECORDED_FABULOUS_VERSION in flow/tool_versions.sh
+  oss-cad-tag          RECORDED_OSS_CAD_TAG in flow/tool_versions.sh
+  yosys-version        RECORDED_YOSYS_VERSION in flow/tool_versions.sh
+  nextpnr-version      RECORDED_NEXTPNR_VERSION in flow/tool_versions.sh
 
 README.md must carry every key at least once (so deleting a marker is a
 failure, not a silent pass). Exit 0 iff every marker holds.
@@ -53,6 +57,17 @@ def _summary_re(root, pattern):
     return m.group(1)
 
 
+def _pin(root, name):
+    """The RECORDED_<name> tool pin in flow/tool_versions.sh (issue #324: the
+    blinky quick start quotes the pins, so a bump there fails the check until
+    the README marker is updated with it)."""
+    m = re.search(rf'^RECORDED_{name}="([^"\n]+)"$',
+                  (root / "flow/tool_versions.sh").read_text(), re.M)
+    if not m:
+        raise ValueError(f"no RECORDED_{name} assignment in flow/tool_versions.sh")
+    return m.group(1)
+
+
 def truth(root):
     """key -> zero-arg callable returning the authoritative value (str)."""
     return {
@@ -65,6 +80,10 @@ def truth(root):
         "binding-corner": lambda: _summary_re(root, r"binding setup corner `([^`]+)`"),
         "t1-met": lambda: str(_json(root, "signoff/tier-report.json")["t1_met_count"]),
         "t1-items": lambda: str(_json(root, "signoff/tier-report.json")["t1_item_count"]),
+        "fabulous-version": lambda: _pin(root, "FABULOUS_VERSION"),
+        "oss-cad-tag": lambda: _pin(root, "OSS_CAD_TAG"),
+        "yosys-version": lambda: _pin(root, "YOSYS_VERSION"),
+        "nextpnr-version": lambda: _pin(root, "NEXTPNR_VERSION"),
     }
 
 

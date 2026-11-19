@@ -22,6 +22,7 @@ FILES = [
     "spec/decisions/0005-nextpnr-io-and-constant-handling.md",
     "layout/logic_tile.drc.json", "layout/logic_tile.lvs.json",
     "signoff/tier-report.json",
+    "flow/tool_versions.sh",
 ]
 
 
@@ -64,6 +65,15 @@ class T(unittest.TestCase):
         d["t1_met_count"] += 1
         p.write_text(json.dumps(d))
         self.assertTrue(any("t1-met" in e for e in C.check(self.tmp)))
+
+    def test_tool_pin_drift_fails(self):
+        # issue #324: the README quick start quotes the tool pins through
+        # status-claim markers sourced from flow/tool_versions.sh
+        self.edit("flow/tool_versions.sh",
+                  f'RECORDED_YOSYS_VERSION="{C._pin(REPO, "YOSYS_VERSION")}"',
+                  'RECORDED_YOSYS_VERSION="0.70"')
+        errs = C.check(self.tmp)
+        self.assertTrue(any("yosys-version" in e for e in errs), errs)
 
     def test_deleted_and_unknown_markers_fail(self):
         self.edit("README.md", "<!-- status-claim: lvs=match -->", "")
