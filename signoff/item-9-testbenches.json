@@ -17,7 +17,7 @@
         "role": "testbench",
         "path": "design/fabulous/tb_configmem_equiv.v",
         "passed": true,
-        "content_hash": "sha256:613e07b2367ad773a1104460eedbc9cae57697b9d8f26d41d54247dfe46e0fde"
+        "content_hash": "sha256:b06ed1d884ada5d30d1b0c4ec17f773f46c311e271492562ee7f668315e257e1"
       },
       {
         "check": "present",

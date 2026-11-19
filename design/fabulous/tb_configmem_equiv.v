@@ -39,6 +39,10 @@
 module tb;
     localparam NB = 158, NF = 20, FB = 32;
     localparam LMAX = 256, MAXT = 4, NAMEMAX = 128;
+    // PMAX: plusarg path capacity in bytes (issue #347) -- 4096 = Linux
+    // PATH_MAX. mapf/vecf and both task fname ports use 8*PMAX so the three
+    // sites cannot drift apart and re-truncate long (nested-worktree) paths.
+    localparam PMAX = 4096;
     reg  [FB-1:0] FrameData;
     reg  [NF-1:0] FrameStrobe;
     wire [NB-1:0] CB, CBN;
@@ -54,7 +58,7 @@ module tb;
     reg [NB-1:0] tprev;      // previous settled value, to detect a real change
     reg [NB-1:0] tmoved;     // bit changed value while its strobe stayed asserted
     integer fh, a, b, i, f, k, n;
-    reg [1023:0] mapf, vecf;
+    reg [8*PMAX-1:0] mapf, vecf;
     reg [FB-1:0] d;
     reg [159:0] want;   // 40 hex digits
     reg [8*NAMEMAX-1:0] name;
@@ -131,7 +135,7 @@ module tb;
     endtask
 
     // Read the next line into lbuf; returns llen = 0 at clean EOF.
-    task next_line(input integer h, input [8*8-1:0] what, input [1023:0] fname);
+    task next_line(input integer h, input [8*8-1:0] what, input [8*PMAX-1:0] fname);
         begin
             lbuf = 0;
             llen = $fgets(lbuf, h);
@@ -142,7 +146,7 @@ module tb;
         end
     endtask
 
-    task in_error(input [8*8-1:0] what, input [1023:0] fname, input [8*64-1:0] msg);
+    task in_error(input [8*8-1:0] what, input [8*PMAX-1:0] fname, input [8*64-1:0] msg);
         begin
             $display("ERROR: configmem_fabulous_equiv setup: %0s file %0s line %0d: %0s", what, fname, lineno, msg);
             $finish;

@@ -147,6 +147,26 @@ for c in "missing:$BUILD/cm_vec_nonexistent.txt" "empty:$BUILD/cm_vec_empty.txt"
     fi
     echo "input '${c%%:*}' vector file -> $verdict: $(grep '^ERROR: configmem' "$BUILD/cm_in_${c%%:*}.out")"
 done
+# (issue #347) the bench's plusarg path regs must hold paths longer than 128
+# bytes (nested worktrees pass deep absolute paths): both inputs symlinked
+# through a >128-byte path must reach the same PASS summary as the baseline.
+echo "--- ConfigMem bench long-path inputs (>128-byte map/vec paths must PASS) ---"
+LP_DIR="$BUILD/cm_longpath/$(printf 'a%.0s' {1..128})"
+mkdir -p "$LP_DIR"
+ln -sf "$REPO/sim/bitstream/logic4_configmem.map" "$LP_DIR/map"
+ln -sf "$CM_VEC" "$LP_DIR/vec"
+lp_len="$(printf '%s' "$LP_DIR/map" | wc -c)"
+[[ "$lp_len" -gt 128 ]] \
+    || { echo "error: long-path fixture path is only $lp_len bytes (want >128)" >&2; exit 1; }
+rc=0; gs_run_bounded "ConfigMem input long-path" "$BUILD/cm_in_longpath.out" \
+    vvp "$BUILD/cm_tb" +map="$LP_DIR/map" +vec="$LP_DIR/vec" || rc=$?
+verdict="$(gs_classify_configmem "$rc" "$BUILD/cm_in_longpath.out")"
+[[ "$verdict" == PASS ]] \
+    || { echo "error: ConfigMem bench with a ${lp_len}-byte input path gave '$verdict', not PASS (see $BUILD/cm_in_longpath.out)" >&2; exit 1; }
+[[ "$(grep '^PASS: configmem_fabulous_equiv' "$BUILD/cm_in_longpath.out")" \
+    == "$(grep '^PASS: configmem_fabulous_equiv' "$BUILD/cm.out")" ]] \
+    || { echo "error: ConfigMem long-path PASS summary differs from the baseline run (see $BUILD/cm_in_longpath.out)" >&2; exit 1; }
+echo "input 'long-path' (${lp_len}-byte map/vec paths) -> $verdict"
 # (issue #200) malformed transaction records and maps (flow/configmem_bad_inputs.py:
 # short/extra fields, bad tags/numbers/widths, out-of-range or duplicate/missing
 # frames, F before S, truncated streams, trailing input, non-bijective or malformed
