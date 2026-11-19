@@ -155,27 +155,37 @@ def collect_lut_count() -> int:
     def line_of(offset: int) -> int:
         return rtl.count("\n", 0, module.start(1) + offset) + 1
 
+    # Count every for-loop labeled g_slice before validating the sole
+    # header: a bound spelled other than a bare decimal literal -- `(4)`,
+    # `NUM_SLICES`, `4'd4` -- still names a g_slice header, so counting
+    # only fully validated headers would let a duplicated label slip past
+    # the check below and silently cost the wrong loop (issue #335
+    # review). A duplicated g_slice label in a nested generate scope
+    # elaborates as g_wrap.g_slice, but file order must never decide the
+    # divisor: require exactly one named header, reporting every header
+    # line even when only one has a supported bound.
+    named_header = re.compile(
+        r"\bfor\s*\([^;]*;[^;]*;[^;]*\)"
+        r"\s*begin\s*:\s*g_slice(?![\w$])"
+    )
+    named = list(named_header.finditer(tile))
+    require(
+        len(named) == 1,
+        f"{RTL_PATH}: expected exactly one g_slice loop in logic_tile_routed, "
+        f"found {len(named)} at "
+        + ", ".join(f"line {line_of(m.start())}" for m in named),
+    )
     loop_header = re.compile(
         r"\bfor\s*\(\s*(?:genvar\s+)?(?P<index>[A-Za-z_][\w$]*)\s*=\s*0\s*;\s*"
         r"(?P=index)\s*<\s*(?P<bound>[0-9]+)\s*;\s*(?P<step>[^();]+)\)"
         r"\s*begin\s*:\s*g_slice(?![\w$])"
     )
-    # A duplicated g_slice label in a nested generate scope elaborates as
-    # g_wrap.g_slice, but file order must never decide the divisor: require
-    # exactly one matching header (issue #335).
-    matches = list(loop_header.finditer(tile))
-    if not matches:
-        require(
-            False,
-            f"{RTL_PATH}: expected g_slice loop with a literal bound in logic_tile_routed",
-        )
+    loop = loop_header.search(tile, named[0].start())
     require(
-        len(matches) == 1,
-        f"{RTL_PATH}: expected exactly one g_slice loop in logic_tile_routed, "
-        f"found {len(matches)} at "
-        + ", ".join(f"line {line_of(m.start())}" for m in matches),
+        loop is not None,
+        f"{RTL_PATH}: expected g_slice loop with a literal bound in "
+        f"logic_tile_routed (header at line {line_of(named[0].start())})",
     )
-    loop = matches[0]
     count = int(loop["bound"])
     require(count > 0, f"{RTL_PATH}: g_slice loop bound must be positive, got {count}")
     index = loop["index"]

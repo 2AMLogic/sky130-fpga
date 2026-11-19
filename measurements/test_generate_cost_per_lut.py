@@ -35,7 +35,7 @@ class SliceCountTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp:
             rtl = Path(temp) / "logic_tile_routed.v"
             rtl.write_text(
-                f"module logic_tile_routed;\ngenvar i, j;\ngenerate\n{loops}\n"
+                f"module logic_tile_routed;\ngenvar i, j, k;\ngenerate\n{loops}\n"
                 f"endgenerate\nendmodule\n{extra_module}"
             )
             with patch.object(generator, "RTL_PATH", rtl):
@@ -54,7 +54,7 @@ class SliceCountTests(unittest.TestCase):
             self.count(SLICE_LOOP.replace("i + 1", "i + 2"))
 
     def test_bound_must_be_a_positive_literal(self):
-        for bound in ("0", "NUM_SLICES"):
+        for bound in ("0", "NUM_SLICES", "(4)", "4'd4"):
             with (
                 self.subTest(bound=bound),
                 self.assertRaisesRegex(AssertionError, "g_slice"),
@@ -99,6 +99,40 @@ class SliceCountTests(unittest.TestCase):
                 message = str(caught.exception)
                 self.assertIn("exactly one g_slice", message)
                 self.assertIn("found 2", message)
+                self.assertNotIn("158", message)
+
+    def test_duplicate_with_unsupported_bound_still_detected(self):
+        # The real four-slice loop's bound is not a bare decimal literal
+        # (`(4)`); the nested 158-slice duplicate is. Counting only
+        # supported headers would silently cost the 158 loop -- the
+        # duplicate must be reported in both source orders, with both
+        # header lines.
+        paren = SLICE_LOOP.replace("< 4", "< (4)")
+        for duplicate_first in (True, False):
+            loops = (
+                NESTED_DUPLICATE + paren
+                if duplicate_first
+                else paren + NESTED_DUPLICATE
+            )
+            with self.subTest(duplicate_first=duplicate_first):
+                rtl_text = (
+                    "module logic_tile_routed;\ngenvar i, j, k;\ngenerate\n"
+                    f"{loops}\nendgenerate\nendmodule\n"
+                )
+                first = rtl_text.index("begin : g_slice")
+                second = rtl_text.index("begin : g_slice", first + 1)
+                expected = sorted(
+                    rtl_text.count("\n", 0, rtl_text.rindex("for", 0, at)) + 1
+                    for at in (first, second)
+                )
+                with self.assertRaisesRegex(
+                    AssertionError, "exactly one g_slice"
+                ) as caught:
+                    self.count(loops)
+                message = str(caught.exception)
+                self.assertIn("found 2", message)
+                for number in expected:
+                    self.assertIn(f"line {number}", message)
                 self.assertNotIn("158", message)
 
 
