@@ -6,6 +6,15 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-19
+
+- **PR #329**: docs: index proposed decision records ADR-0004 through ADR-0006
+- **Issue #328** (closed): docs: backfill ADR-0004..0006 in spec/README.md decision index
+- **PR #327**: docs: publish generated cost-per-LUT4 estimate from committed tile layout
+- **Issue #323** (closed): Publish a cost-per-LUT estimate for the fabric
+- **PR #326**: docs: record ADR-0007, standalone-FPGA configuration out of scope for now
+- **Issue #325** (closed): Spec question: a small standalone-FPGA configuration
+
 ### 2026-11-17
 
 - **PR #300**: docs: name .vh bench includes and cocotb request fixture in item-9 inventory row
