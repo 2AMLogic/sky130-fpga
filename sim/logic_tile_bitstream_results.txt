@@ -131,3 +131,62 @@
     flow/blinky.sh) and host Icarus 13.0.
   Not covered: ratified fabric, inter-tile routing, timing (blink period stated in clock
     cycles only), tile types other than LOGIC4.
+
+2026-11-19  sim/tb_logic_tile_bitstream.v + flow/fasm_to_bitstream.py  (issue #342: routing-select
+  Claim   : a surviving routing-select flip is classified REDUNDANT when the assembler proves,
+            from the configured pips alone, that the original and the flipped mux encoding
+            select inputs resolving to the same physical driver (BEL or pad output wire).
+            The proof is emitted as `RED <bit> <mux> <src> <flipped-src> <driver>` manifest
+            lines; the bench reports `REDUNDANT: flip of routing-select cfg[N] (mux: a -> b,
+            both driven by tile.wire)` with the redundant count appended to the PASS line
+            only when nonzero (the zero-redundancy PASS format of every earlier fixture is
+            byte-unchanged, keeping flow/pin_experiment.py's strict parser compatible).
+            Everything unproven (undriven/ambiguously driven flipped input, configured cycle,
+            flipped encoding with no input) and every surviving BEL perturbation stays a
+            fatal SURVIVED; baseline and restored-configuration checks stay fatal.
+  Fixtures: sim/bitstream/top_io_alias.* (the curator's positive case: the S1BEG1 mux input
+            reached two ways -- directly and through a W1BEG2..E1END1 CAP loop-back; fasm
+            sha256 486c46e74d8988db8c246b1a635a8bd59d898759762e2b6f93a5805414aaa076, bin
+            3847b4598552a712badc17ffd053a378dca6c54cd6b5aa708cbe73664adb24c4) and
+            sim/bitstream/top_io_unused.* (negative control: same branch with nothing
+            selecting it; fasm sha256 cc654247e8bad40d1ce23adc26815b6c5a7ff44c2aa4b31cf1aca77f032789dd,
+            bin 6fe2dcaf98afab194541e516e7bc45ef053bf057ac12aa6b7a3658b635530efa). Both
+            reproduce the curated recipe by editing only the `X1Y1.LA_O.S1BEG1` pip of
+            top_io in the FASM and the mapped summary; nextpnr was not run.
+  Pre-change measurement (main code at cf3a960 + scratch fixtures, before the classifier):
+    both baselines passed 257 checks, 0 failures; the sweep found exactly the curated
+    survivors: top_io_alias -> cfg[96] only; top_io_unused -> cfg[96], 110, 111, 112.
+  Results (./sim/run.sh, exit 0, HEAD cf3a960 + working tree):
+    PASS: tb_logic_tile_bitstream[comb] (5409 checks, 0 failures; 26/26 perturbations detected)  [unchanged]
+    PASS: tb_logic_tile_bitstream[reg] (139651 checks, 0 failures; 27/27 perturbations detected)  [unchanged]
+    PASS: tb_logic_tile_bitstream[comb] top_io_alias (5985 checks, 0 failures; 28/29 perturbations
+          detected, 1 redundant) -- REDUNDANT: flip of routing-select cfg[96] (S1BEG1: E1END1 ->
+          LA_O, both driven by X1Y1.LA_O); zero unexplained survivors
+    top_io_unused negative control: completed functional FAIL (5985 checks, 3 failures,
+          3 perturbations survived) -- REDUNDANT: cfg[96] (S1BEG1: LA_O -> E1END1, both driven
+          by X1Y1.LA_O); SURVIVED: cfg[110], cfg[111], cfg[112] (the unused W1BEG2 branch);
+          run.sh asserts the verdict, the per-bit lines and the exact survivor set
+    All corpus / regbel / pin-experiment fixtures: unchanged k/k verdicts and byte-identical
+      manifests (the proof emits no RED line for any committed fixture); fasm_to_bitstream
+      check reproduces every fixture; assembler unit tests 31/31 (7 new: baseline-no-proof,
+      both fixtures, undriven flip, different-driver flip, same-driver flip, cyclic route).
+  Scope note: flow/blinky.sh's recorded seed-2 mitigation is deliberately untouched (seed
+    search is out of scope for #342); a future seed whose placement contains a provable
+    alias would now be verifiable instead of rejected.
+  Not covered: ratified fabric, inter-tile routing between logic tiles, timing, tile types
+    other than LOGIC4.
+
+2026-11-19  Issue #342 review verification at 2073c959d2ee (single-LOGIC4 harness)
+  python3 -I flow/test_fasm_to_bitstream.py passed 32/32 tests (8 new for #342).
+    The 8-pip cycle regression resolves the alternative with the flipped mux in effect.
+    It emits a proof only for cfg[111]. Flipping cfg[108] disconnects LA_O.
+  On b66dab40, inserting a bit-only RED 110 before the relocated SEL 111 and SEL 112
+    in top_io_unused.wiring produced a false PASS (25/27 detected, 2 redundant).
+    The reader used those SEL lines as proof fields and skipped their flips.
+  With the line-oriented reader, the bitstream controls in sim/run.sh measured:
+    top_io with a field-less RED and top_io_unused with the bit-only RED above
+      both reported "FAIL: tb_logic_tile_bitstream: bad wiring manifest" before baseline.
+    top_io passed 26/26 and top_reg passed 27/27 perturbations.
+    top_io_alias passed with 28/29 detected and cfg[96] redundant (5985 checks).
+    top_io_unused with its original manifest completed 5985 checks, with cfg[96]
+      redundant and exactly three failures from the surviving cfg[110], cfg[111], cfg[112].

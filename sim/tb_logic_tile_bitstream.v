@@ -20,7 +20,13 @@
 //                         design/fabulous/corpus/*.v; blinky: issue #324,
 //                         design/fabulous/nextpnr/blinky.v)
 //   +mutate               also flip each used routing-select bit, and LUT/FF
-//                         bits of each used BEL; every flip must be DETECTED
+//                         bits of each used BEL; every flip must be DETECTED,
+//                         except a flip the manifest proves redundant (RED
+//                         records, issue #342: the flip only swaps a mux to a
+//                         second input that resolves, through the configured
+//                         pips, to the same physical driver). A proven flip is
+//                         reported as REDUNDANT and counted separately in the
+//                         PASS line; it is neither detected nor a failure.
 //   +expect_reject        the loader must reject +bin (malformed-input test)
 //
 // Nothing here uses hand-written LUT/matrix constants: cfg comes only from the
@@ -108,6 +114,16 @@ module tb_logic_tile_bitstream;
     integer nbel, nsel;
     integer bel_list [0:3];
     integer sel_list [0:127];
+    // provably redundant select flips (issue #342): manifest RED records.
+    // bit -> mux + both mux inputs + the common physical driver, as resolved by
+    // the assembler from the configured pips; a surviving flip of a recorded
+    // bit is REDUNDANT, anything else stays a failing SURVIVED.
+    integer nred;
+    integer red_bit [0:127];
+    reg [8*16-1:0] red_mux  [0:127];
+    reg [8*16-1:0] red_from [0:127];
+    reg [8*16-1:0] red_to   [0:127];
+    reg [8*16-1:0] red_drv  [0:127];
     integer n_loops;
 
     // input pad slots / output pad slots (port names)
@@ -242,11 +258,14 @@ module tb_logic_tile_bitstream;
 
     task read_manifest;
         reg [8*8-1:0] kw, nm;
+        reg [8*16-1:0] nm2, nm3, nm4, nm5;
+        reg [8*256-1:0] red_line;
+        reg [7:0] extra;
         integer d, k, a, b, s, r, ok_all, i, end_seen;
         begin
             for (i = 0; i < 16; i = i + 1) begin tin_kind[i] = 0; tin_arg[i] = 0; end
             for (i = 0; i < 8; i = i + 1) out_track[i] = -1;
-            slot_wired_in = 0; slot_wired_out = 0; nbel = 0; nsel = 0; n_loops = 0;
+            slot_wired_in = 0; slot_wired_out = 0; nbel = 0; nsel = 0; nred = 0; n_loops = 0;
             ok_all = 1; end_seen = 0;
             fd = $fopen(f_wire, "r");
             if (fd == 0) begin $display("FAIL: tb_logic_tile_bitstream: cannot open wiring manifest"); $finish; end
@@ -272,6 +291,19 @@ module tb_logic_tile_bitstream;
                     n_loops = n_loops + 1;
                 end else if (kw == "BEL") begin r = $fscanf(fd, "%d", a); bel_list[nbel] = a; nbel = nbel + 1; end
                 else if (kw == "SEL") begin r = $fscanf(fd, "%d", a); sel_list[nsel] = a; nsel = nsel + 1; end
+                else if (kw == "RED") begin
+                    // A proof occupies one line. A short proof must never borrow
+                    // fields from the next SEL, which would also skip its flip.
+                    r = $fgets(red_line, fd);
+                    if (r > 0 && red_line[7:0] == 8'h0a)
+                        r = $sscanf(red_line, "%d %s %s %s %s %s", a, nm2, nm3, nm4, nm5, extra);
+                    else r = 0;
+                    if (r != 5) ok_all = 0;
+                    else begin
+                        red_bit[nred] = a; red_mux[nred] = nm2; red_from[nred] = nm3;
+                        red_to[nred] = nm4; red_drv[nred] = nm5; nred = nred + 1;
+                    end
+                end
                 else if (kw == "END") end_seen = 1;
                 else ok_all = 0;
                 if (!end_seen) r = $fscanf(fd, "%s", kw);
@@ -558,9 +590,19 @@ module tb_logic_tile_bitstream;
     endtask
 
     // ------------------------------------------------------------------ main
-    integer i, m, det, surv, nmut, nper;
+    integer i, m, k, det, surv, red, nmut, nper;
     reg [157:0] saved_cfg;
     reg need_ok;
+
+    // index of bit b's RED record, or -1 when its redundancy is not provable
+    function integer red_find(input integer b);
+        integer j;
+        begin
+            red_find = -1;
+            for (j = 0; j < nred; j = j + 1)
+                if (red_bit[j] == b) red_find = j;
+        end
+    endfunction
 
     initial begin
         pad_in = 8'b0; unused = 16'b0;
@@ -631,7 +673,7 @@ module tb_logic_tile_bitstream;
         $display("baseline: %0d checks, %0d failures", checks, cur_fail);
 
         // (2) deliberate perturbation of the loaded configuration must be detected
-        det = 0; surv = 0; nmut = 0;
+        det = 0; surv = 0; red = 0; nmut = 0;
         if (do_mutate) begin
             saved_cfg = cfg; clean_cfg = cfg;
             for (m = 0; m < nsel; m = m + 1) begin     // every used routing-select bit
@@ -640,7 +682,17 @@ module tb_logic_tile_bitstream;
                 apply_cfg;
                 cur_fail = 0; run_all_env(2); nmut = nmut + 1;
                 if (cur_fail > 0) det = det + 1;
-                else begin surv = surv + 1; $display("  SURVIVED: flip of routing-select cfg[%0d]", sel_list[m]); end
+                else begin
+                    k = red_find(sel_list[m]);
+                    if (k >= 0) begin
+                        red = red + 1;
+                        $display("  REDUNDANT: flip of routing-select cfg[%0d] (%0s: %0s -> %0s, both driven by %0s)",
+                                 sel_list[m], red_mux[k], red_from[k], red_to[k], red_drv[k]);
+                    end else begin
+                        surv = surv + 1;
+                        $display("  SURVIVED: flip of routing-select cfg[%0d]", sel_list[m]);
+                    end
+                end
             end
             for (m = 0; m < nbel; m = m + 1) begin
                 // comb/reg (#74): LUT bits 0,1 and reg_sel of every used BEL.
@@ -667,10 +719,14 @@ module tb_logic_tile_bitstream;
             cur_fail = 0; run_all_env(1); fails = fails + cur_fail;
         end
 
-        if (fails == 0)
-            $display("PASS: tb_logic_tile_bitstream[%0s] (%0d checks, 0 failures; %0d/%0d perturbations detected)",
-                     design_name, checks, det, nmut);
-        else
+        if (fails == 0) begin
+            if (red == 0)
+                $display("PASS: tb_logic_tile_bitstream[%0s] (%0d checks, 0 failures; %0d/%0d perturbations detected)",
+                         design_name, checks, det, nmut);
+            else
+                $display("PASS: tb_logic_tile_bitstream[%0s] (%0d checks, 0 failures; %0d/%0d perturbations detected, %0d redundant)",
+                         design_name, checks, det, nmut, red);
+        end else
             $display("FAIL: tb_logic_tile_bitstream[%0s] (%0d checks, %0d failures, %0d perturbations survived)",
                      design_name, checks, fails, surv);
         $finish;

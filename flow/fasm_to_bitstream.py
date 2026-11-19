@@ -141,6 +141,7 @@ def logic_tile(snap):
 
 _WIRE = re.compile(r"^([NESW])1(BEG|END)(\d)$")
 _PAD = re.compile(r"^IO([A-D])_([OI])$")
+_SRC_OUT = re.compile(r"^(?:L[A-D]|IO[A-D])_O$")   # physical driver: BEL or pad output
 
 
 def pad_pip_rows(snap):
@@ -241,8 +242,9 @@ def assemble(fasm_text, snap, mapped):
     if mapped is not None:      # mapped=None: bit assembly only (unit tests)
         wiring = trace_wiring(pips, snap, ltile)
         check_against_mapped(items, pips, bel_used, cfg, mapped, snap, ltile, wiring)
+    red = redundancy_records(pips, snap, ltile)
     return dict(positions=positions, cfg=cfg, bel_used=sorted(bel_used),
-                sel_bits=sorted(sel_bits), wiring=wiring, pad_lines=pad_lines,
+                sel_bits=sorted(sel_bits), wiring=wiring, red=red, pad_lines=pad_lines,
                 pad_line_nos=pad_line_nos, n_logic=n_logic, n_cap=n_cap, n_lines=len(items), ltile=(ltile, lx, ly))
 
 
@@ -303,6 +305,85 @@ def trace_wiring(pips, snap, ltile):
     return dict(ins=sorted(ins), outs=sorted(outs), loops=sorted(loops))
 
 
+def redundancy_records(pips, snap, ltile):
+    """Same-driver redundancy evidence for the configured routing-select bits.
+
+    For every mux of the logic tile that the FASM configures, a flip of one of
+    its select bits is provably redundant when the original and the flipped
+    encoding select inputs resolving, through the configured pips, to the same
+    physical driver (a BEL or pad output wire). The original encoding is
+    resolved in the configured routing; the flipped one with the flipped
+    select in effect, so a chain that passes back through the mux being
+    flipped closes a cycle through the flip. A chain that reaches a node with
+    two configured drivers or closes a combinational cycle (a flip can create
+    one) is not provable. Everything unproven -- including a flipped encoding with no
+    input, where the generated mux drives 0 -- is absent from the result and
+    stays a strict SURVIVED in the bench (issue #342). CAP delay is irrelevant
+    under the bench's sampling model: two same-driven mux inputs carry the
+    same settled value at every sampling point.
+
+    Returns [(cfg bit, mux, selected src, flipped src, driver)], driver spelled
+    "<tile>.<wire>", for the manifest's RED lines.
+    """
+    ext = {}
+    for st, sw, dt, dw in snap["pips"]:
+        if st != dt:
+            ext[(st, sw)] = (dt, dw)
+    drv, multi, sel = {}, set(), {}
+    for t, s, d in pips:
+        hop = (t, s) in ext and ext[(t, s)][1] == d
+        node = ext[(t, s)] if hop else (t, d)
+        if node in drv and drv[node] != (t, s):
+            multi.add(node)
+        else:
+            drv.setdefault(node, (t, s))
+        if t == ltile and not hop:
+            sel[d] = s
+
+    def driver(node, flip=None):
+        seen = set()
+        while node not in seen:
+            seen.add(node)
+            if node in multi or not _SRC_OUT.match(node[1]) and node not in drv:
+                return None
+            if _SRC_OUT.match(node[1]):
+                return f"{node[0]}.{node[1]}"
+            node = flip[1] if flip is not None and node == flip[0] else drv[node]
+        return None            # configured cycle: redundancy not provable
+
+    specs = snap["tile_specs"][ltile]
+    cb_of_pos = {p: cb for cb, p in enumerate(snap["cb_pos"])}
+    out = []
+    for mux, s0 in sel.items():
+        positions, enc, enc_of = None, {}, {}
+        for key, bits in specs.items():
+            src, dot, dst = key.rpartition(".")
+            if not dot or dst != mux or not bits:
+                continue
+            pos = tuple(sorted(bits))
+            if positions is None:
+                positions = pos
+            elif pos != positions:
+                raise AsmError(f"mux {mux}: select positions differ between {src} and other inputs")
+            e = 0
+            for r, p in enumerate(positions):
+                e |= int(bits[p]) << r
+            if e in enc:
+                raise AsmError(f"mux {mux}: inputs {enc[e]} and {src} share encoding {e}")
+            enc[e] = src
+            enc_of[src] = e
+        if not enc or s0 not in enc_of:
+            continue
+        for r, p in enumerate(positions):
+            s2 = enc.get(enc_of[s0] ^ (1 << r))
+            if s2 is None:
+                continue       # flipped encoding selects no input: mux drives 0
+            d0, d2 = driver((ltile, s0)), driver((ltile, s2), ((ltile, mux), (ltile, s2)))
+            if d0 is not None and d0 == d2:
+                out.append((cb_of_pos[p], mux, s0, s2, d0))
+    return sorted(out)
+
+
 def check_against_mapped(items, pips, bel_used, cfg, mapped, snap, ltile, wiring):
     """Cross-check the FASM against nextpnr's routed netlist (normalised)."""
     want = {f"{t}.{s}.{d}" for t, s, d in pips}
@@ -360,6 +441,7 @@ def manifest_text(asm, snap, mapped):
     out += [f"LOOP {a} {b} {c} {d}" for a, b, c, d in loops]
     out += [f"BEL {i}" for i in asm["bel_used"]]
     out += [f"SEL {b}" for b in asm["sel_bits"]]
+    out += [f"RED {bit} {mx} {s0} {s1} {drv}" for bit, mx, s0, s1, drv in asm["red"]]
     out.append("END")
     return "\n".join(out) + "\n"
 

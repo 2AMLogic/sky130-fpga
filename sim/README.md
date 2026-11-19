@@ -190,6 +190,16 @@ from a serialized bitstream:
 5. `+mutate`: every routing-select bit the FASM uses, and LUT bits 0 and 1 and
    `reg_sel` of every used BEL, are flipped one at a time in the loaded
    `cfg`; each flip must make the checks fail (a surviving flip fails the run).
+   The one exception (issue #342) is a flip the assembler has *proven*
+   redundant and recorded in the manifest as a `RED` line: original and
+   flipped mux encoding select two inputs that resolve, through the
+   configured pips, to the same physical driver (a BEL or pad output wire).
+   Such a flip is reported as `REDUNDANT` with its mux, bit and common
+   driver, counted separately in the PASS line (`..., N redundant`) and is
+   neither a detection nor a failure. Everything unproven -- an undriven or
+   ambiguously driven flipped input, a configured cycle, or a flipped
+   encoding with no input (the matrix drives 0) -- stays a strict `SURVIVED`.
+   BEL perturbation survivors are never exempt.
 6. Malformed streams (13 variants from `sim/bitstream_corrupt.py`: truncation at
    several points, bad sync, duplicate/extra strobe, bad column, set bits at
    unmapped positions or in CAP columns, missing frame, trailing data) must be
@@ -314,6 +324,14 @@ selects). Example: BEL A `INIT[0]` is `cfg[0]` = frame 4 bit 2 = position 130.
   logic input track (`dir` 0..3 = N,E,S,W, `idx` = track), `OUT` = a pad
   observes an output track, `LOOP` = a CAP loop-back from an output track to
   an input track; every other input track is a harness don't-care.
+* **Redundant select flips (issue #342).** `SEL` lists every used
+  routing-select cfg bit; a following `RED <bit> <mux> <src> <flipped src>
+  <driver>` line records a flip of `<bit>` the assembler proved redundant:
+  in the configured encoding `<mux>` selects `<src>`, the flip selects
+  `<flipped src>`, and both resolve through the configured pips to the same
+  physical `<driver>` (`<tile>.<wire>` of a BEL or pad output). The bench
+  reports such a flip as `REDUNDANT` instead of failing it; e.g.
+  `top_io_unused.wiring` has `RED 96 S1BEG1 LA_O E1END1 X1Y1.LA_O`.
 * Combinational (`FF = 0`) BELs with unconnected inputs rely on the
   constant-folded, replicated INIT of ADR-0005 (Proposed); the unused-track
   randomisation above is what exercises it.
