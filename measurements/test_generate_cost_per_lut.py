@@ -21,6 +21,13 @@ OTHER_LOOP = """
         wire unused;
     end
 """
+NESTED_DUPLICATE = """
+    if (1) begin : g_wrap
+        for (k = 0; k < 158; k = k + 1) begin : g_slice
+            lut4_slice u_fake ();
+        end
+    end
+"""
 
 
 class SliceCountTests(unittest.TestCase):
@@ -78,6 +85,21 @@ class SliceCountTests(unittest.TestCase):
         self.assertEqual(
             self.count(SLICE_LOOP.replace("lut4_slice", nested + "lut4_slice")), 4
         )
+
+    def test_duplicate_g_slice_in_nested_scope(self):
+        for duplicate_first in (True, False):
+            loops = (
+                NESTED_DUPLICATE + SLICE_LOOP
+                if duplicate_first
+                else SLICE_LOOP + NESTED_DUPLICATE
+            )
+            with self.subTest(duplicate_first=duplicate_first):
+                with self.assertRaisesRegex(AssertionError, "g_slice") as caught:
+                    self.count(loops)
+                message = str(caught.exception)
+                self.assertIn("exactly one g_slice", message)
+                self.assertIn("found 2", message)
+                self.assertNotIn("158", message)
 
 
 if __name__ == "__main__":

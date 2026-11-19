@@ -135,9 +135,12 @@ def collect_bel_only_area() -> float:
 
 def collect_lut_count() -> int:
     """Read the iteration count of logic_tile_routed's named slice loop."""
+    # Blank comments and string literals without shifting offsets or
+    # removing newlines, so diagnostics below can report the file's real
+    # line numbers.
     rtl = re.sub(
         r'//[^\n]*|/\*.*?\*/|"(?:\\.|[^"\\])*"',
-        " ",
+        lambda m: re.sub(r"[^\n]", " ", m.group(0)),
         RTL_PATH.read_text(),
         flags=re.DOTALL,
     )
@@ -148,16 +151,31 @@ def collect_lut_count() -> int:
     )
     require(module is not None, f"{RTL_PATH}: module logic_tile_routed not found")
     tile = module.group(1)
-    loop = re.search(
+
+    def line_of(offset: int) -> int:
+        return rtl.count("\n", 0, module.start(1) + offset) + 1
+
+    loop_header = re.compile(
         r"\bfor\s*\(\s*(?:genvar\s+)?(?P<index>[A-Za-z_][\w$]*)\s*=\s*0\s*;\s*"
         r"(?P=index)\s*<\s*(?P<bound>[0-9]+)\s*;\s*(?P<step>[^();]+)\)"
-        r"\s*begin\s*:\s*g_slice(?![\w$])",
-        tile,
+        r"\s*begin\s*:\s*g_slice(?![\w$])"
     )
+    # A duplicated g_slice label in a nested generate scope elaborates as
+    # g_wrap.g_slice, but file order must never decide the divisor: require
+    # exactly one matching header (issue #335).
+    matches = list(loop_header.finditer(tile))
+    if not matches:
+        require(
+            False,
+            f"{RTL_PATH}: expected g_slice loop with a literal bound in logic_tile_routed",
+        )
     require(
-        loop is not None,
-        f"{RTL_PATH}: expected g_slice loop with a literal bound in logic_tile_routed",
+        len(matches) == 1,
+        f"{RTL_PATH}: expected exactly one g_slice loop in logic_tile_routed, "
+        f"found {len(matches)} at "
+        + ", ".join(f"line {line_of(m.start())}" for m in matches),
     )
+    loop = matches[0]
     count = int(loop["bound"])
     require(count > 0, f"{RTL_PATH}: g_slice loop bound must be positive, got {count}")
     index = loop["index"]
