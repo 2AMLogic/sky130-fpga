@@ -3,14 +3,14 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 9,
-  "summary": "T1 item 9 (Testbenches shipped): 45/45 attestation checks passed (klt signoff --attest)",
+  "summary": "T1 item 9 (Testbenches shipped): 46/46 attestation checks passed (klt signoff --attest)",
   "source": "signoff/item-9-inventory.json",
   "attestation": {
     "producer": "klt signoff --attest",
     "inventory_schema_version": 1,
     "hash_algorithm": "sha256-raw-bytes",
-    "check_count": 45,
-    "passed_count": 45,
+    "check_count": 46,
+    "passed_count": 46,
     "checks": [
       {
         "check": "present",
@@ -66,7 +66,14 @@
         "role": "testbench",
         "path": "sim/bitstream_load.vh",
         "passed": true,
-        "content_hash": "sha256:800e3821aa8085fe910a693ea502888d9fd4d02cd49a51895187ea7271ac3cbd"
+        "content_hash": "sha256:e59b7ae4bffabb6ecc7fef13068eb199dc5a2793f3f2e8febfed3d012feab134"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/bitstream_parse.vh",
+        "passed": true,
+        "content_hash": "sha256:f9fec06e12d870ee118990e13ba9c8503b302a7a1a3d313819b47af695cfb629"
       },
       {
         "check": "present",
@@ -255,7 +262,7 @@
         "role": "testbench",
         "path": "sim/tb_logic_tile_bitstream.v",
         "passed": true,
-        "content_hash": "sha256:660d2697e9b9292dfca7692cb65b2623d3466589513efce4a4b8bd658909e81a"
+        "content_hash": "sha256:1918206373557539d5a97351fc0bdc5800b1c3ea801790f04e1bfa79b3770c07"
       },
       {
         "check": "present",
@@ -349,7 +356,7 @@
         "path": "signoff/item-9-inventory.json",
         "scope": "repo"
       },
-      "content_hash": "sha256:e4fe44ab6ce520613da64bd3d85b83c89763dd0c9b154d18210aa1cb0714b8c1"
+      "content_hash": "sha256:9b8953f42561a84a468484ca9d4e3678366157225c688a2d194e9988d2b595a7"
     }
   }
 }
