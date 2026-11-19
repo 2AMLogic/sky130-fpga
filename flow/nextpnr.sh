@@ -4,13 +4,13 @@
 #
 # Spec gap G1 caveat 1 (spec/framework-gaps.md, issue #87). Steps:
 #   1. flow/fabulous.sh regenerates the model into flow/build/fabulous-run/.
-#   2. The pinned OSS CAD Suite (flow/tool_versions.sh) is downloaded to
-#      flow/build/dl/, sha256-verified, and unpacked (tool subset only) into
-#      flow/build/oss-cad-suite/. Nothing is installed host-wide.
-#      On later runs the unpacked tree is reused if its .pin stamp matches the
-#      pinned sha256 and, when the tarball is still in flow/build/dl/, the
-#      tarball re-verifies; otherwise it is re-fetched/re-extracted. The yosys
-#      and nextpnr version strings are checked against the pins on every run.
+#   2. The pinned OSS CAD Suite (pins in flow/tool_versions.sh) is installed
+#      by the shared flow/install_oss_cad_suite.sh: downloaded to
+#      flow/build/dl/, sha256-verified and unpacked (tool subset only) into
+#      flow/build/oss-cad-suite/, then its yosys/nextpnr versions are checked
+#      against the pins. Nothing is installed host-wide. This script installs
+#      after its FABulous model run (which needs no yosys on PATH); the
+#      installer itself documents the reuse/fetch rules.
 #   3. yosys reads design/fabulous/nextpnr/top.v (+ prims.v) -> JSON, then
 #      nextpnr-generic places and routes it on the generated model.
 #   4. Two expected-FAIL probes record the fabric's known limits:
@@ -37,8 +37,9 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=flow/tool_versions.sh
 source "$REPO/flow/tool_versions.sh"
+# shellcheck source=flow/install_oss_cad_suite.sh
+source "$REPO/flow/install_oss_cad_suite.sh"
 BUILD="$REPO/flow/build"
-OSS="$BUILD/oss-cad-suite"
 mkdir -p "$BUILD/dl"
 
 # Only the regenerated model is needed here; the ~2 min integrated generated-tile
@@ -47,27 +48,10 @@ mkdir -p "$BUILD/dl"
 FABULOUS_SKIP_TILE_REPLAY=1 "$REPO/flow/fabulous.sh" >"$BUILD/fabulous-for-nextpnr.out" 2>&1 || {
     echo "flow/fabulous.sh failed:" >&2; tail -20 "$BUILD/fabulous-for-nextpnr.out" >&2; exit 1; }
 
-TGZ="$BUILD/dl/$RECORDED_OSS_CAD_TARBALL"
-if [[ ! -x "$OSS/bin/nextpnr-generic" ]] || \
-   [[ ! -f "$OSS/.pin" ]] || [[ "$(cat "$OSS/.pin")" != "$RECORDED_OSS_CAD_SHA256" ]] || \
-   { [[ -f "$TGZ" ]] && ! echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet - >/dev/null 2>&1; }; then
-    if [[ ! -f "$TGZ" ]] || ! echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet -; then
-        curl -fsSL -o "$TGZ" \
-          "https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${RECORDED_OSS_CAD_TAG}/${RECORDED_OSS_CAD_TARBALL}"
-        echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet -
-    fi
-    rm -rf "$OSS"; mkdir -p "$OSS"
-    tar -xzf "$TGZ" -C "$OSS" --strip-components=1 \
-        oss-cad-suite/bin oss-cad-suite/lib oss-cad-suite/libexec \
-        oss-cad-suite/share/yosys oss-cad-suite/share/nextpnr oss-cad-suite/etc
-    echo "$RECORDED_OSS_CAD_SHA256" >"$OSS/.pin"
-fi
-export PATH="$OSS/bin:$PATH"
-YV="$(yosys -V | awk '{print $2}')"
-NV="$(nextpnr-generic --version 2>&1 | grep -o 'nextpnr-[0-9][^)" ]*' | head -1)"
-echo "=== yosys $YV (pinned $RECORDED_YOSYS_VERSION), $NV (pinned $RECORDED_NEXTPNR_VERSION) ==="
-[[ "$YV" == "$RECORDED_YOSYS_VERSION" && "$NV" == "$RECORDED_NEXTPNR_VERSION" ]] || {
-    echo "toolchain version mismatch" >&2; exit 1; }
+# 2. pinned OSS CAD Suite (shared installer): fetch/verify/extract if needed,
+#    put its bin/ on PATH, check the yosys/nextpnr versions against the pins
+# shellcheck disable=SC2119  # no args: the default build dir is correct here
+install_oss_cad_suite
 
 SRC="$REPO/design/fabulous/nextpnr"
 W="$BUILD/nextpnr-run"

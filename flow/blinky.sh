@@ -4,16 +4,14 @@
 # EXPERIMENTAL single-LOGIC4 harness (sim/README.md; not the ratified fabric,
 # no timing claim).
 #
-#   1. The pinned OSS CAD Suite (flow/tool_versions.sh) is downloaded to
+#   1. The pinned OSS CAD Suite (pins in flow/tool_versions.sh) is installed
+#      by the shared flow/install_oss_cad_suite.sh -- downloaded to
 #      flow/build/dl/, sha256-verified and unpacked (tool subset only) into
-#      flow/build/oss-cad-suite/ BEFORE anything else: FABulous shells out to
-#      yosys (BEL Verilog -> JSON), and this order -- the CI workflow's order,
-#      unlike flow/nextpnr.sh's -- is what makes the command work from a clean
-#      checkout with an empty flow/build/. On later runs the unpacked tree is
-#      reused if its .pin stamp matches the pinned sha256 and, when the tarball
-#      is still in flow/build/dl/, the tarball re-verifies; otherwise it is
-#      re-fetched/re-extracted. The yosys and nextpnr version strings are
-#      checked against the pins on every run. Nothing is installed host-wide.
+#      flow/build/oss-cad-suite/, yosys/nextpnr versions checked against the
+#      pins -- BEFORE anything else: FABulous shells out to yosys (BEL
+#      Verilog -> JSON), and this order -- the CI workflow's order, unlike
+#      flow/nextpnr.sh's -- is what makes the command work from a clean
+#      checkout with an empty flow/build/. Nothing is installed host-wide.
 #   2. flow/fabulous.sh regenerates the fabric model (FABULOUS_SKIP_TILE_REPLAY=1,
 #      throwaway venv flow/build/fab-venv, pinned FABulous), and
 #      flow/nextpnr_io_overlay.py adds the harness pad model (ADR-0005, scratch
@@ -54,6 +52,8 @@ set -euo pipefail
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=flow/tool_versions.sh
 source "$REPO/flow/tool_versions.sh"
+# shellcheck source=flow/install_oss_cad_suite.sh
+source "$REPO/flow/install_oss_cad_suite.sh"
 # shellcheck source=flow/gate_sim_verdict.sh
 source "$REPO/flow/gate_sim_verdict.sh"
 gs_budget_check || exit 1
@@ -68,35 +68,12 @@ done
 SRC="$REPO/design/fabulous/nextpnr"
 TOOL="$REPO/flow/fasm_to_bitstream.py"
 BUILD="$REPO/flow/build"
-OSS="$BUILD/oss-cad-suite"
 W="$BUILD/blinky-run"
-mkdir -p "$BUILD/dl"
 SECONDS=0
-FETCHED=0
 
 # 1. pinned OSS CAD Suite first: FABulous (step 2) shells out to yosys
-TGZ="$BUILD/dl/$RECORDED_OSS_CAD_TARBALL"
-if [[ ! -x "$OSS/bin/nextpnr-generic" ]] || \
-   [[ ! -f "$OSS/.pin" ]] || [[ "$(cat "$OSS/.pin")" != "$RECORDED_OSS_CAD_SHA256" ]] || \
-   { [[ -f "$TGZ" ]] && ! echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet - >/dev/null 2>&1; }; then
-    if [[ ! -f "$TGZ" ]] || ! echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet -; then
-        curl -fsSL -o "$TGZ" \
-          "https://github.com/YosysHQ/oss-cad-suite-build/releases/download/${RECORDED_OSS_CAD_TAG}/${RECORDED_OSS_CAD_TARBALL}"
-        echo "$RECORDED_OSS_CAD_SHA256  $TGZ" | sha256sum -c --quiet -
-    fi
-    rm -rf "$OSS"; mkdir -p "$OSS"
-    tar -xzf "$TGZ" -C "$OSS" --strip-components=1 \
-        oss-cad-suite/bin oss-cad-suite/lib oss-cad-suite/libexec \
-        oss-cad-suite/share/yosys oss-cad-suite/share/nextpnr oss-cad-suite/etc
-    echo "$RECORDED_OSS_CAD_SHA256" >"$OSS/.pin"
-    FETCHED=1
-fi
-export PATH="$OSS/bin:$PATH"
-YV="$(yosys -V | awk '{print $2}')"
-NV="$(nextpnr-generic --version 2>&1 | grep -o 'nextpnr-[0-9][^)" ]*' | head -1)"
-echo "=== yosys $YV (pinned $RECORDED_YOSYS_VERSION), $NV (pinned $RECORDED_NEXTPNR_VERSION) ==="
-[[ "$YV" == "$RECORDED_YOSYS_VERSION" && "$NV" == "$RECORDED_NEXTPNR_VERSION" ]] || {
-    echo "toolchain version mismatch" >&2; exit 1; }
+# shellcheck disable=SC2119  # no args: the default build dir is correct here
+install_oss_cad_suite
 
 # 2. fabric model (pinned FABulous, throwaway venv) + harness pad overlay
 FABULOUS_SKIP_TILE_REPLAY=1 "$REPO/flow/fabulous.sh" >"$BUILD/fabulous-for-blinky.out" 2>&1 || {
@@ -179,4 +156,4 @@ if [[ -z "$sim_cfg" || "$sim_cfg" != "$py_cfg" || "$sim_cfg" != "$rec_cfg" ]]; t
     exit 1
 fi
 grep -E "^(PASS|baseline)" "$W/blinky-sim.log"
-echo "=== blinky PASS: RTL -> FASM -> frame stream -> simulated blink ($SECONDS s wall clock, tools $([[ "$FETCHED" -eq 1 ]] && echo fetched-this-run || echo cached)) ==="
+echo "=== blinky PASS: RTL -> FASM -> frame stream -> simulated blink ($SECONDS s wall clock, tools $([[ "$OSS_FETCHED" -eq 1 ]] && echo fetched-this-run || echo cached)) ==="

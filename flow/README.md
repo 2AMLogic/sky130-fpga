@@ -17,6 +17,7 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | Script | Produces / checks | CI |
 | --- | --- | --- |
 | `tool_versions.sh` | single source of tool pins (sourced by the others) | all flow workflows |
+| `install_oss_cad_suite.sh` | pinned OSS CAD Suite installer (download/sha256/extract/`.pin` stamp + yosys/nextpnr version check), sourced by `nextpnr.sh`, `blinky.sh` and `fabulous-nextpnr.yml` (issue #350); regression: `test_install_oss_cad_suite.sh` | `fabulous-nextpnr.yml` (installer), `flow-evidence.yml` (test) |
 | `pdk_root.sh` | `$PDK_ROOT`/`$PDK` resolution, sourced by `drc.sh`, `layout.sh`, `lvs.sh`, `sta-sweep.sh` | - |
 | `report_check.sh` | `--update`/check argument parse (`parse_update_mode`), `require_klt` PATH guard and `sha256_of` provenance hash, sourced by `drc.sh`, `synth.sh`, `layout.sh`, `erc.sh`, `lvs.sh`, `routed_checks.sh`, `sta-sweep.sh` (issue #265) | - |
 | `klt_artifact.sh` | `.klt/<stage>/` artifact resolver (flat path vs. newest `run-*` copy), sourced by `layout.sh`, `sdf-resim.sh`, `layout_routed.sh`, `lvs.sh` (issue #261) | - |
@@ -358,7 +359,8 @@ are in `sim/README.md`, evidence in `sim/generated_tile_replay.txt`.
 
 Runs `flow/fabulous.sh` (with `FABULOUS_SKIP_TILE_REPLAY=1`: only the model is
 needed, so the integrated replay above is skipped there), then pinned yosys + `nextpnr-generic --uarch fabulous`
-(YosysHQ OSS CAD Suite tarball, sha256-verified, unpacked into the untracked
+via the shared installer `flow/install_oss_cad_suite.sh` (YosysHQ OSS CAD
+Suite tarball, sha256-verified, unpacked into the untracked
 `flow/build/oss-cad-suite/`; pins in `flow/tool_versions.sh`) on
 `design/fabulous/nextpnr/top.v`, and diffs the normalized log against the
 committed `design/fabulous/nextpnr.log` (`--update-log` rewrites it). Needs
@@ -396,9 +398,10 @@ the `flow/nextpnr.sh` prerequisites plus Icarus Verilog. See
 Takes `design/fabulous/nextpnr/blinky.v` (a one-bit divider: after a
 synchronous reset the output toggles on every rising edge with `en` held high,
 so the blink period is two input clocks) from RTL to a simulated blink in one
-command: the pinned OSS CAD Suite is fetched/unpacked *before*
-`flow/fabulous.sh` (FABulous shells out to yosys -- the CI workflow's order,
-so a clean checkout with an empty `flow/build/` works), the harness pad
+command: the pinned OSS CAD Suite is installed by the shared
+`flow/install_oss_cad_suite.sh` *before* `flow/fabulous.sh` (FABulous shells
+out to yosys -- the CI workflow's order, so a clean checkout with an empty
+`flow/build/` works), the harness pad
 overlay is applied, yosys + `nextpnr-generic --uarch fabulous` map the design
 at a fixed recorded seed, `flow/fasm_to_bitstream.py` freezes the spec
 snapshot (byte-checked against the committed `sim/bitstream/` copies) and
