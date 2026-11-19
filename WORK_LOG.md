@@ -8,6 +8,8 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-19
 
+- **Issue #342** (closed): Verify when a surviving routing-select flip in +mutate is structurally redundant
+- **PR #348**: Classify provably-redundant routing-select flips in the +mutate sweep
 - **Issue #347** (closed): ConfigMem equivalence bench truncates map and vector paths longer than 128 bytes
 - **PR #349**: fix: widen ConfigMem bench plusarg path regs to 4096 bytes
 - **Issue #338** (closed): Share the bitstream frame parser with the corpus testbench
