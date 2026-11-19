@@ -110,8 +110,13 @@ Issue #74 adds a registered example (`nextpnr/top_reg.v`, with `ff_map.v`;
 EN/SR routed) and an **experimental** FASM-to-bitstream assembler plus a
 bitstream-driven simulation of the composed tile (`flow/fasm_to_bitstream.py`,
 `flow/bitstream.sh`, `sim/tb_logic_tile_bitstream.v`, `sim/README.md`): a
-harness observation on this fabric as implemented, not G5/G6 completion. No
-timing claim is made: the
+harness observation on this fabric as implemented, not G5/G6 completion.
+Issue #324 adds a one-bit divider ([`nextpnr/blinky.v`](fabulous/nextpnr/blinky.v)
+with pin constraints in [`nextpnr/blinky.pcf`](fabulous/nextpnr/blinky.pcf))
+that [`flow/blinky.sh`](../flow/blinky.sh) takes from RTL to a simulated blink
+in one command on the experimental single-LOGIC4 harness, using the registered
+mapping from `top_reg.v` and routing with nextpnr seed 2.
+No timing claim is made: the
 `GenerateDelayInSwitchMatrix,80` value is FABulous's placeholder constant.
 
 ### Discrepancies and deferrals (for a decision record - spec NOT edited)
