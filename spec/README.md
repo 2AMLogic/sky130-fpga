@@ -22,9 +22,9 @@ Ratified tile/fabric spec + decision records.
   — decision record: proposed mapper-side LUT pin-assignment policy for the
   harness flow.
 - [`decisions/0007-standalone-fpga-configuration.md`](decisions/0007-standalone-fpga-configuration.md)
-  — decision record: a small standalone-FPGA configuration is out of scope
-  for now, with what it waits on and an indicative area extrapolation from
-  the measured composed tile.
+  — decision record: proposed ruling that a small standalone-FPGA
+  configuration is out of scope for now, with what it waits on and an
+  indicative area extrapolation from the measured composed tile.
 - [`tile-spec.md`](tile-spec.md) — draft LUT4-class tile spec (LUT count, FF
   arrangement, carry support, switch-matrix routing target) and the
   2×2–4×4 demonstration fabric target.
