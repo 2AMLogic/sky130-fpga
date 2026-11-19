@@ -194,10 +194,10 @@ if ! iverilog -g2012 -Wall -I "$SCRIPT_DIR" -o "$out_bin" \
     overall_status=1
 else
     # design-name : fixture stem
-    for entry in "comb:top_io" "reg:top_reg"; do
+    for entry in "comb:top_io" "reg:top_reg" "comb:top_io_alias"; do
         dname="${entry%%:*}"; stem="${entry#*:}"
         bs_args=(+bin="$BS_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" +wiring="$BS_DIR/$stem.wiring" +design="$dname")
-        log_file="$BUILD_DIR/${name}_${dname}.log"
+        log_file="$BUILD_DIR/${name}_${dname}_${stem}.log"
         echo "=== running ${name} [${dname}] (bitstream sim/bitstream/$stem.bin, with perturbation checks) ==="
         if ! gs_run_bounded_tee "${name}[${dname}] $stem" "$log_file" vvp "$out_bin" "${bs_args[@]}" +mutate; then
             echo "error: simulation run failed for ${name} [${dname}]" >&2
@@ -217,7 +217,20 @@ else
             echo "error: [${dname}] loaded cfg mismatch: sim=$sim_cfg python=$py_cfg recorded=$rec_cfg" >&2
             overall_status=1
         else
-            echo "cfg cross-check [${dname}]: simulation loader == python decoder == recorded cfg ($sim_cfg)"
+            echo "cfg cross-check [${dname}/${stem}]: simulation loader == python decoder == recorded cfg ($sim_cfg)"
+        fi
+        # the alias fixture carries one provably redundant select flip (issue #342):
+        # it must be reported with its mux/bit/driver, included in the PASS line,
+        # and leave no unexplained survivor
+        if [[ "$stem" == top_io_alias ]]; then
+            grep -qF '  REDUNDANT: flip of routing-select cfg[96] (S1BEG1: E1END1 -> LA_O, both driven by X1Y1.LA_O)' "$log_file" \
+                || { echo "error: top_io_alias: missing or wrong REDUNDANT report for cfg[96] (see $log_file)" >&2; overall_status=1; }
+            grep -qF '; 28/29 perturbations detected, 1 redundant)' "$log_file" \
+                || { echo "error: top_io_alias: PASS line must report 28/29 detected and 1 redundant (see $log_file)" >&2; overall_status=1; }
+            if grep -q '^  SURVIVED:' "$log_file"; then
+                echo "error: top_io_alias: unexplained survivor in a fully-proven fixture (see $log_file)" >&2
+                overall_status=1
+            fi
         fi
         # malformed streams must be rejected by the loader (the generator
         # overwrites the same file names each run)
@@ -241,6 +254,41 @@ else
         done
         echo "loader malformed-input rejections [${dname}]: ${nrej}/${nbad}"
     done
+
+    # Redundancy negative control (issue #342): top_io_unused adds the same
+    # loop-back branch but lets nothing select it, so its three W1BEG2 select
+    # flips (cfg[110..112]) are unobservable and MUST stay fatal SURVIVED,
+    # while the S1BEG1 alias flip (cfg[96]) is still proven REDUNDANT. The
+    # terminal verdict is a completed functional FAIL counting exactly those
+    # three unexplained survivors.
+    stem=top_io_unused
+    log_file="$BUILD_DIR/${name}_comb_${stem}.log"
+    echo "=== running ${name} [comb] redundancy negative control sim/bitstream/${stem}.bin (must FAIL: 3 unexplained survivors) ==="
+    if ! gs_run_bounded_tee "${name}[comb] ${stem}" "$log_file" \
+            vvp "$out_bin" +bin="$BS_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
+            +wiring="$BS_DIR/$stem.wiring" +design=comb +mutate; then
+        echo "error: simulation run failed for ${stem}" >&2
+        overall_status=1
+    else
+        v="$(gs_classify 0 "$log_file" "$name" comb)"
+        if [[ "$v" != "FUNC_FAIL" ]]; then
+            echo "error: ${stem} must end in a completed functional FAIL (got $v; see $log_file)" >&2
+            overall_status=1
+        fi
+        grep -qF '  REDUNDANT: flip of routing-select cfg[96] (S1BEG1: LA_O -> E1END1, both driven by X1Y1.LA_O)' "$log_file" \
+            || { echo "error: ${stem}: missing or wrong REDUNDANT report for cfg[96] (see $log_file)" >&2; overall_status=1; }
+        nred="$(grep -c '^  REDUNDANT:' "$log_file" || true)"
+        [[ "$nred" -eq 1 ]] || { echo "error: ${stem}: exactly one flip must be proven redundant, got $nred" >&2; overall_status=1; }
+        for b in 110 111 112; do
+            grep -q "^  SURVIVED: flip of routing-select cfg\\[${b}\\]\$" "$log_file" \
+                || { echo "error: ${stem}: cfg[${b}] must stay an unexplained SURVIVED (see $log_file)" >&2; overall_status=1; }
+        done
+        nsurv="$(grep -c '^  SURVIVED:' "$log_file" || true)"
+        [[ "$nsurv" -eq 3 ]] || { echo "error: ${stem}: expected exactly 3 unexplained survivors, got $nsurv" >&2; overall_status=1; }
+        grep -qE '^FAIL: .*\[comb\] \([0-9]+ checks, 3 failures, 3 perturbations survived\)$' "$log_file" \
+            || { echo "error: ${stem}: terminal summary must count exactly the 3 unexplained survivors (see $log_file)" >&2; overall_status=1; }
+        echo "redundancy negative control [${stem}]: verdict $v, ${nred} REDUNDANT + ${nsurv} SURVIVED flips"
+    fi
 fi
 
 # ---------------------------------------------------------------------------

@@ -63,7 +63,7 @@ def ref_matrix_field(sink):
 
 class FixtureTests(unittest.TestCase):
     def test_committed_fixtures_reproduce(self):
-        for d in ("top_io", "top_reg"):
+        for d in ("top_io", "top_reg", "top_io_alias", "top_io_unused"):
             m = mapped(d)
             a = F.assemble(fasm(d), SNAP, m)
             self.assertEqual((FIX / f"{d}.bin").read_bytes(), F.pack(a["positions"], SNAP))
@@ -143,6 +143,56 @@ class LayoutTests(unittest.TestCase):
 
     def test_default_select_is_all_zero(self):
         self.assertEqual(asm_bits("")["cfg"], 0)
+
+
+# Same-driver redundancy evidence for the +mutate sweep (issue #342). The
+# fixtures reproduce the measured curator cases: an alias loop (both S1BEG1
+# encodings resolve to LA_O), and the negative control whose extra branch is
+# unused (its W1BEG2 flips stay unexplained).
+class RedundancyTests(unittest.TestCase):
+    ALIAS_BRANCH = ("X1Y1.LA_O.W1BEG2\nX1Y1.W1BEG2.W1END2\nX0Y1.W1END2.E1BEG1\n"
+                    "X0Y1.E1BEG1.E1END1\n")
+
+    def test_baseline_fixtures_prove_nothing(self):
+        for d in ("top_io", "top_reg"):
+            self.assertEqual(F.assemble(fasm(d), SNAP, mapped(d))["red"], [])
+
+    def test_alias_fixture_proves_exactly_the_one_flip(self):
+        a = F.assemble(fasm("top_io_alias"), SNAP, mapped("top_io_alias"))
+        self.assertEqual(a["red"], [(96, "S1BEG1", "E1END1", "LA_O", "X1Y1.LA_O")])
+        self.assertIn("RED 96 S1BEG1 E1END1 LA_O X1Y1.LA_O\n", (FIX / "top_io_alias.wiring").read_text())
+
+    def test_unused_branch_proves_only_the_alias_flip(self):
+        a = F.assemble(fasm("top_io_unused"), SNAP, mapped("top_io_unused"))
+        self.assertEqual(a["red"], [(96, "S1BEG1", "LA_O", "E1END1", "X1Y1.LA_O")])
+
+    def fragment(self, pips):
+        return F.assemble("X1Y1.A.INIT[15:0] = 'b" + "0" * 16 + "\n" + pips, SNAP, None)["red"]
+
+    def test_flip_to_undriven_or_absent_input_is_not_proven(self):
+        # S1BEG1 selects LA_O directly; every flipped encoding is undriven
+        # (W1END1/E1END1) or the mux-drives-0 encoding 7
+        self.assertEqual(self.fragment("X1Y1.LA_O.S1BEG1\n"), [])
+
+    def test_flip_to_a_different_driver_is_not_proven(self):
+        # the loop-back into E1END1 is driven by LB_O, not LA_O
+        pips = ("X1Y1.LB_O.W1BEG2\nX1Y1.W1BEG2.W1END2\nX0Y1.W1END2.E1BEG1\n"
+                "X0Y1.E1BEG1.E1END1\nX1Y1.E1END1.S1BEG1\n")
+        self.assertEqual(self.fragment(pips), [])
+
+    def test_flip_to_the_same_physical_driver_is_proven(self):
+        # the measured alias case, as a minimal fragment: E1END1 and LA_O both
+        # resolve to X1Y1.LA_O through the CAP loop-back
+        pips = (self.ALIAS_BRANCH + "X1Y1.E1END1.S1BEG1\n")
+        self.assertEqual(self.fragment(pips),
+                         [(96, "S1BEG1", "E1END1", "LA_O", "X1Y1.LA_O")])
+
+    def test_cyclic_route_is_not_proven(self):
+        # S1BEG1 <- N1END1 <- CAP_S loop <- S1BEG2 <- N1END2 <- CAP_S loop <- S1BEG1:
+        # both inputs resolve into a configured cycle, so no flip is provable
+        pips = ("X1Y1.N1END1.S1BEG1\nX1Y1.S1BEG1.S1END1\nX1Y2.S1END1.N1BEG2\nX1Y2.N1BEG2.N1END2\n"
+                "X1Y1.N1END2.S1BEG2\nX1Y1.S1BEG2.S1END2\nX1Y2.S1END2.N1BEG1\nX1Y2.N1BEG1.N1END1\n")
+        self.assertEqual(self.fragment(pips), [])
 
 
 class AssemblerRejectTests(unittest.TestCase):
