@@ -164,11 +164,19 @@ def collect_lut_count() -> int:
     # elaborates as g_wrap.g_slice, but file order must never decide the
     # divisor: require exactly one named header, reporting every header
     # line even when only one has a supported bound.
-    named_header = re.compile(
-        r"\bfor\s*\([^;]*;[^;]*;[^;]*\)"
-        r"\s*begin\s*:\s*g_slice(?![\w$])"
-    )
-    named = list(named_header.finditer(tile))
+    label_after_header = re.compile(r"\s*begin\s*:\s*g_slice(?![\w$])")
+    named = []
+    for header in re.compile(r"\bfor\s*\(").finditer(tile):
+        depth = 1
+        pos = header.end()
+        while pos < len(tile) and depth:
+            if tile[pos] == "(":
+                depth += 1
+            elif tile[pos] == ")":
+                depth -= 1
+            pos += 1
+        if depth == 0 and label_after_header.match(tile, pos):
+            named.append(header)
     require(
         len(named) == 1,
         f"{RTL_PATH}: expected exactly one g_slice loop in logic_tile_routed, "

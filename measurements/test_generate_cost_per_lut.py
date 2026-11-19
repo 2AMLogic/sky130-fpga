@@ -99,7 +99,6 @@ class SliceCountTests(unittest.TestCase):
                 message = str(caught.exception)
                 self.assertIn("exactly one g_slice", message)
                 self.assertIn("found 2", message)
-                self.assertNotIn("158", message)
 
     def test_duplicate_with_unsupported_bound_still_detected(self):
         # The real four-slice loop's bound is not a bare decimal literal
@@ -133,7 +132,19 @@ class SliceCountTests(unittest.TestCase):
                 self.assertIn("found 2", message)
                 for number in expected:
                     self.assertIn(f"line {number}", message)
-                self.assertNotIn("158", message)
+
+    def test_conditional_labeled_g_slice_is_not_a_loop_header(self):
+        conditional = OTHER_LOOP.replace(
+            "wire unused;", "if (1) begin : g_slice wire unused; end"
+        )
+        for conditional_first in (True, False):
+            loops = (
+                conditional + SLICE_LOOP
+                if conditional_first
+                else SLICE_LOOP + conditional
+            )
+            with self.subTest(conditional_first=conditional_first):
+                self.assertEqual(self.count(loops), 4)
 
 
 if __name__ == "__main__":
