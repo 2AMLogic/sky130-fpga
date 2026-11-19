@@ -32,13 +32,13 @@ _None._
 
 Issues currently being built (`loom:building`).
 
-_None._
+- **#338**: Share the bitstream frame parser with the corpus testbench
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-_None._
+- **#345**: sim: share the frame-stream parser with the corpus testbench
 
 ## Approved (Awaiting Merge)
 
