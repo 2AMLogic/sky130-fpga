@@ -8,6 +8,10 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 ### 2026-11-19
 
+- **Issue #347** (closed): ConfigMem equivalence bench truncates map and vector paths longer than 128 bytes
+- **PR #349**: fix: widen ConfigMem bench plusarg path regs to 4096 bytes
+- **Issue #338** (closed): Share the bitstream frame parser with the corpus testbench
+- **PR #345**: sim: share the frame-stream parser with the corpus testbench
 - **PR #343**: docs: link the blinky divider demo from the nextpnr examples
 - **Issue #341** (closed): design/README.md: record the #324 blinky nextpnr fixture alongside top.v / top_io.v / top_reg.v
 - **PR #337**: feat: one-command blinky demo (RTL -> bitstream -> simulated blink)
