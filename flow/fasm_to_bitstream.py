@@ -311,10 +311,12 @@ def redundancy_records(pips, snap, ltile):
     For every mux of the logic tile that the FASM configures, a flip of one of
     its select bits is provably redundant when the original and the flipped
     encoding select inputs resolving, through the configured pips, to the same
-    physical driver (a BEL or pad output wire). Both encodings are resolved in
-    the configured routing; a chain that reaches a node with two configured
-    drivers or closes a combinational cycle (a flip can create one) is not
-    provable. Everything unproven -- including a flipped encoding with no
+    physical driver (a BEL or pad output wire). The original encoding is
+    resolved in the configured routing; the flipped one with the flipped
+    select in effect, so a chain that passes back through the mux being
+    flipped closes a cycle through the flip. A chain that reaches a node with
+    two configured drivers or closes a combinational cycle (a flip can create
+    one) is not provable. Everything unproven -- including a flipped encoding with no
     input, where the generated mux drives 0 -- is absent from the result and
     stays a strict SURVIVED in the bench (issue #342). CAP delay is irrelevant
     under the bench's sampling model: two same-driven mux inputs carry the
@@ -338,7 +340,7 @@ def redundancy_records(pips, snap, ltile):
         if t == ltile and not hop:
             sel[d] = s
 
-    def driver(node):
+    def driver(node, flip=None):
         seen = set()
         while node not in seen:
             seen.add(node)
@@ -346,7 +348,7 @@ def redundancy_records(pips, snap, ltile):
                 return None
             if _SRC_OUT.match(node[1]):
                 return f"{node[0]}.{node[1]}"
-            node = drv[node]
+            node = flip[1] if flip is not None and node == flip[0] else drv[node]
         return None            # configured cycle: redundancy not provable
 
     specs = snap["tile_specs"][ltile]
@@ -376,7 +378,7 @@ def redundancy_records(pips, snap, ltile):
             s2 = enc.get(enc_of[s0] ^ (1 << r))
             if s2 is None:
                 continue       # flipped encoding selects no input: mux drives 0
-            d0, d2 = driver((ltile, s0)), driver((ltile, s2))
+            d0, d2 = driver((ltile, s0)), driver((ltile, s2), ((ltile, mux), (ltile, s2)))
             if d0 is not None and d0 == d2:
                 out.append((cb_of_pos[p], mux, s0, s2, d0))
     return sorted(out)

@@ -291,8 +291,11 @@ module tb_logic_tile_bitstream;
                 else if (kw == "SEL") begin r = $fscanf(fd, "%d", a); sel_list[nsel] = a; nsel = nsel + 1; end
                 else if (kw == "RED") begin
                     r = $fscanf(fd, "%d %s %s %s %s", a, nm2, nm3, nm4, nm5);
-                    red_bit[nred] = a; red_mux[nred] = nm2; red_from[nred] = nm3;
-                    red_to[nred] = nm4; red_drv[nred] = nm5; nred = nred + 1;
+                    if (r != 5) ok_all = 0;
+                    else begin
+                        red_bit[nred] = a; red_mux[nred] = nm2; red_from[nred] = nm3;
+                        red_to[nred] = nm4; red_drv[nred] = nm5; nred = nred + 1;
+                    end
                 end
                 else if (kw == "END") end_seen = 1;
                 else ok_all = 0;

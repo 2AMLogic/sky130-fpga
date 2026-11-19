@@ -289,6 +289,29 @@ else
             || { echo "error: ${stem}: terminal summary must count exactly the 3 unexplained survivors (see $log_file)" >&2; overall_status=1; }
         echo "redundancy negative control [${stem}]: verdict $v, ${nred} REDUNDANT + ${nsurv} SURVIVED flips"
     fi
+
+    # Malformed-manifest negative (issue #342 review): a RED record with
+    # missing fields must be rejected outright -- it used to store stale
+    # copies of the previous record, minting exemptions for bits it does
+    # not describe and letting the must-fail control pass.
+    stem=top_io
+    bad_wiring="$BUILD_DIR/${stem}_bad_red.wiring"
+    sed '/^END$/i RED' "$BS_DIR/$stem.wiring" > "$bad_wiring"
+    log_file="$BUILD_DIR/${name}_comb_${stem}_bad_red.log"
+    echo "=== running ${name} [comb] malformed manifest (RED record with no fields must be rejected) ==="
+    rc=0
+    gs_run_bounded "${name}[comb] ${stem} bad-red-manifest" "$log_file" \
+        vvp "$out_bin" +bin="$BS_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
+        +wiring="$bad_wiring" +design=comb || rc=$?
+    if [[ "$rc" -ne 0 ]]; then
+        echo "error: malformed-manifest run did not complete (rc=$rc; infrastructure failure, see $log_file)" >&2
+        overall_status=1
+    elif grep -qF 'FAIL: '"${name}"': bad wiring manifest' "$log_file" && ! grep -q "^PASS: ${name}" "$log_file"; then
+        echo "malformed-manifest negative [${stem}]: field-less RED record rejected"
+    else
+        echo "error: bench accepted a wiring manifest with a field-less RED record (see $log_file)" >&2
+        overall_status=1
+    fi
 fi
 
 # ---------------------------------------------------------------------------

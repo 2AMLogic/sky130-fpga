@@ -194,6 +194,19 @@ class RedundancyTests(unittest.TestCase):
                 "X1Y1.N1END2.S1BEG2\nX1Y1.S1BEG2.S1END2\nX1Y2.S1END2.N1BEG1\nX1Y2.N1BEG1.N1END1\n")
         self.assertEqual(self.fragment(pips), [])
 
+    def test_flip_that_creates_a_cycle_is_not_proven(self):
+        # W1BEG1 selects LA_O; its flipped input E1END1 resolves to LA_O only
+        # by walking *through* the mux being flipped. With the flipped select
+        # in effect the branch is the cycle W1BEG1 -> E1END2 -> W1BEG2 ->
+        # E1END1 -> W1BEG1, cut off from LA_O: cfg[108] must stay SURVIVED.
+        # The W1BEG2 flip (cfg[111]) keeps its genuine same-driver proof: its
+        # chain E1END2 -> ... -> LA_O never crosses the mux it flips.
+        pips = ("X1Y1.LA_O.W1BEG1\nX1Y1.W1BEG1.W1END1\nX0Y1.W1END1.E1BEG2\n"
+                "X0Y1.E1BEG2.E1END2\nX1Y1.E1END2.W1BEG2\nX1Y1.W1BEG2.W1END2\n"
+                "X0Y1.W1END2.E1BEG1\nX0Y1.E1BEG1.E1END1\n")
+        self.assertEqual(self.fragment(pips),
+                         [(111, "W1BEG2", "E1END2", "LA_O", "X1Y1.LA_O")])
+
 
 class AssemblerRejectTests(unittest.TestCase):
     def rej(self, text, mapped_name=None, exc=F.AsmError):
