@@ -25,12 +25,14 @@ on:
     paths:
       - 'flow/**'
       - 'design/rtl/logic_tile.v'
+      - 'design/rtl/logic_tile_routed.v'
       - 'design/bitstream-format.md'
       - 'sim/**'
       - 'layout/**'
       - 'measurements/**'
       - 'README.md'
       - 'spec/framework-gaps.md'
+      - 'spec/tile-spec.md'
       - 'spec/decisions/**'
       - 'signoff/tier-report.json'
       - '.github/workflows/flow-evidence.yml'
@@ -84,6 +86,17 @@ jobs:
         run: |
           python3 flow/test_gen_bitstream_format.py
           python3 flow/gen_bitstream_format.py --check
+
+      - name: Test cost-per-LUT slice count
+        run: python3 measurements/test_generate_cost_per_lut.py
+
+      - name: Check generated cost-per-LUT estimate
+        if: ${{ !cancelled() }}
+        run: python3 measurements/generate-cost-per-lut.py --check
+
+      - name: Check generated characterization summary
+        if: ${{ !cancelled() }}
+        run: python3 measurements/generate-characterization-summary.py --check
 
       - name: PDK-resolution gate regression (hermetic, issue #269)
         run: ./sim/sdf_port_interconnect/test_pdk_gate.sh
