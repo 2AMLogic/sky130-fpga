@@ -177,11 +177,11 @@ def collect_lut_count() -> int:
             pos += 1
         if depth == 0 and label_after_header.match(tile, pos):
             named.append(header)
+    locations = ", ".join(f"line {line_of(m.start())}" for m in named)
     require(
         len(named) == 1,
         f"{RTL_PATH}: expected exactly one g_slice loop in logic_tile_routed, "
-        f"found {len(named)} at "
-        + ", ".join(f"line {line_of(m.start())}" for m in named),
+        f"found {len(named)}" + (" at " + locations if named else ""),
     )
     loop_header = re.compile(
         r"\bfor\s*\(\s*(?:genvar\s+)?(?P<index>[A-Za-z_][\w$]*)\s*=\s*0\s*;\s*"
