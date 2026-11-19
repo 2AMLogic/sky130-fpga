@@ -175,3 +175,18 @@
     alias would now be verifiable instead of rejected.
   Not covered: ratified fabric, inter-tile routing between logic tiles, timing, tile types
     other than LOGIC4.
+
+2026-11-19  Issue #342 review verification at 2073c959d2ee (single-LOGIC4 harness)
+  python3 -I flow/test_fasm_to_bitstream.py passed 32/32 tests (8 new for #342).
+    The 8-pip cycle regression resolves the alternative with the flipped mux in effect.
+    It emits a proof only for cfg[111]. Flipping cfg[108] disconnects LA_O.
+  On b66dab40, inserting a bit-only RED 110 before the relocated SEL 111 and SEL 112
+    in top_io_unused.wiring produced a false PASS (25/27 detected, 2 redundant).
+    The reader used those SEL lines as proof fields and skipped their flips.
+  With the line-oriented reader, the bitstream controls in sim/run.sh measured:
+    top_io with a field-less RED and top_io_unused with the bit-only RED above
+      both reported "FAIL: tb_logic_tile_bitstream: bad wiring manifest" before baseline.
+    top_io passed 26/26 and top_reg passed 27/27 perturbations.
+    top_io_alias passed with 28/29 detected and cfg[96] redundant (5985 checks).
+    top_io_unused with its original manifest completed 5985 checks, with cfg[96]
+      redundant and exactly three failures from the surviving cfg[110], cfg[111], cfg[112].
