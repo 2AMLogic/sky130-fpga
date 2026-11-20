@@ -46,6 +46,7 @@ from pathlib import Path
 # introduces it; never remove an entry (removal fails the check).
 LEDGERS = (
     "sim/configmem_fabulous_equiv.txt",
+    "sim/fabric_bitstream_results.txt",
     "sim/generated_tile_replay.txt",
     "sim/logic_tile_bitstream_gate_results.txt",
     "sim/logic_tile_bitstream_results.txt",
