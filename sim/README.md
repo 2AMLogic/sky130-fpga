@@ -342,6 +342,19 @@ Recorded, append-only, in `sim/logic_tile_bitstream_results.txt`. Mapped
 designs: `top_io.v` (BELs A and D) and `top_reg.v` (BELs A and C; flop BEL A,
 data LUT BEL C); both route through the generated switch matrix.
 
+## Multi-tile 2x2 bitstream replay (issue #355, EXPERIMENTAL)
+
+`flow/fabric_bitstream.sh` (run by `flow/bitstream.sh`) generates a 2x2
+FABulous fabric (`design/fabulous/fabric_2x2.csv`), maps the cross-tile
+design `design/fabulous/nextpnr/cross_tile.v`, assembles a multi-tile stream
+with `flow/fasm_to_bitstream.py`, requires it to be byte-identical to
+FABulous's `bit_gen genBitstream`, and replays it through
+`sim/tb_fabric_bitstream.v` (96 checks). A one-bit perturbed stream
+(`perturbed.bin`) must fail with exactly 32 mismatches. Golden files are in
+`sim/bitstream/fabric_2x2/`. Single-tile outputs are unchanged. Stand-in
+switch matrix only: no timing claim and no ADR-0004/0005 conformance claim.
+Evidence: `sim/fabric_bitstream_results.txt` (append-only).
+
 ## Gate-level / SDF-annotated coverage (T1 item 7, issue #29)
 
 `./flow/sdf-resim.sh` re-runs `tb_logic_tile.v` **unmodified**, gate-level,
