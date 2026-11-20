@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
-"""FASM -> serialized configuration for the single-LOGIC4 harness (issue #74).
+"""FASM -> serialized configuration for the experimental LOGIC4 harnesses.
 
 EXPERIMENTAL HARNESS COVERAGE ONLY. Targets the existing G1 harness fabric
-(design/fabulous: one LOGIC4 tile + four CAP_* boundary cells, plus the scratch
-pad overlay of flow/nextpnr_io_overlay.py). It makes no claim about the ratified
-Wilton-class population (ADR-0004/0005 are still Proposed), about timing, or
-about inter-tile routing. See sim/README.md for the format description.
+(design/fabulous, LOGIC4 inside CAP_* boundary cells, with optional scratch
+pad overlay) and its experimental multi-tile extension. See sim/README.md
+for the single-tile format and sim/fabric_bitstream_results.txt for the 2x2 run.
 
 What it does (python3 standard library only, so `sim/run.sh` can use it
 without any mapping tool):
@@ -20,8 +19,8 @@ without any mapping tool):
   assemble  FASM + snapshot + mapped summary -> FABulous-format frame stream
             (.bin, byte-identical to `bit_gen genBitstream`, which
             flow/bitstream.sh checks), wiring manifest (.wiring) and the
-            decoded 158-bit tile vector (.cfg).
-  decode    independent frame-stream reader -> 158-bit tile vector.
+            decoded tile vectors (.cfg, 158 bits per LOGIC4).
+  decode    independent frame-stream reader -> concatenated tile vectors.
   check     re-assemble every committed fixture and require byte identity.
 
 Strictness: every FASM line must be accounted for. Logic-tile and CAP-tile
@@ -131,8 +130,19 @@ def load_snapshot(path):
     return s
 
 
+def logic_tiles(snap):
+    """Tile names in cfg order: Y increasing, then X, first tile in low bits."""
+    cols, rows = snap["grid"]
+    tiles = [f"X{x}Y{y}" for y in range(rows) for x in range(cols)
+             if snap["tile_map"].get(f"X{x}Y{y}") == snap["logic_type"]]
+    if not tiles:
+        raise AsmError(f"no {snap['logic_type']} tiles in fabric")
+    return tiles
+
+
 def logic_tile(snap):
-    tiles = [t for t, k in snap["tile_map"].items() if k == snap["logic_type"]]
+    """Coordinate of the sole tile for callers implementing single-tile diagnostics."""
+    tiles = logic_tiles(snap)
     if len(tiles) != 1:
         raise AsmError(f"expected exactly one {snap['logic_type']} tile, got {tiles}")
     m = re.fullmatch(r"X(\d+)Y(\d+)", tiles[0])
@@ -159,7 +169,9 @@ def pad_pip_rows(snap):
 def assemble(fasm_text, snap, mapped):
     """-> dict with positions, cfg, manifest data and the line accounting."""
     items = parse_fasm(fasm_text)
-    ltile, lx, ly = logic_tile(snap)
+    tiles = logic_tiles(snap)
+    index = {tile: i for i, tile in enumerate(tiles)}
+    stride = snap["arch"]["frame_bits_per_row"] * snap["arch"]["max_frames_per_col"]
     pads = pad_pip_rows(snap)
     specs = snap["tile_specs"]
 
@@ -198,31 +210,25 @@ def assemble(fasm_text, snap, mapped):
             if (tile, key) in seen:
                 raise AsmError(f"line {it['line']}: duplicate feature {tile}.{key}")
             seen.add((tile, key))
-            if tile != ltile:
+            if not val and not spec[key]:
+                raise AsmError(f"line {it['line']}: disabled zero-bit pip {tile}.{key} = 0 "
+                               f"(omit the line instead)")
+            if tile not in index:
                 if spec[key]:
                     raise AsmError(f"line {it['line']}: unexpected config bits on {tile}.{key}")
-                if val == 0:
-                    # zero-bit CAP/wire pip: `= 0` would carry no bits yet still be
-                    # traced as an active route, so it is rejected outright
-                    raise AsmError(f"line {it['line']}: disabled zero-bit pip {tile}.{key} = 0 "
-                                   f"(omit the line instead)")
                 n_cap += 1
-            else:
-                n_logic += 1
-            if tile != ltile and "." in key and not key.startswith(("A.", "B.", "C.", "D.")):
-                p = key.split(".")
-                pips.append((tile, p[0], p[1]))
-            if val == 0:
+                pips.append((tile, *key.split(".")))
+                continue
+            n_logic += 1
+            i = index[tile]
+            m = re.fullmatch(r"([A-D])\.(INIT(?:\[\d+\])?|FF)", key)
+            if m:
+                bel_used.add(4 * i + "ABCD".index(m[1]))
+            if not val:
                 continue        # vector bit 0: feature not set (bits stay 0)
-            if tile == ltile:
-                m = re.match(r"^([A-D])\.(INIT(?:\[\d+\])?|FF)$", key)
-                if m:
-                    bel_used.add("ABCD".index(m.group(1)))
-                else:
-                    p = key.split(".")
-                    pips.append((tile, p[0], p[1]))
-                    if spec[key]:
-                        sel_bits.update(cb_of_pos[q] for q in spec[key])
+            if not m:
+                pips.append((tile, *key.split(".")))
+                sel_bits.update(i * CFG_BITS + cb_of_pos[q] for q in spec[key])
             for pos, bv in spec[key].items():
                 prev = owner.get((tile, pos))
                 if prev and prev[0] != int(bv):
@@ -230,26 +236,38 @@ def assemble(fasm_text, snap, mapped):
                                    f"by {key} and {prev[1]}")
                 owner[(tile, pos)] = (int(bv), key)
 
-    positions = {pos: v for (t, pos), (v, _) in owner.items() if t == ltile}
-    stray = [pos for pos in positions if pos not in cb_of_pos]
-    if stray:
-        raise AsmError(f"bits {stray} are not mapped by the ConfigMem")
+    positions = {}
     cfg = 0
-    for pos, v in positions.items():
+    for (tile, pos), (v, _) in owner.items():
+        if pos not in cb_of_pos:
+            raise AsmError(f"bit {tile}:{pos} is not mapped by the ConfigMem")
+        i = index[tile]
+        positions[i * stride + pos] = v
         if v:
-            cfg |= 1 << cb_of_pos[pos]
-    wiring = None
+            cfg |= 1 << (i * CFG_BITS + cb_of_pos[pos])
+    wiring, links = None, []
     if mapped is not None:      # mapped=None: bit assembly only (unit tests)
-        wiring = trace_wiring(pips, snap, ltile)
-        check_against_mapped(items, pips, bel_used, cfg, mapped, snap, ltile, wiring)
-    red = redundancy_records(pips, snap, ltile)
-    return dict(positions=positions, cfg=cfg, bel_used=sorted(bel_used),
-                sel_bits=sorted(sel_bits), wiring=wiring, red=red, pad_lines=pad_lines,
-                pad_line_nos=pad_line_nos, n_logic=n_logic, n_cap=n_cap, n_lines=len(items), ltile=(ltile, lx, ly))
+        wiring, links = fabric_wiring(pips, snap, tiles)
+        check_against_mapped(pips, bel_used, cfg, mapped, index, wiring)
+    red = redundancy_records(pips, snap, index)
+    result = dict(positions=positions, cfg=cfg, bel_used=sorted(bel_used),
+                  sel_bits=sorted(sel_bits), tile_wiring=wiring, red=red, pad_lines=pad_lines,
+                  pad_line_nos=pad_line_nos, n_logic=n_logic, n_cap=n_cap, n_lines=len(items),
+                  links=links)
+    if len(tiles) == 1:  # retain the single-tile diagnostic API
+        result["ltile"] = logic_tile(snap)
+        result["wiring"] = wiring[tiles[0]] if wiring is not None else None
+    return result
 
 
 def trace_wiring(pips, snap, ltile):
-    """Derive pad/loopback wiring around the logic tile from the FASM pips.
+    """Single-tile view used by the LUT basis diagnostic."""
+    wiring, _ = fabric_wiring(pips, snap, [ltile])
+    return wiring[ltile]
+
+
+def fabric_wiring(pips, snap, tiles):
+    """Derive pad/loopback wiring and direct inter-LOGIC4 hops from FASM.
 
     Edges come only from the FASM pips plus the generated pip model for the
     inter-tile hop of a wire pip. Every non-logic pip must belong to a traced
@@ -259,53 +277,61 @@ def trace_wiring(pips, snap, ltile):
     for st, sw, dt, dw in snap["pips"]:
         if st != dt:
             ext[(st, sw)] = (dt, dw)
-    internal = {}
-    for t, s, d in pips:
-        internal.setdefault((t, s), []).append(d)
     pred = {}
     for (t, s), (dt, dw) in ext.items():
         pred[(dt, dw)] = (t, s)
     used = set()
-    ins, outs, loops = [], [], []
+    wiring = {t: dict(ins=[], outs=[], loops=[]) for t in tiles}
+    driven = {(t, d) for t, s, d in pips}
+    feeding = {(t, s) for t, s, d in pips}
+    links = []
     for t, s, d in pips:
-        if t == ltile:
+        if t in wiring:
+            dst = ext.get((t, s))
+            if dst and dst[0] in wiring and dst[1] == d:
+                if (t, s) not in driven or dst not in feeding:
+                    raise AsmError(f"orphan wire hop {t}.{s}.{d}")
+                links.append((t, s, *dst))
+                used.add((t, s, d))
             continue
         ps, pd = _PAD.match(s), _PAD.match(d)
         if ps and ps.group(2) == "O":          # pad drives a track toward the logic tile
             node = (t, d)
             hop = ext.get(node)
-            if not hop or hop[0] != ltile or not _WIRE.match(hop[1]):
+            if not hop or hop[0] not in wiring or not _WIRE.match(hop[1]):
                 raise AsmError(f"pad pip {t}.{s}.{d} does not reach the logic tile")
             used.update([(t, s, d), (t, d, hop[1])])
             m = _WIRE.match(hop[1])
-            ins.append(((t, ps.group(1)), DIRS.index(m.group(1)), int(m.group(3))))
+            wiring[hop[0]]["ins"].append(((t, ps.group(1)), DIRS.index(m[1]), int(m[3])))
         elif pd and pd.group(2) == "I":        # track from the logic tile into a pad
             src = pred.get((t, s))
-            if not src or src[0] != ltile:
+            if not src or src[0] not in wiring:
                 raise AsmError(f"pad pip {t}.{s}.{d} is not fed by the logic tile")
             m = _WIRE.match(src[1])
             used.update([(t, s, d), (src[0], src[1], s)])
-            outs.append(((t, pd.group(1)), DIRS.index(m.group(1)), int(m.group(3))))
+            wiring[src[0]]["outs"].append(((t, pd.group(1)), DIRS.index(m[1]), int(m[3])))
         elif (t, s) in ext and ext[(t, s)][1] == d:  # plain wire hop (BEG -> END)
             continue
         elif _WIRE.match(s) and _WIRE.match(d):  # CAP loopback END -> BEG
             src = pred.get((t, s))
             hop = ext.get((t, d))
-            if not src or src[0] != ltile or not hop or hop[0] != ltile:
+            if not src or not hop or src[0] not in wiring or hop[0] != src[0]:
                 raise AsmError(f"cap pip {t}.{s}.{d} is not a logic-tile loopback")
             a, b = _WIRE.match(src[1]), _WIRE.match(hop[1])
             used.update([(t, s, d), (src[0], src[1], s), (t, d, hop[1])])
-            loops.append((DIRS.index(a.group(1)), int(a.group(3)),
-                          DIRS.index(b.group(1)), int(b.group(3))))
+            wiring[src[0]]["loops"].append((DIRS.index(a[1]), int(a[3]), DIRS.index(b[1]), int(b[3])))
         else:
             raise AsmError(f"unclassified non-logic pip {t}.{s}.{d}")
     for t, s, d in pips:   # wire hops must all lie on a traced path
         if (t, s) in ext and ext[(t, s)][1] == d and (t, s, d) not in used:
             raise AsmError(f"orphan wire hop {t}.{s}.{d}")
-    return dict(ins=sorted(ins), outs=sorted(outs), loops=sorted(loops))
+    for w in wiring.values():
+        for rows in w.values():
+            rows.sort()
+    return wiring, sorted(links)
 
 
-def redundancy_records(pips, snap, ltile):
+def redundancy_records(pips, snap, index):
     """Same-driver redundancy evidence for the configured routing-select bits.
 
     For every mux of the logic tile that the FASM configures, a flip of one of
@@ -337,8 +363,8 @@ def redundancy_records(pips, snap, ltile):
             multi.add(node)
         else:
             drv.setdefault(node, (t, s))
-        if t == ltile and not hop:
-            sel[d] = s
+        if t in index and not hop:
+            sel[(t, d)] = s
 
     def driver(node, flip=None):
         seen = set()
@@ -351,12 +377,11 @@ def redundancy_records(pips, snap, ltile):
             node = flip[1] if flip is not None and node == flip[0] else drv[node]
         return None            # configured cycle: redundancy not provable
 
-    specs = snap["tile_specs"][ltile]
     cb_of_pos = {p: cb for cb, p in enumerate(snap["cb_pos"])}
     out = []
-    for mux, s0 in sel.items():
+    for (ltile, mux), s0 in sel.items():
         positions, enc, enc_of = None, {}, {}
-        for key, bits in specs.items():
+        for key, bits in snap["tile_specs"][ltile].items():
             src, dot, dst = key.rpartition(".")
             if not dot or dst != mux or not bits:
                 continue
@@ -380,11 +405,11 @@ def redundancy_records(pips, snap, ltile):
                 continue       # flipped encoding selects no input: mux drives 0
             d0, d2 = driver((ltile, s0)), driver((ltile, s2), ((ltile, mux), (ltile, s2)))
             if d0 is not None and d0 == d2:
-                out.append((cb_of_pos[p], mux, s0, s2, d0))
+                out.append((index[ltile] * CFG_BITS + cb_of_pos[p], mux, s0, s2, d0))
     return sorted(out)
 
 
-def check_against_mapped(items, pips, bel_used, cfg, mapped, snap, ltile, wiring):
+def check_against_mapped(pips, bel_used, cfg, mapped, index, wiring):
     """Cross-check the FASM against nextpnr's routed netlist (normalised)."""
     want = {f"{t}.{s}.{d}" for t, s, d in pips}
     got = set()
@@ -399,46 +424,50 @@ def check_against_mapped(items, pips, bel_used, cfg, mapped, snap, ltile, wiring
         if cell["type"] != "lut4_ff_bel":
             continue
         tile, bel = cell["bel"].split("/")
-        if f"{tile}" != ltile:
-            raise AsmError(f"BEL placed on {tile}, not the logic tile")
+        if tile not in index:
+            raise AsmError(f"BEL placed on non-logic tile {tile}")
         i = "ABCD".index(bel)
+        offset = index[tile] * CFG_BITS + 17 * i
         init = int(cell["init"], 2)
-        got_init = (cfg >> (17 * i)) & 0xFFFF
-        got_ff = (cfg >> (17 * i + 16)) & 1
+        got_init = (cfg >> offset) & 0xFFFF
+        got_ff = (cfg >> (offset + 16)) & 1
         if got_init != init or got_ff != int(cell["ff"]):
-            raise AsmError(f"BEL {bel}: FASM config INIT={got_init:04x} FF={got_ff} "
+            raise AsmError(f"BEL {tile}/{bel}: FASM config INIT={got_init:04x} FF={got_ff} "
                            f"!= netlist INIT={init:04x} FF={cell['ff']}")
-        seen.add(i)
+        seen.add(index[tile] * 4 + i)
     if seen != set(bel_used):
         raise AsmError(f"FASM configures BELs {sorted(bel_used)}, netlist places {sorted(seen)}")
     # port <-> pad directions against the wiring derived from the FASM
     by_pad = {tuple(p["pad"]): p for p in mapped["ports"]}
-    for kind, lst in (("input", wiring["ins"]), ("output", wiring["outs"])):
-        for (tp, d, k) in lst:
-            port = by_pad.get(tp)
-            if not port:
-                raise AsmError(f"pad {tp} used by FASM but unbound in the netlist")
-            if port["dir"] != kind:
-                raise AsmError(f"port {port['name']} is an {port['dir']} but pad {tp} is wired as {kind}")
-    if len(by_pad) != len(wiring["ins"]) + len(wiring["outs"]):
+    used_pads = {}
+    for w in wiring.values():
+        for key, direction in (("ins", "input"), ("outs", "output")):
+            for pad, _, _ in w[key]:
+                if pad in used_pads:
+                    raise AsmError(f"pad {pad} wired twice")
+                used_pads[pad] = direction
+    if used_pads != {pad: port["dir"] for pad, port in by_pad.items()}:
         raise AsmError("netlist ports and FASM pads differ")
 
 
-def named_wiring(asm, mapped):
+def named_wiring(asm, mapped, tile=None):
     by_pad = {tuple(p["pad"]): p["name"] for p in mapped["ports"]}
-    w = asm["wiring"]
+    w = asm["wiring"] if tile is None else asm["tile_wiring"][tile]
     return ([(by_pad[tp], d, k) for tp, d, k in w["ins"]],
             [(by_pad[tp], d, k) for tp, d, k in w["outs"]], w["loops"])
 
 
 def manifest_text(asm, snap, mapped):
-    ins, outs, loops = named_wiring(asm, mapped)
-    _, lx, ly = asm["ltile"]
     cols, rows = snap["grid"]
-    out = [f"GRID {cols} {rows}", f"TILE {lx} {ly}"]
-    out += [f"IN {n} {d} {k}" for n, d, k in sorted(ins)]
-    out += [f"OUT {n} {d} {k}" for n, d, k in sorted(outs)]
-    out += [f"LOOP {a} {b} {c} {d}" for a, b, c, d in loops]
+    out = [f"GRID {cols} {rows}"]
+    for tile in asm["tile_wiring"]:
+        x, y = tile[1:].split("Y")
+        out.append(f"TILE {x} {y}")
+        ins, outs, loops = named_wiring(asm, mapped, tile)
+        out += [f"IN {n} {d} {k}" for n, d, k in sorted(ins)]
+        out += [f"OUT {n} {d} {k}" for n, d, k in sorted(outs)]
+        out += [f"LOOP {a} {b} {c} {d}" for a, b, c, d in loops]
+    out.extend(f"LINK {st} {sw} {dt} {dw}" for st, sw, dt, dw in asm["links"])
     out += [f"BEL {i}" for i in asm["bel_used"]]
     out += [f"SEL {b}" for b in asm["sel_bits"]]
     out += [f"RED {bit} {mx} {s0} {s1} {drv}" for bit, mx, s0, s1, drv in asm["red"]]
@@ -447,7 +476,13 @@ def manifest_text(asm, snap, mapped):
 
 
 def map_text(snap):
-    return "".join(f"{cb} {pos}\n" for cb, pos in enumerate(snap["cb_pos"]))
+    tiles = logic_tiles(snap)
+    lines = []
+    for i, tile in enumerate(tiles):
+        # Multi-tile rows qualify each local frame position by X and Y.
+        prefix = " ".join(tile[1:].split("Y")) + " " if len(tiles) > 1 else ""
+        lines.extend(f"{prefix}{i * CFG_BITS + cb} {pos}\n" for cb, pos in enumerate(snap["cb_pos"]))
+    return "".join(lines)
 
 
 # ----------------------------------------------------------------------------
@@ -457,7 +492,7 @@ def pack(positions, snap):
     a = snap["arch"]
     fbits, nfr, sel_w = a["frame_bits_per_row"], a["max_frames_per_col"], a["frame_select_width"]
     cols, rows = snap["grid"]
-    _, lx, ly = logic_tile(snap)
+    index = {tile: i for i, tile in enumerate(logic_tiles(snap))}
     nbytes = (fbits + 7) // 8
     out = bytearray.fromhex(a["sync_header_hex"])
     for col in range(cols):
@@ -465,9 +500,10 @@ def pack(positions, snap):
             out += ((col << (fbits - sel_w)) | (1 << f)).to_bytes(nbytes, "big")
             for y in range(rows - 2, 0, -1):          # interior rows, Y descending
                 word = 0
-                if (col, y) == (lx, ly):
+                i = index.get(f"X{col}Y{y}")
+                if i is not None:
                     for b in range(fbits):
-                        if positions.get(f * fbits + b):
+                        if positions.get((i * nfr + f) * fbits + b):
                             word |= 1 << b
                 out += word.to_bytes(nbytes, "big")
     out += (1 << a["desync_bit"]).to_bytes(nbytes, "big")
@@ -479,7 +515,7 @@ def decode(data, snap):
     a = snap["arch"]
     fbits, nfr, sel_w = a["frame_bits_per_row"], a["max_frames_per_col"], a["frame_select_width"]
     cols, rows = snap["grid"]
-    _, lx, ly = logic_tile(snap)
+    index = {tile: i for i, tile in enumerate(logic_tiles(snap))}
     nbytes = (fbits + 7) // 8
     hdr = bytes.fromhex(a["sync_header_hex"])
     if data[:len(hdr)] != hdr:
@@ -514,14 +550,15 @@ def decode(data, snap):
             raise BitstreamError("truncated frame data")
         for i, y in enumerate(row_order):
             fw = int.from_bytes(data[pos + i * nbytes: pos + (i + 1) * nbytes], "big")
-            if (col, y) == (lx, ly):
+            tile_index = index.get(f"X{col}Y{y}")
+            if tile_index is not None:
                 for b in range(fbits):
                     if fw >> b & 1:
                         p = frame * fbits + b
                         if p not in mapped_pos:
                             raise BitstreamError(f"set bit at unmapped frame position {p}")
-                        cfg |= 1 << cb_of_pos[p]
-                        bitpos.add(p)
+                        cfg |= 1 << (tile_index * CFG_BITS + cb_of_pos[p])
+                        bitpos.add(tile_index * nfr * fbits + p)
             elif fw:
                 raise BitstreamError(f"data for tile X{col}Y{y} which has no config bits")
         pos += need
@@ -622,6 +659,11 @@ def sha256(p):
     return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
 
+def cfg_hex(cfg, snap):
+    digits = (len(logic_tiles(snap)) * CFG_BITS + 3) // 4
+    return f"{cfg:0{digits}x}"
+
+
 def cmd_assemble(a):
     snap = load_snapshot(a.snapshot)
     mapped = json.loads(Path(a.mapped).read_text())
@@ -632,7 +674,7 @@ def cmd_assemble(a):
         raise AsmError("internal: decode(pack()) != assembled cfg")
     Path(a.out + ".bin").write_bytes(data)
     Path(a.out + ".wiring").write_text(manifest_text(asm, snap, mapped))
-    Path(a.out + ".cfg").write_text(f"{asm['cfg']:040x}\n")
+    Path(a.out + ".cfg").write_text(cfg_hex(cfg, snap) + "\n")
     if a.filtered_fasm:
         # FASM minus the accounted-for zero-bit pad pips: the input for
         # FABulous's own bit_gen cross-check (flow/bitstream.sh).
@@ -648,7 +690,7 @@ def cmd_assemble(a):
 def cmd_decode(a):
     snap = load_snapshot(a.snapshot)
     cfg, _ = decode(Path(a.bin).read_bytes(), snap)
-    print(f"{cfg:040x}")
+    print(cfg_hex(cfg, snap))
 
 
 def cmd_check(a):
@@ -664,7 +706,7 @@ def cmd_check(a):
         asm = assemble(fasm.read_text(), snap, mapped)
         want = {".bin": pack(asm["positions"], snap),
                 ".wiring": manifest_text(asm, snap, mapped).encode(),
-                ".cfg": f"{asm['cfg']:040x}\n".encode()}
+                ".cfg": (cfg_hex(asm["cfg"], snap) + "\n").encode()}
         for ext, blob in want.items():
             if stem.with_suffix(ext).read_bytes() != blob:
                 print(f"DRIFT {stem.name}{ext}"); ok = False
@@ -675,7 +717,7 @@ def cmd_check(a):
 
 
 def cmd_snapshot(a):
-    prov = dict(fabulous=a.fabulous_version, source="flow/fabulous.sh + flow/nextpnr_io_overlay.py")
+    prov = dict(fabulous=a.fabulous_version, source=a.source)
     snap = build_snapshot(a.spec, Path(a.configmem).read_text(), Path(a.pips).read_text(), prov)
     out = Path(a.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -708,6 +750,7 @@ def main(argv=None):
     p.add_argument("--spec", required=True); p.add_argument("--configmem", required=True)
     p.add_argument("--pips", required=True); p.add_argument("--out", required=True)
     p.add_argument("--fabulous-version", default="")
+    p.add_argument("--source", default="flow/fabulous.sh + flow/nextpnr_io_overlay.py")
     p.set_defaults(fn=cmd_snapshot)
     p = sp.add_parser("summary")
     p.add_argument("post_json"); p.add_argument("--out", required=True)

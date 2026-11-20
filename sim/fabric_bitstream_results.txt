@@ -1,0 +1,50 @@
+# Append-only experimental 2x2 LOGIC4 bitstream results (#355)
+
+2026-11-20  sim/tb_fabric_bitstream.v
+  Reproduce with ./flow/fabric_bitstream.sh. The normal ./flow/bitstream.sh
+  verification also runs this bench after reproducing the single-tile fixtures.
+
+  FABulous 2.2.0 generated design/fabulous/fabric_2x2.csv using the verified
+  OSS CAD Suite 2026-10-08. The same suite provided yosys 0.69+260,
+  nextpnr-0.11.1-54-g861c57be and Icarus 14.0-devel (f45ffabed).
+  The grid and six-LUT parity chain reproduce 2AMLogic/sg13g2-fpga #80.
+  nextpnr placed u0..u2 on X2Y1/C,A,D and u3..u5 on X1Y1/B,A,D.
+  Net n3 runs from X2Y1/D.O via W1BEG0 -> W1END0 to X1Y1/B.I0.
+
+  PASS: cross_tile.bin equals FABulous bit_gen genBitstream on the unfiltered
+        nextpnr FASM, all 984 bytes. SHA-256
+        e4a0ff127ce7602e8f20dbe7dcba5dbf89a2aa547ef84f3ae16bc121c3f5fbf2
+  PASS: tb_fabric_bitstream (96 checks, 0 failures)
+        The bench wrote the binary words through eFPGA_top.SelfWriteData and
+        compared all 632 generated ConfigMem outputs to cross_tile.cfg.
+        It drove all 16 addresses of u0 and tied the unused upper three LUT
+        inputs of u1..u5 low. Each stage must then output the parity of u0's
+        input. All five routed connections, including n3, carry DUT signals.
+  FAIL (expected): tb_fabric_bitstream on perturbed.bin (96 checks, 32 failures).
+        Flipping u2 INIT[0] changes u2..u5 on the eight even-parity inputs.
+        The mutated stream passed its own ConfigMem readback. SHA-256
+        6067de2852bd50eca07b2e0ccbeb4c0ceec78b40613f009f704b3498804b1c17
+  PASS: negative control detected. The runner requires a completed functional
+        FAIL with 32 mismatches.
+
+  Single-tile regression checks
+  PASS: all 35 assembler tests and all committed baseline, corpus and pin
+        fixtures reproduced. The combinational, registered and alias benches
+        passed 5,409, 139,651 and 5,985 checks respectively.
+  PASS: signoff/verify-pins.sh verified every manifest citation. The pinned
+        klt 0.9.1 grader reproduced signoff/tier-report.json.
+
+  The five golden files are in sim/bitstream/fabric_2x2. The driver generates
+  fabric_spec.json and logic4_configmem.map in flow/build/fabric-bitstream.
+  To reassemble using those files and the standard-library assembler, run
+    python3 flow/fasm_to_bitstream.py check sim/bitstream/fabric_2x2 --snapshot-dir flow/build/fabric-bitstream
+
+  Tiles appear in increasing Y, then X. Tile 0 occupies cfg[157:0], with
+  consecutive 158-bit slices above it. Multi-tile map rows contain X, Y,
+  the global cfg bit and the local frame position (32 * frame + bit).
+  In .wiring, each TILE owns its following IN/OUT/LOOP rows. LINK names both
+  endpoints of a routed logic-to-logic hop. BEL numbers count four per tile.
+  SEL and RED use global cfg bit numbers.
+
+  Experimental coverage on the stand-in switch matrix. Timing, layout, DRC
+  and LVS were NOT-RUN. G5/G6 remain open for the ratified fabric.

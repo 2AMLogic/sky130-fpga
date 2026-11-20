@@ -89,6 +89,55 @@ class FixtureTests(unittest.TestCase):
         self.assertEqual(F.assemble(fasm("top_reg"), SNAP, mapped("top_reg"))["bel_used"], [0, 2])
 
 
+class FabricTests(unittest.TestCase):
+    def test_three_tiles_keep_independent_bits_in_row_major_order(self):
+        # A non-square core. Repeated frame positions and BEL names refer
+        # to different physical latches in each column.
+        tiles = ["X1Y1", "X2Y1", "X3Y1"]
+        snap = dict(SNAP, grid=[5, 3], tile_map=dict.fromkeys(reversed(tiles), "LOGIC4"),
+                    tile_specs=dict.fromkeys(tiles, SPEC))
+        text = "X1Y1.A.INIT[0]\nX2Y1.A.INIT[1]\nX3Y1.A.INIT[2]\n"
+        asm = F.assemble(text, snap, None)
+        expected = sum(1 << (i * F.CFG_BITS + i) for i in range(3))
+        self.assertEqual(asm["cfg"], expected)
+        self.assertEqual(F.decode(F.pack(asm["positions"], snap), snap)[0], expected)
+
+    def test_reference_2x2_decode_and_loader_map(self):
+        # The generated ConfigMem is shared by all instances of LOGIC4.
+        # Decode this real bit_gen stream using just the four coordinates,
+        # frame constants and single-tile map, independent of the pip model.
+        tiles = ("X1Y1", "X2Y1", "X1Y2", "X2Y2")
+        snap = dict(SNAP, grid=[4, 4], tile_map=dict.fromkeys(tiles, "LOGIC4"))
+        fix = FIX / "fabric_2x2"
+        data = (fix / "cross_tile.bin").read_bytes()
+        cfg, positions = F.decode(data, snap)
+        self.assertEqual(F.cfg_hex(cfg, snap) + "\n", (fix / "cross_tile.cfg").read_text())
+        self.assertEqual(F.pack(dict.fromkeys(positions, 1), snap), data)
+        rows = [tuple(map(int, line.split())) for line in F.map_text(snap).splitlines()]
+        for i, (x, y) in enumerate(((1, 1), (2, 1), (1, 2), (2, 2))):
+            self.assertEqual(rows[i * 158:(i + 1) * 158],
+                             [(x, y, i * 158 + cb, pos) for cb, pos in enumerate(SNAP["cb_pos"])])
+        self.assertEqual(len(rows), 4 * 158)
+
+    def test_mapped_bel_and_wire_hop_are_tile_specific(self):
+        # Two instances use BEL A with different truth tables. The source and
+        # destination of the inter-tile hop must be wired on their own tiles.
+        src, dst = "X1Y1", "X2Y1"
+        snap = dict(SNAP, grid=[4, 3], tile_map=dict.fromkeys((src, dst), "LOGIC4"),
+                    pips=[(src, "E1BEG0", dst, "E1END0")], tile_specs={src: SPEC, dst: SPEC})
+        pips = [f"{src}.LA_O.E1BEG0", f"{src}.E1BEG0.E1END0", f"{dst}.E1END0.LA_I0"]
+        text = "\n".join([f"{src}.A.INIT", f"{dst}.A.INIT[1]", *pips])
+        cells = [dict(type="lut4_ff_bel", bel=f"{t}/A", init=init, ff="0")
+                 for t, init in ((src, "01"), (dst, "10"))]
+        mapped = dict(cells=cells, nets=[dict(pips=pips)], ports=[])
+        asm = F.assemble(text, snap, mapped)
+        self.assertIn("LINK X1Y1 E1BEG0 X2Y1 E1END0\n", F.manifest_text(asm, snap, mapped))
+        with self.assertRaisesRegex(F.AsmError, "orphan wire hop"):
+            F.assemble(text.replace(pips[-1], ""), snap, mapped)
+        with self.assertRaisesRegex(F.AsmError, "BEL X2Y1/A"):
+            F.assemble(text.replace(f"{dst}.A.INIT[1]", f"{dst}.A.INIT"), snap, mapped)
+
+
 class LayoutTests(unittest.TestCase):
     def test_round_trip_every_config_bit(self):
         for cb in range(F.CFG_BITS):

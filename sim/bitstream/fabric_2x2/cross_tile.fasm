@@ -1,0 +1,77 @@
+# routing for net '$PACKER_GND'
+
+
+# routing for net '$PACKER_VCC'
+
+
+# routing for net 'n6'
+
+
+# routing for net 'n5'
+
+X1Y0.N1END3.S1BEG0
+X1Y0.S1BEG0.S1END0
+X1Y1.LA_O.N1BEG3
+X1Y1.S1END0.LD_I0
+X1Y1.N1BEG3.N1END3
+
+# routing for net 'n4'
+
+X0Y1.W1END3.E1BEG0
+X0Y1.E1BEG0.E1END0
+X1Y1.LB_O.W1BEG3
+X1Y1.E1END0.LA_I0
+X1Y1.W1BEG3.W1END3
+
+# routing for net 'n3'
+
+X1Y1.W1END0.LB_I0
+X2Y1.LD_O.W1BEG0
+X2Y1.W1BEG0.W1END0
+
+# routing for net 'n2'
+
+X2Y1.LA_O.S1BEG0
+X2Y1.N1END0.LD_I0
+X2Y1.S1BEG0.S1END0
+X2Y2.S1END0.N1BEG0
+X2Y2.N1BEG0.N1END0
+
+# routing for net 'n1'
+
+X2Y1.LC_O.E1BEG3
+X2Y1.W1END0.LA_I0
+X2Y1.E1BEG3.E1END3
+X3Y1.E1END3.W1BEG0
+X3Y1.W1BEG0.W1END0
+
+# config for cell '$PACKER_GND_DRV'
+
+
+# config for cell '$PACKER_VCC_DRV'
+
+
+# config for cell 'u5'
+
+X1Y1.D.INIT[15:0] = 'b0110100110010110
+
+# config for cell 'u4'
+
+X1Y1.A.INIT[15:0] = 'b0110100110010110
+
+# config for cell 'u3'
+
+X1Y1.B.INIT[15:0] = 'b0110100110010110
+
+# config for cell 'u2'
+
+X2Y1.D.INIT[15:0] = 'b0110100110010110
+
+# config for cell 'u1'
+
+X2Y1.A.INIT[15:0] = 'b0110100110010110
+
+# config for cell 'u0'
+
+X2Y1.C.INIT[15:0] = 'b0110100110010110
+

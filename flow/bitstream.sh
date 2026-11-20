@@ -15,6 +15,7 @@
 #      produce a byte-identical stream from the same FASM (pad pips removed).
 #   5. fixtures compared with the committed sim/bitstream/ (exit 1 on drift),
 #      or rewritten with --update.
+#   6. Replay the separate 2x2 fabric fixture through the generated wrapper.
 #
 # Nothing is installed host-wide (everything lives under flow/build/).
 # Usage: flow/bitstream.sh [--update]
@@ -64,3 +65,4 @@ else
     echo "regenerated fixtures match the committed sim/bitstream/"
 fi
 python3 "$TOOL" check "$FIX"
+"$REPO/flow/fabric_bitstream.sh"
