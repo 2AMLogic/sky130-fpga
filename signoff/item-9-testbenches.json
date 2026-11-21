@@ -3,14 +3,14 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 9,
-  "summary": "T1 item 9 (Testbenches shipped): 46/46 attestation checks passed (klt signoff --attest)",
+  "summary": "T1 item 9 (Testbenches shipped): 48/48 attestation checks passed (klt signoff --attest)",
   "source": "signoff/item-9-inventory.json",
   "attestation": {
     "producer": "klt signoff --attest",
     "inventory_schema_version": 1,
     "hash_algorithm": "sha256-raw-bytes",
-    "check_count": 46,
-    "passed_count": 46,
+    "check_count": 48,
+    "passed_count": 48,
     "checks": [
       {
         "check": "present",
@@ -46,6 +46,13 @@
         "path": "flow/audit_evidence.py",
         "passed": true,
         "content_hash": "sha256:9bf62a7b4aa562ba79fd65731f299363fdbd1356da9ffa66a94b3f7ede013be2"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "flow/tile-functional-verification.sh",
+        "passed": true,
+        "content_hash": "sha256:f55d2b315c13e0e2ff303645aa914eb74c6d7877374f4eaea6898c535e62b19f"
       },
       {
         "check": "present",
@@ -88,6 +95,13 @@
         "path": "sim/cocotb/test_bitstream_fabric.py",
         "passed": true,
         "content_hash": "sha256:19b83097dcaab5cac93f88cbc51597f1cb0963012b96a20658edb24155cd6cb4"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/cocotb/test_logic_tile.py",
+        "passed": true,
+        "content_hash": "sha256:02ee239eb08d070a5b28056cf9b1f1fe71ba6db92cc9e5857404cea8b1c22ca3"
       },
       {
         "check": "present",
@@ -356,7 +370,7 @@
         "path": "signoff/item-9-inventory.json",
         "scope": "repo"
       },
-      "content_hash": "sha256:9b8953f42561a84a468484ca9d4e3678366157225c688a2d194e9988d2b595a7"
+      "content_hash": "sha256:785a80b906187d91552f367e429181e87f4054f3a0db0c8f40677eed05a6024d"
     }
   }
 }
