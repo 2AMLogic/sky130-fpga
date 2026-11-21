@@ -510,38 +510,49 @@ def pack(positions, snap):
     return bytes(out)
 
 
-def decode(data, snap):
-    """Strict frame-stream reader -> (cfg int, set of positions set)."""
+def frame_records(data, snap):
+    """Structural frame-stream reader -> [(column, row, frame, raw word)].
+
+    One framing loop shared by every consumer of the serialized stream (issue
+    #363): after validating the complete stream it returns one record per
+    LOGIC4 row of each frame write, zero words included, in wire order, with
+    the payload word kept raw so each caller applies its own interpretation.
+    Tile identity comes from snapshot geometry + logic_tiles(snap); the
+    configuration map (cb_pos) is deliberately not consulted.
+
+    Checks: sync header, complete big-endian words, one-hot frame strobe,
+    reserved bits and column range, exactly one write per (column, frame)
+    with a complete payload in descending interior-row order, zero data on
+    non-LOGIC4 tiles, an exact final desync word with no trailing bytes, and
+    every column x frame present.
+    """
     a = snap["arch"]
     fbits, nfr, sel_w = a["frame_bits_per_row"], a["max_frames_per_col"], a["frame_select_width"]
     cols, rows = snap["grid"]
-    index = {tile: i for i, tile in enumerate(logic_tiles(snap))}
+    logic = set(logic_tiles(snap))
     nbytes = (fbits + 7) // 8
     hdr = bytes.fromhex(a["sync_header_hex"])
     if data[:len(hdr)] != hdr:
         raise BitstreamError("bad or missing sync header")
     pos = len(hdr)
     row_order = list(range(rows - 2, 0, -1))
-    mapped_pos = set(snap["cb_pos"])
-    cb_of_pos = {p: cb for cb, p in enumerate(snap["cb_pos"])}
-    got, cfg, bitpos = set(), 0, set()
+    got, out = set(), []
     while True:
         if pos + nbytes > len(data):
-            raise BitstreamError("truncated: missing frame-select word / desync")
+            raise BitstreamError("truncated: missing frame-select word / desync word")
         word = int.from_bytes(data[pos:pos + nbytes], "big")
         pos += nbytes
-        if word >> a["desync_bit"] & 1 and word & ((1 << nfr) - 1) == 0 and word >> (fbits - sel_w) == 0:
-            if word != 1 << a["desync_bit"]:
-                raise BitstreamError("malformed desync word")
-            if pos != len(data):
-                raise BitstreamError("trailing data after desync")
-            break
-        col = word >> (fbits - sel_w)
-        reserved = (word >> nfr) & ((1 << (fbits - sel_w - nfr)) - 1)
         strobe = word & ((1 << nfr) - 1)
-        if reserved or strobe == 0 or strobe & (strobe - 1) or col >= cols:
+        if strobe == 0:                            # must be the exact desync word
+            if word != 1 << a["desync_bit"]:
+                raise BitstreamError(f"malformed desync word {word:#010x}")
+            if pos != len(data):
+                raise BitstreamError("trailing data after desync word")
+            break
+        col, frame = word >> (fbits - sel_w), strobe.bit_length() - 1
+        reserved = (word >> nfr) & ((1 << (fbits - sel_w - nfr)) - 1)
+        if reserved or strobe & (strobe - 1) or col >= cols:
             raise BitstreamError(f"invalid frame-select word {word:#010x}")
-        frame = strobe.bit_length() - 1
         if (col, frame) in got:
             raise BitstreamError(f"duplicate frame {frame} for column {col}")
         got.add((col, frame))
@@ -549,21 +560,38 @@ def decode(data, snap):
         if pos + need > len(data):
             raise BitstreamError("truncated frame data")
         for i, y in enumerate(row_order):
-            fw = int.from_bytes(data[pos + i * nbytes: pos + (i + 1) * nbytes], "big")
-            tile_index = index.get(f"X{col}Y{y}")
-            if tile_index is not None:
-                for b in range(fbits):
-                    if fw >> b & 1:
-                        p = frame * fbits + b
-                        if p not in mapped_pos:
-                            raise BitstreamError(f"set bit at unmapped frame position {p}")
-                        cfg |= 1 << (tile_index * CFG_BITS + cb_of_pos[p])
-                        bitpos.add(tile_index * nfr * fbits + p)
-            elif fw:
+            w = int.from_bytes(data[pos + i * nbytes:pos + (i + 1) * nbytes], "big")
+            if f"X{col}Y{y}" in logic:
+                out.append((col, y, frame, w))
+            elif w:
                 raise BitstreamError(f"data for tile X{col}Y{y} which has no config bits")
         pos += need
     if len(got) != cols * nfr:
         raise BitstreamError(f"incomplete stream: {len(got)} of {cols * nfr} frames")
+    return out
+
+
+def decode(data, snap):
+    """Strict frame-stream reader -> (cfg int, set of positions set).
+
+    Framing and completeness come from frame_records(); this layer only
+    interprets each raw payload word through the configuration map.
+    """
+    a = snap["arch"]
+    fbits, nfr = a["frame_bits_per_row"], a["max_frames_per_col"]
+    index = {tile: i for i, tile in enumerate(logic_tiles(snap))}
+    mapped_pos = set(snap["cb_pos"])
+    cb_of_pos = {p: cb for cb, p in enumerate(snap["cb_pos"])}
+    cfg, bitpos = 0, set()
+    for col, row, frame, fw in frame_records(data, snap):
+        i = index[f"X{col}Y{row}"]
+        for b in range(fbits):
+            if fw >> b & 1:
+                p = frame * fbits + b
+                if p not in mapped_pos:
+                    raise BitstreamError(f"set bit at unmapped frame position {p}")
+                cfg |= 1 << (i * CFG_BITS + cb_of_pos[p])
+                bitpos.add(i * nfr * fbits + p)
     return cfg, bitpos
 
 

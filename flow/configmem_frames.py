@@ -27,55 +27,21 @@ def frames(data, snap):
     """Validate the whole stream structurally, then return the LOGIC4 tile's
     (frame, FrameData) writes in stream order.
 
-    Checks mirror the strict reader in fasm_to_bitstream.decode() as structural
-    rules only (header, select-word shape, one-hot strobe, column range,
-    duplicates, full payload, exact desync word, no trailing data, every
-    column x frame present, non-logic-tile rows zero); the configuration map
-    (cb_pos) is deliberately not consulted.
+    Framing and completeness are shared with the strict reader
+    fasm_to_bitstream.frame_records() (header, select-word shape, one-hot
+    strobe, column range, duplicates, full payload, exact desync word, no
+    trailing data, every column x frame present, non-logic-tile rows zero);
+    the configuration map (cb_pos) is deliberately not consulted, so the raw
+    stimulus reaches the bench unchanged. The shared reader's BitstreamError
+    is translated at this boundary: the adapter's contract is
+    FrameStreamError.
     """
-    a = snap["arch"]
-    fbits, nfr, sel_w = a["frame_bits_per_row"], a["max_frames_per_col"], a["frame_select_width"]
-    cols, rows = snap["grid"]
     _, lx, ly = f2b.logic_tile(snap)
-    nbytes = (fbits + 7) // 8
-    row_order = list(range(rows - 2, 0, -1))
-    hdr = bytes.fromhex(a["sync_header_hex"])
-    if data[:len(hdr)] != hdr:
-        raise FrameStreamError("bad or missing sync header")
-    pos = len(hdr)
-    seen, out = set(), []
-    while True:
-        if pos + nbytes > len(data):
-            raise FrameStreamError("truncated: missing frame-select word / desync word")
-        word = int.from_bytes(data[pos:pos + nbytes], "big")
-        pos += nbytes
-        strobe = word & ((1 << nfr) - 1)
-        if strobe == 0:                            # must be the exact desync word
-            if word != 1 << a["desync_bit"]:
-                raise FrameStreamError(f"malformed desync word {word:#010x}")
-            if pos != len(data):
-                raise FrameStreamError("trailing data after desync word")
-            break
-        col, frame = word >> (fbits - sel_w), strobe.bit_length() - 1
-        reserved = (word >> nfr) & ((1 << (fbits - sel_w - nfr)) - 1)
-        if reserved or strobe & (strobe - 1) or col >= cols:
-            raise FrameStreamError(f"invalid frame-select word {word:#010x}")
-        if (col, frame) in seen:
-            raise FrameStreamError(f"duplicate frame {frame} for column {col}")
-        seen.add((col, frame))
-        need = nbytes * len(row_order)
-        if pos + need > len(data):
-            raise FrameStreamError("truncated frame data")
-        for i, y in enumerate(row_order):
-            w = int.from_bytes(data[pos + i * nbytes:pos + (i + 1) * nbytes], "big")
-            if (col, y) == (lx, ly):
-                out.append((frame, w))
-            elif w:
-                raise FrameStreamError(f"data for tile X{col}Y{y} which has no config bits")
-        pos += need
-    if len(seen) != cols * nfr:
-        raise FrameStreamError(f"incomplete stream: {len(seen)} of {cols * nfr} frames")
-    return out
+    try:
+        recs = f2b.frame_records(data, snap)
+    except f2b.BitstreamError as e:
+        raise FrameStreamError(str(e)) from None
+    return [(frame, w) for col, row, frame, w in recs if (col, row) == (lx, ly)]
 
 
 def main(argv):
