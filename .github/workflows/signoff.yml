@@ -82,7 +82,7 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Base-freshness guard (issue #304) -- merge the live main tip before gating
+      - name: 'Base-freshness guard (issue #304) -- merge the live main tip before gating'
         # pull_request-only (see the header comment): gate the tree that
         # would actually land -- this PR merged with origin/main's CURRENT
         # tip -- not the cached merge ref from when the run was queued.
@@ -176,20 +176,20 @@ jobs:
           fi
           echo "run-time merge with origin/main: done (Already up to date == the common case, no new failure mode)"
 
-      - name: Regression-test the pin checker itself (issue #281)
+      - name: 'Regression-test the pin checker itself (issue #281)'
         # python3 + git only, so it runs before the klt install: signoff/
         # verify-pins.sh's multi-input branch must catch a tampered member of
         # item 1's input set (flow/test_verify_pins.sh tampers a tempdir copy).
         run: ./flow/test_verify_pins.sh
 
-      - name: Regression-test the signoff --target flag (issue #259)
+      - name: 'Regression-test the signoff --target flag (issue #259)'
         # python3 + git only, so it also runs before the klt install: the
         # harnesses are exercised through stub binaries
         # (flow/test_signoff_target.sh builds its own fake klt/openroad/yosys
         # and needs no PDK or network), so this runs on a bare runner.
         run: ./flow/test_signoff_target.sh
 
-      - name: Regression-test the base-freshness guard (issue #304)
+      - name: 'Regression-test the base-freshness guard (issue #304)'
         # python3 + git only, so it also runs before the klt install. Its
         # leg 0 re-reads THIS workflow file and fails when the guard step
         # above is removed, runs below the pin gate, or loses the
