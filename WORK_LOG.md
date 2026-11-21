@@ -6,6 +6,11 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-21
+
+- **Issue #355** (closed): Multi-tile support in flow/fasm_to_bitstream.py and an experimental fabric-level bitstream bench (N LOGIC4 tiles, 2x2 first)
+- **PR #361**: feat: assemble multi-tile LOGIC4 streams and replay a routed 2x2 fabric
+
 ### 2026-11-19
 
 - **Issue #350** (closed): Share the pinned OSS CAD Suite setup across blinky, nextpnr and CI
@@ -286,22 +291,4 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 - **PR #64**: feat: drop git-history-derived stamps from the characterization summary
 - **Issue #61** (closed): Drop git-history-derived "Committed at" stamps from the characterization summary generator (decision per #57 item 4)
-
-### 2026-09-21
-
-- **PR #62**: docs: refresh post-ADR-0003 staleness in traceability row 12, measurements README and ADR index
-- **PR #60**: feat: add klt signoff block manifest and graded T1 tier report
-- **PR #58**: docs: match flow prose to post-#1901 PDK pins; add lvs trigger
-- **PR #59**: spec: re-ratify timing row WNS from post-PDN STA record (ADR-0003)
-- **PR #56**: fix: point layout/README's ERC run block at the surviving spec path
-- **PR #55**: fix: add the logic tile's power grid and substantiate the T1 item-4 claim with real power-connectivity evidence
-- **PR #54**: feat: add klt erc supply spec and committed ERC report (T1 item 11)
-- **Issue #57** (closed): Post-ADR-0003 freshness pass: claim-traceability row 12, measurements/README timing section, spec/README ADR index
-- **Issue #53** (closed): flow/audit-evidence.sh is red on main: record 20260915-133517-234b13b's pinned flow/sdf-resim.sh hash drifted (PRs #46/#47)
-- **Issue #52** (closed): Commit a klt signoff block manifest so this block's T1 state is graded, not hand-read
-- **Issue #49** (closed): klt toolchain drift: repo pins klt 0.3.0, environment has 0.5.0 — drc/lvs/layout check modes fail on metadata-only diffs
-- **Issue #42** (closed): Re-ratify spec/tile-spec.md's Timing row against the PDN-bearing layout (ADR-0003)
-- **Issue #50** (closed): klt lvs power_connectivity reports VPB reaching 12 nets across 47 instances — real PDN gap or abstracted-cell extraction artifact?
-- **Issue #41** (closed): logic_tile.gds has no power grid (15 isolated met1 rails, 0 straps/vias/tapcells) — the LVS 'match' is signal-only and README cites it for T1 item 4
-- **Issue #51** (closed): T1 item 11 (power delivery, structural): no klt erc supply spec or report in this repo
 
