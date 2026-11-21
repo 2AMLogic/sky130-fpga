@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # flow/test_signoff_target.sh (issue #259): regression for the read-only
 # `--target <dir>` flag on the four signoff harnesses (flow/drc.sh,
-# flow/erc.sh, flow/lvs.sh, flow/sta-sweep.sh).
+# flow/erc.sh, flow/lvs.sh, flow/sta-sweep.sh). Extended by issue #370:
+# an explicitly empty `--target` operand is a directory error on every
+# driver, never an omitted flag.
 #
 # What it pins down, per the issue's acceptance criteria:
 #   (a) default-mode `klt` argv and cwd are byte-identical to what the
@@ -352,6 +354,42 @@ assert "sta: --target --update refused (rc=$RC)" bash -c "[[ $RC -ne 0 ]]"
 assert "sta: refusal ran no klt" no_new_invocations
 assert "refusals wrote nothing under layout/, measurements/ or signoff/" no_writes
 assert "refusals created no target artifacts" bash -c "[[ -z \$(ls -A '$T/target') ]]"
+
+# ---- 1b. explicit empty --target operand (issue #370) ----------------------
+# An empty operand is a directory error at parse time on every driver,
+# never an omitted flag: the pre-#370 parsers stored it and the later
+# `[[ -n "$TARGET_DIR" ]]` treated the empty value as "no --target
+# given", so `--target "" --update` fell through to refreshing the
+# committed layout -- exactly the evidence an empty shell variable in
+# the operand meant to override. Every write-mode combination must
+# refuse with the directory diagnostic before any klt run or write.
+touch_sentinel
+mark_log
+run_h "$REPO/flow/drc.sh" --target ""
+assert "drc: empty --target operand refused (rc=$RC)" bash -c "[[ $RC -ne 0 ]]"
+out_has "drc: empty refusal names the directory requirement" '*--target requires a non-empty directory*'
+run_h "$REPO/flow/drc.sh" --target "" --update
+assert "drc: empty --target + --update refused, not a committed-layout refresh (rc=$RC)" bash -c "[[ $RC -ne 0 ]]"
+out_has "drc: empty write-mode refusal is the directory diagnostic" '*--target requires a non-empty directory*'
+run_h "$REPO/flow/erc.sh" --target ""
+assert "erc: empty --target operand refused (rc=$RC)" bash -c "[[ $RC -ne 0 ]]"
+run_h "$REPO/flow/erc.sh" --target "" --update
+assert "erc: empty --target + --update refused, not a committed-layout refresh (rc=$RC)" bash -c "[[ $RC -ne 0 ]]"
+out_has "erc: empty write-mode refusal is the directory diagnostic" '*--target requires a non-empty directory*'
+run_h "$REPO/flow/lvs.sh" --target ""
+assert "lvs: empty --target operand refused (rc=$RC)" bash -c "[[ $RC -ne 0 ]]"
+run_h "$REPO/flow/lvs.sh" --target "" --update
+assert "lvs: empty --target + --update refused, not a committed-layout refresh (rc=$RC)" bash -c "[[ $RC -ne 0 ]]"
+run_h "$REPO/flow/lvs.sh" --target "" --update-report
+assert "lvs: empty --target + --update-report refused, not a committed-report refresh (rc=$RC)" bash -c "[[ $RC -ne 0 ]]"
+out_has "lvs: empty write-mode refusal is the directory diagnostic" '*--target requires a non-empty directory*'
+run_h "$REPO/flow/sta-sweep.sh" --target ""
+assert "sta: empty --target operand refused (rc=$RC)" bash -c "[[ $RC -ne 0 ]]"
+run_h "$REPO/flow/sta-sweep.sh" --target "" --update
+assert "sta: empty --target + --update refused, not a committed-report refresh (rc=$RC)" bash -c "[[ $RC -ne 0 ]]"
+out_has "sta: empty write-mode refusal is the directory diagnostic" '*--target requires a non-empty directory*'
+assert "empty-operand refusals ran no klt" no_new_invocations
+assert "empty-operand refusals wrote nothing under layout/, measurements/ or signoff/" no_writes
 
 # ---- 2. drc.sh -----------------------------------------------------------
 # (a) default mode: byte-identical argv + cwd, and the full check path
