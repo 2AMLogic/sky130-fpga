@@ -90,6 +90,11 @@ jobs:
           python3 flow/test_gen_bitstream_format.py
           python3 flow/gen_bitstream_format.py --check
 
+      - name: Check recovered logic_tile reference netlist is current
+        run: |
+          python3 -I flow/test_def_to_netlist.py
+          python3 -I flow/def_to_netlist.py --check
+
       - name: Test cost-per-LUT slice count
         run: python3 measurements/test_generate_cost_per_lut.py
 

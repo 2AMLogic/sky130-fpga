@@ -50,6 +50,23 @@ Tile physical design — GDS + routed DEF + DRC/LVS/ERC reports.
   compare itself is signal-only and the power check is layout-side pin
   consistency, so supply islands and well ties still come from
   `logic_tile.erc.json` immediately below. See "LVS scope, concretely".
+- `logic_tile.asbuilt.v` — a gate-level Verilog netlist **recovered from
+  `logic_tile.def`** by `flow/def_to_netlist.py` (issue #358; regenerated
+  into scratch space and byte-compared by `--check`, run in
+  `flow-evidence.yml`). It is **not** the signed LVS reference. Caveats:
+  - **Signal-only**: no supply pins or rails on any cell, and no
+    `fill_*`/`tapvpwrvgnd_1` instances (47 logical cells only). This matches
+    the `verilog_path` reference convention in "LVS scope, concretely", but
+    means the file cannot be functionally simulated against the
+    power-aware sky130 HD models (floating `VPWR` gives `X`); elaboration
+    is fine.
+  - **Ports are alphabetically ordered** (`ce, clk, in, lut_init, out,
+    reg_sel, rst`), not in `design/rtl/logic_tile.v`'s order
+    (`clk, rst, ce, in, lut_init, reg_sel, out`). Instantiate it by port
+    name only; a positional instantiation would mis-wire silently.
+  - **Not the signed reference**: its sanitized hash differs from
+    `logic_tile.lvs.json`'s `environment.reference_sha256`, so it must not
+    be compared to or substituted for that hash.
 - `flow/erc_supply_spec.json` — the `klt erc` **supply spec** for both the
   T1 checklist **item 11** (power delivery, structural —
   klayout-tools#2025, tracked by issues #51 and #4) and the
