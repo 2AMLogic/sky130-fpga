@@ -28,7 +28,7 @@ full per-issue narrative: ["Current position" in `spec/framework-gaps.md`](spec/
 | [ADR-0004](spec/decisions/0004-g1-tile-description-discrepancies.md) (G1 discrepancies) | Proposed <!-- status-claim: adr-0004=Proposed --> | pending operator ratification |
 | [ADR-0005](spec/decisions/0005-nextpnr-io-and-constant-handling.md) (nextpnr IO/constants) | Proposed <!-- status-claim: adr-0005=Proposed --> | pending operator ratification |
 | [ADR-0006](spec/decisions/0006-lut-pin-assignment-policy.md) (LUT pin-assignment policy) | Proposed <!-- status-claim: adr-0006=Proposed --> | pending operator ratification |
-| Bitstream-level verification | experimental single-tile harness only; ratified fabric not verified (G5, G6 not closed) | `sim/README.md` |
+| Bitstream-level verification | experimental single-tile harness, plus a routed cross-tile replay on the experimental 2×2 LOGIC4 fabric (96/96 golden-stream checks; a one-LUT-bit perturbed stream fails with the expected 32 mismatches) — stand-in switch matrix only, no timing/layout claim; ratified fabric not verified (G5, G6 remain open) | [`sim/README.md`](sim/README.md), ledger [`sim/fabric_bitstream_results.txt`](sim/fabric_bitstream_results.txt) |
 | klt T1 evidence tier | 9 <!-- status-claim: t1-met=9 --> of 11 <!-- status-claim: t1-items=11 --> items met | [`signoff/tier-report.json`](signoff/tier-report.json) |
 
 ## Quick start: RTL to a simulated blink (experimental single-tile harness)
