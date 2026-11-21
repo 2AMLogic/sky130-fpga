@@ -1,0 +1,106 @@
+{
+ "cells": [
+  {
+   "bel": "X1Y1/A",
+   "ff": "0",
+   "init": "0110100110010110",
+   "type": "lut4_ff_bel"
+  },
+  {
+   "bel": "X1Y1/B",
+   "ff": "0",
+   "init": "0110100110010110",
+   "type": "lut4_ff_bel"
+  },
+  {
+   "bel": "X1Y1/D",
+   "ff": "0",
+   "init": "0110100110010110",
+   "type": "lut4_ff_bel"
+  },
+  {
+   "bel": "X2Y1/A",
+   "ff": "0",
+   "init": "0110100110010110",
+   "type": "lut4_ff_bel"
+  },
+  {
+   "bel": "X2Y1/C",
+   "ff": "0",
+   "init": "0110100110010110",
+   "type": "lut4_ff_bel"
+  },
+  {
+   "bel": "X2Y1/D",
+   "ff": "0",
+   "init": "0110100110010110",
+   "type": "lut4_ff_bel"
+  }
+ ],
+ "nets": [
+  {
+   "pins": [
+    "X1Y1/A.I0",
+    "X1Y1/B.O"
+   ],
+   "pips": [
+    "X0Y1.E1BEG0.E1END0",
+    "X0Y1.W1END3.E1BEG0",
+    "X1Y1.E1END0.LA_I0",
+    "X1Y1.LB_O.W1BEG3",
+    "X1Y1.W1BEG3.W1END3"
+   ]
+  },
+  {
+   "pins": [
+    "X1Y1/A.O",
+    "X1Y1/D.I0"
+   ],
+   "pips": [
+    "X1Y0.N1END3.S1BEG0",
+    "X1Y0.S1BEG0.S1END0",
+    "X1Y1.LA_O.N1BEG3",
+    "X1Y1.N1BEG3.N1END3",
+    "X1Y1.S1END0.LD_I0"
+   ]
+  },
+  {
+   "pins": [
+    "X1Y1/B.I0",
+    "X2Y1/D.O"
+   ],
+   "pips": [
+    "X1Y1.W1END0.LB_I0",
+    "X2Y1.LD_O.W1BEG0",
+    "X2Y1.W1BEG0.W1END0"
+   ]
+  },
+  {
+   "pins": [
+    "X2Y1/A.I0",
+    "X2Y1/C.O"
+   ],
+   "pips": [
+    "X2Y1.E1BEG3.E1END3",
+    "X2Y1.LC_O.E1BEG3",
+    "X2Y1.W1END0.LA_I0",
+    "X3Y1.E1END3.W1BEG0",
+    "X3Y1.W1BEG0.W1END0"
+   ]
+  },
+  {
+   "pins": [
+    "X2Y1/A.O",
+    "X2Y1/D.I0"
+   ],
+   "pips": [
+    "X2Y1.LA_O.S1BEG0",
+    "X2Y1.N1END0.LD_I0",
+    "X2Y1.S1BEG0.S1END0",
+    "X2Y2.N1BEG0.N1END0",
+    "X2Y2.S1END0.N1BEG0"
+   ]
+  }
+ ],
+ "ports": []
+}

@@ -30,8 +30,9 @@ OTHER = HDR + "2026-10-01  equiv\n  PASS\n"
 GIT_ENV = {"GIT_CONFIG_GLOBAL": os.devnull, "GIT_CONFIG_NOSYSTEM": "1",
            "GIT_AUTHOR_NAME": "t", "GIT_AUTHOR_EMAIL": "t@example.invalid",
            "GIT_COMMITTER_NAME": "t", "GIT_COMMITTER_EMAIL": "t@example.invalid"}
-SEVEN = {
+EXPECTED_LEDGERS = {
     "sim/configmem_fabulous_equiv.txt",
+    "sim/fabric_bitstream_results.txt",
     "sim/generated_tile_replay.txt",
     "sim/logic_tile_bitstream_gate_results.txt",
     "sim/logic_tile_bitstream_results.txt",
@@ -324,9 +325,9 @@ class Baseline(GuardBase):
 class RealRepository(unittest.TestCase):
     """Read-only: the committed table covers every committed ledger."""
 
-    def test_table_is_the_seven_ledgers(self):
-        self.assertEqual(set(L.LEDGERS), SEVEN)
-        self.assertEqual(len(L.LEDGERS), len(SEVEN))
+    def test_table_matches_expected_ledgers(self):
+        self.assertEqual(set(L.LEDGERS), EXPECTED_LEDGERS)
+        self.assertEqual(len(L.LEDGERS), len(EXPECTED_LEDGERS))
 
     def test_head_candidates_are_listed(self):
         git = L.Git(REPO)
@@ -376,7 +377,7 @@ class WorkflowTrigger(unittest.TestCase):
         return any(p.match(path) for p in self.pats)
 
     def test_selected_paths(self):
-        for path in sorted(SEVEN) + [
+        for path in sorted(EXPECTED_LEDGERS) + [
                 "sim/new_thing_results.txt",           # new unlisted results
                 "sim/deep/dir/new_record.txt",         # new declared ledger
                 "sim/README.md",
