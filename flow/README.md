@@ -59,6 +59,7 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | `audit_sim_ledgers.py` | append-only guard for the `sim/*.txt` ledgers | `flow-evidence.yml` |
 | `check_status_claims.py` | README/framework-gaps status drift check | `flow-evidence.yml` |
 | `gen_bitstream_format.py` | `design/bitstream-format.md` drift check | `flow-evidence.yml` |
+| `def_to_netlist.py`, `test_def_to_netlist.py` | `layout/logic_tile.asbuilt.v`: signal-only Verilog recovered from the routed `layout/logic_tile.def` (no PDK, SDF or klt needed); `--check` fails on drift (issue #358) | `flow-evidence.yml` |
 
 ## Toolchain versions
 
