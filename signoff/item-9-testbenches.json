@@ -80,7 +80,7 @@
         "role": "testbench",
         "path": "measurements/claim-traceability.md",
         "passed": true,
-        "content_hash": "sha256:3931b0063f470613cbb63c21b56147bdb25e27fc01523651580018189a4a7e98"
+        "content_hash": "sha256:dc5fd514adca7128de3aeb1058459393cc23084ebaa4a0911e08e2546e6bf4c6"
       },
       {
         "check": "present",

@@ -904,6 +904,15 @@ back-annotated. The two envelopes are committed under
 the four BEL-level checks in item 7. The test module's header states the
 timing contract.
 
+The four checks pass identically on both legs, so they observe no delay.
+The same driver therefore also runs the SDF settle-time probe
+`sim/cocotb/test_logic_tile_sdf_probe.py` on the same two requests and
+commits `logic_tile.sdf-probe-zero-delay.json` / `logic_tile.sdf-probe-sdf.json`
+beside the pair; `flow/tile_sdf_probe_gate.py` requires the annotated leg to
+settle at least 0.1 ns later on both probed paths and refuses a missing or
+malformed reading (issue #382). The probe observes that the annotation took
+effect; it is not a timing measurement.
+
 Run it through the driver (needs `uvx`, Icarus Verilog 13.0+ and a
 `sky130_fd_sc_hd` model directory whose hashes match `flow/tool_versions.sh`;
 not part of `sim/run.sh`, and **not run in CI**):
