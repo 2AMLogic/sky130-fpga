@@ -224,9 +224,14 @@ def load_trim_gate(raw_path, out_path, repo_root, leg):
         problems.append(f"failed_count is {env['failed_count']}")
     if names != EXPECT_TESTS:
         problems.append(f"test names {names} != the four named tile checks")
-    if leg == "sdf":
-        sdf = env.get("environment", {}).get("sdf")
-        if not isinstance(sdf, dict) or sdf.get("annotated") is not True:
+    sdf = env["environment"]["sdf"]
+    if leg == "zero":
+        if sdf is not None:
+            problems.append("zero-delay environment.sdf must be null")
+    elif not isinstance(sdf, dict):
+        problems.append("annotated environment.sdf must be an object")
+    else:
+        if sdf.get("annotated") is not True:
             problems.append("environment.sdf.annotated is not true")
         if sdf.get("entries") != "all":
             problems.append(f"environment.sdf.entries is {sdf.get('entries')!r}, not 'all'")
@@ -241,7 +246,6 @@ def load_trim_gate(raw_path, out_path, repo_root, leg):
             # Drop the run-to-run-volatile digest and the machine-local scope;
             # keep the bare artifact name so the run's own files stay named.
             env["environment"][key] = {"path": os.path.basename(artifact["path"])}
-    sdf = env["environment"].get("sdf")
     if isinstance(sdf, dict) and isinstance(sdf.get("file"), str):
         f = sdf["file"]
         if f.startswith(repo_root + "/"):

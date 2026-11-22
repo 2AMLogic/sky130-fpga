@@ -52,7 +52,7 @@
         "role": "testbench",
         "path": "flow/tile-functional-verification.sh",
         "passed": true,
-        "content_hash": "sha256:f3a490844dc464e94f9bdf70d9d8d9053f1de9018840aa7ef47c90ebb01e31c4"
+        "content_hash": "sha256:f320af2e24ee421ed43a8a2a27b201f22c43cca824eae257a9e69fddfa171db6"
       },
       {
         "check": "present",
@@ -101,7 +101,7 @@
         "role": "testbench",
         "path": "sim/cocotb/test_logic_tile.py",
         "passed": true,
-        "content_hash": "sha256:02ee239eb08d070a5b28056cf9b1f1fe71ba6db92cc9e5857404cea8b1c22ca3"
+        "content_hash": "sha256:28964ba515ba7a546475d5a82dd524052d39757b411318264f1b0197e4aca22f"
       },
       {
         "check": "present",

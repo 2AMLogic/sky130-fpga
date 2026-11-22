@@ -24,17 +24,16 @@ to the #360 comparison, recorded in the timing-characterization record):
                           period (ADR-0002/0003), a comfortable bound for
                           the annotated design (binding-corner SPEF WNS
                           15.2145 ns).
-  SETTLE_NS       = 4.0  -- sampling interval after each active clock edge
-                          and the combinational settling window. The worst
-                          single IOPATH delay in the committed SDF is
-                          0.315 ns (mux4_2 S0->X) and the worst clk->out
-                          path through the three buf_4 clock buffers, one
-                          dfxtp_1 CLK->Q and the output mux2_2 is
-                          ~0.75 ns typ, so 4 ns observes the settled value
-                          with > 5x margin. The Verilog reference samples
-                          1 ns after the edge; that is too tight once the
-                          clock insertion (~0.28 ns) plus CLK->Q (~0.29 ns)
-                          plus the output mux (~0.18 ns) are annotated.
+  SETTLE_NS       = 4.0  -- input settling interval and clock high time.
+                          The combinational test samples after 8 ns.
+                          Registered checks sample 20 ns after the rising
+                          edge, when the full cycle has elapsed.
+
+At the SDF typ corner, the largest single IOPATH delay is 0.477 ns
+(mux4_2 A3->X, falling output). In registered mode, the rising clock
+traverses the root buffer and one leaf buffer (0.089 + 0.092 ns). Adding
+dfxtp_1 CLK->Q and mux2_2 A1->X gives 0.591 ns for a rising output
+(0.181 + 0.293 + 0.117) and 0.693 ns for a fall (0.181 + 0.280 + 0.232).
 
 Driven by flow/tile-functional-verification.sh through `klt
 functional-verification` (klt 0.9.1) with USE_POWER_PINS and FUNCTIONAL
@@ -75,9 +74,7 @@ async def _init(dut):
 
 
 async def _capture_edge(dut):
-    """One clock cycle: rising edge, SETTLE_NS sampling window, then the
-    low phase filling out CLOCK_PERIOD_NS so input changes between edges
-    get a full half period to settle before the next active edge."""
+    """Hold clk high for SETTLE_NS, then low until the caller samples at cycle end."""
     dut.clk.value = 1
     await Timer(SETTLE_NS, unit="ns")
     dut.clk.value = 0
