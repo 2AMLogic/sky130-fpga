@@ -26,6 +26,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 # shellcheck source=flow/gate_sim_verdict.sh
 source "$SCRIPT_DIR/gate_sim_verdict.sh"   # wall-clock budget helpers (issue #157)
+# shellcheck source=flow/pdk_root.sh
+source "$SCRIPT_DIR/pdk_root.sh"   # sky130_fd_sc_hd model resolution (issue #375)
 BUILD_DIR="$SCRIPT_DIR/build/gate-sim-routed"
 TB_NAME="tb_logic_tile_routed"
 NETLIST="$REPO_ROOT/layout/experimental/logic_tile_routed.synth.v"
@@ -36,19 +38,11 @@ done
 gs_budget_check || exit 1
 [[ -s "$NETLIST" ]] || { echo "error: missing $NETLIST" >&2; exit 1; }
 
-# Resolve the sky130_fd_sc_hd behavioral models (same search as sdf-resim.sh,
-# with klt optional here).
-LIBS_REF=""
-if command -v klt >/dev/null 2>&1; then
-    LIBS_REF="$(klt pdk find --pdk sky130A --format json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin).get("assets", {}).get("libs_ref", ""))' 2>/dev/null || true)"
-fi
-CELL_DIR=""
-for c in "${LIBS_REF:+$LIBS_REF/sky130_fd_sc_hd/verilog}" \
-         "${PDK_ROOT:+$PDK_ROOT/sky130A/libs.ref/sky130_fd_sc_hd/verilog}" \
-         "$HOME/.volare/sky130A/libs.ref/sky130_fd_sc_hd/verilog"; do
-    if [[ -n "$c" && -f "$c/sky130_fd_sc_hd.v" ]]; then CELL_DIR="$c"; break; fi
-done
-[[ -n "$CELL_DIR" ]] || { echo "error: could not resolve sky130_fd_sc_hd Verilog cell models (set PDK_ROOT)" >&2; exit 1; }
+# Resolve the sky130_fd_sc_hd behavioral models (shared helper, issue #375;
+# fixes this script's drifted copy, which accepted a directory holding only
+# sky130_fd_sc_hd.v and delayed the failure to the iverilog invocation that
+# passes primitives.v below).
+CELL_DIR="$(resolve_sky130_cell_models sky130A)" || exit 1
 
 mkdir -p "$BUILD_DIR"
 echo "=== $(iverilog -V 2>&1 | head -1) ==="

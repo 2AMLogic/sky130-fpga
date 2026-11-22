@@ -140,6 +140,13 @@ REPORT_NAME="logic_tile.lvs.json"
 STD_CELL_LIBRARY="sky130_fd_sc_hd"
 PDK_VARIANT="sky130A"
 
+# Shared driver-convention helpers (issue #265): sourced BEFORE the
+# argument parse so the loop can validate --target's operand with
+# target_dir_arg (issue #370). Sourcing defines functions only --
+# parse_update_mode and friends execute nothing at source time.
+# shellcheck source=./report_check.sh
+source "$SCRIPT_DIR/report_check.sh"
+
 MODE="check"
 TARGET_DIR=""
 while [[ $# -gt 0 ]]; do
@@ -156,11 +163,7 @@ while [[ $# -gt 0 ]]; do
                 echo "usage: $0 [--target <dir> | --update | --update-report]" >&2
                 exit 1
             fi
-            if [[ -n "$TARGET_DIR" ]]; then
-                echo "error: --target given twice" >&2
-                exit 1
-            fi
-            TARGET_DIR="$2"
+            target_dir_arg "$2"
             shift
             ;;
         "")
@@ -175,24 +178,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 # Issue #259: --target points the compare at a GDS outside layout/.
-# Normalization and read-only guarantee identical to flow/drc.sh's: the
-# committed layout directory spelled explicitly behaves exactly as the
-# default; anything else refuses both write modes before anything is
-# written.
-TARGET_MODE="default"
-if [[ -n "$TARGET_DIR" ]]; then
-    if [[ ! -d "$TARGET_DIR" ]]; then
-        echo "error: --target directory does not exist: $TARGET_DIR" >&2
-        exit 1
-    fi
-    TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
-    if [[ "$TARGET_DIR" == "$REPO_ROOT/layout" ]]; then
-        TARGET_MODE="default"
-        TARGET_DIR=""
-    else
-        TARGET_MODE="target"
-    fi
-fi
+# Normalization via report_check.sh's resolve_target_mode (shared with
+# flow/drc.sh and flow/erc.sh): the committed layout directory spelled
+# explicitly behaves exactly as the default; anything else refuses both
+# write modes before anything is written. The --update-report refusal is
+# this script's own -- only it carries that mode.
+resolve_target_mode
 if [[ "$TARGET_MODE" == "target" && "$MODE" != "check" ]]; then
     echo "error: --target is read-only -- it measures a layout outside layout/ and never writes committed evidence; drop --update (or --update-report)" >&2
     exit 1
@@ -201,8 +192,6 @@ if [[ "$TARGET_MODE" == "target" ]]; then
     LAYOUT_DIR="$TARGET_DIR"
 fi
 
-# shellcheck source=./report_check.sh
-source "$SCRIPT_DIR/report_check.sh"
 require_klt
 
 COMMITTED_GDS="$LAYOUT_DIR/${GDS_NAME}"

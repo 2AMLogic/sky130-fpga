@@ -14,7 +14,12 @@ block's row is identified by the manifest's `block` field.
   `kind: digital` (RTL flow: yosys synthesis + OpenROAD place-and-route, not
   the hand-captured full-custom sub-case), and per-item evidence citations,
   each pinning the cited envelope's input `content_hash` so a stale
-  pairing grades `stale_evidence`, never a false pass.
+  pairing grades `stale_evidence`, never a false pass. The two
+  `klt functional-verification` citations — item 5's second member and
+  item 7 — are cited by `file` only: klt 0.9.1 records no
+  `provenance.input.content_hash` on that envelope kind, so a manifest hash
+  there would grade `unverifiable_provenance` (the item 5 and item 7 rows
+  say what binds each instead).
 - **`characterization-evidence.json`** — the opt-in **generic evidence
   envelope** (`"kind": "generic"`) for T1 item 8, the one item that names no
   `klt` verb: a minimal wrapper asserting the aggregated characterization
@@ -71,7 +76,8 @@ and netlist, so an RTL edit without a re-attest fails CI.
 ```
 ./signoff/verify-pins.sh                                    # every pin still matches live bytes
 klt signoff --manifest signoff/block-manifest.json --format json > signoff/tier-report.json
-# exit 3 is expected while any T1 item is unmet; exit 0 means T1.
+# exit 3 is expected while any T1 item is unmet; exit 0 means T1 (the
+# current state since issue #360).
 ```
 
 `.github/workflows/signoff.yml` runs both on every push/PR and byte-diffs
@@ -148,10 +154,17 @@ regenerate `tier-report.json` last.
 grader **cannot** check — the claim-side disclosures
 `docs/design-evidence-tiers.md` makes this repo's responsibility.
 
-**9 of 11 T1 items are `met`: items 1, 2, 3, 4, 5, 8, 9, 10, 11. Item 6
-renders `not_applicable` (issue #212; counted apart in
-`t1_not_applicable_count`, never as `met`). Item 7 renders
-`unmet`/`no_evidence` and is deliberately uncited.** Item 11
+**10 of 11 T1 items are `met`: items 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, so the
+pinned grader's verdict is `tier: "T1"` and `klt signoff --manifest` exits
+`0` on the full T1 set. Item 6 renders `not_applicable` (issue #212;
+counted apart in `t1_not_applicable_count`, never as `met`).** `met` is the
+grader's mechanical verdict on the cited envelope; the coverage limits it
+cannot check — item 7's partial annotation and BEL-level scope among them —
+are stated in the rows below. Item 7
+moved from `unmet`/`no_evidence` (deliberately uncited) to `met` in issue
+#360, when the manifest began citing the SDF-annotated `klt
+functional-verification` envelope of the BEL-level `logic_tile` suite (see
+its row below). Item 11
 moved from `unmet`/`lvs_supply_unproven` to `met` in issue #69, when the LVS
 report gained `power_connectivity.status: "match"` (see its row below). The
 grader is pinned at the PyPI release `klayout-tools==0.9.1` (issue #256).
@@ -377,34 +390,17 @@ byte-identical signoff code.
     internal consistency. The only normalisation applied to the envelope is
     machine-local paths and per-test wall-clock time.
   - The timing-correct functional leg, the SDF-annotated gate-level
-    re-simulation, is still blocked. That is item 7: klayout-tools#1890 closed
-    only as a fail-loud guard, and its successor gap klayout-tools#2897 closed
-    upstream on 2026-10-18 via klayout-tools#3293 -- first contained in tag
-    `v0.8.0`, which the pinned `0.9.1` postdates, with no GitHub Release carrying notes
-    for it (record `20261008-233733-23e6b5e` predates that closure).
-    **That closure did not unblock item 7, which is still not met**, and
-    klayout-tools#2897 is no longer what holds it. Two blockers do. **(a) The
-    annotation is only partial.** With the rename workaround applied `vvp` no
-    longer aborts, but 28 of 179 `INTERCONNECT` entries -- every one sourced at
-    a top-level input port (`in[N]`, `ce[N]`) -- are rejected, and the cause
-    was not isolated (record
-    [`20261017-sdf-sanitize-d811bcd`](../measurements/timing-characterization/records/20261017-sdf-sanitize-d811bcd.md));
-    that is [#250](https://github.com/2AMLogic/sky130-fpga/issues/250)'s work,
-    and the matching upstream defect is still **open** as
-    [klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)
-    (`vvp` aborts in `vpi_scan` on a flat post-route SDF, filed 2026-11-05,
-    successor to the `not_planned` klayout-tools#3740), whose own A/B isolates
-    top-level-port `INTERCONNECT` entries -- the same shape. **(b) The
-    characterized geometry no longer reproduces on the current toolchain**, so
-    an annotated run today would not be on the geometry that was characterized:
-    record
-    [`20261107-213000-9e83907`](../measurements/layout-reproducibility/records/20261107-213000-9e83907.md)
-    measured that under the host's development build (klt
-    `0.9.2.dev246+g2faba5dec206`, **not** the pinned release), and record
-    [`20261114-043307-515714f`](../measurements/layout-reproducibility/records/20261114-043307-515714f.md)
-    confirmed it under the pinned `klayout-tools==0.8.0`.
-    [#162](https://github.com/2AMLogic/sky130-fpga/issues/162) and
-    [#213](https://github.com/2AMLogic/sky130-fpga/issues/213) track this.
+    re-simulation, is item 7. It is `met` since issue #360 on the BEL-level
+    `logic_tile` suite -- the as-built netlist of the committed geometry with
+    the committed SDF back-annotated; the item 7 row below gives the citation
+    and the partial-annotation disclosure. That suite runs on `logic_tile`,
+    not on this member's bitstream-driven `logic_tile_routed`: it adds no
+    timing content to this member, `flow/sdf-resim.sh` (which re-runs
+    `sim/tb_logic_tile.v` against an OpenROAD-regenerated route) remains gated
+    on the layout non-reproducibility tracked by
+    [#162](https://github.com/2AMLogic/sky130-fpga/issues/162), and the
+    bitstream-level post-layout criterion of
+    [#213](https://github.com/2AMLogic/sky130-fpga/issues/213) remains open.
 
   Not covered by the STA member:
   - propagated-clock timing (the clock is an ideal SDC clock);
@@ -428,9 +424,94 @@ byte-identical signoff code.
   are absent from the JSON rather than overclaimed; none of them is
   statistical either. Ratifying them is a spec change (decision record), not
   part of this record.
-- **Item 7 — uncited.** The SDF-annotated gate-level re-simulation leg is
-  blocked by a real upstream defect (`$sdf_annotate` crashes on escaped
-  identifiers, klayout-tools#1890); the zero-delay leg passing is recorded
-  in the characterization record but is, by the item's own text, the
-  pre-layout run — so no citable envelope exists for this item until
-  the remaining blockers clear. #1890 closed 2026-09-16 as a fail-loud guard in klt v0.6.0 only, and its successor gap klayout-tools#2897 closed upstream on 2026-10-18 via klayout-tools#3293 (first contained in tag `v0.8.0`, which the pinned `0.9.1` postdates; no GitHub Release carries notes for it), so #2897 is no longer the blocker: klayout-tools#2897's closure did **not** unblock item 7, which is still not met: two other blockers hold it -- the renamed pair leaves 28 of 179 `INTERCONNECT` entries, every one sourced at a top-level input port, unapplied (record [`20261017-sdf-sanitize-d811bcd`](../measurements/timing-characterization/records/20261017-sdf-sanitize-d811bcd.md), worked as [#250](https://github.com/2AMLogic/sky130-fpga/issues/250), with the matching upstream defect still **open** as [klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)), and the characterized geometry no longer reproduces on the current toolchain (records [`20261107-213000-9e83907`](../measurements/layout-reproducibility/records/20261107-213000-9e83907.md), measured under the host's klt `0.9.2.dev246+g2faba5dec206` development build, and [`20261114-043307-515714f`](../measurements/layout-reproducibility/records/20261114-043307-515714f.md), confirmed under the pinned `klayout-tools==0.8.0`), which [#162](https://github.com/2AMLogic/sky130-fpga/issues/162) and [#213](https://github.com/2AMLogic/sky130-fpga/issues/213) track. No result was fabricated to fill the row.
+- **Item 7 — `met`** (issue #360). The manifest cites
+  `measurements/timing-characterization/logic_tile.fv-sdf.json`, the `klt
+  functional-verification` envelope of the SDF-annotated leg of a paired run
+  of the four tile-level checks of `sim/tb_logic_tile.v`, ported one-to-one as
+  named cocotb tests in `sim/cocotb/test_logic_tile.py` and run by
+  `./flow/tile-functional-verification.sh` (issues #359 and #358; record
+  [`20261121-183351-787c7ca`](../measurements/timing-characterization/records/20261121-183351-787c7ca.md);
+  klt 0.9.1, Icarus Verilog 13.0, cocotb 2.1.0). The grader passes it because
+  the envelope is `status: "pass"` with `environment.sdf.annotated: true`
+  (`citation.kind: "functional-verification"`, `check_status: "pass"`). The
+  cited leg and its zero-delay twin (`logic_tile.fv-zero-delay.json`) report
+  the same four named tests (`test_independent_lut_config`,
+  `test_reset_with_all_enables_low`, `test_selective_capture`,
+  `test_reset_from_mixed_state_all_enables_high`), 4/4 passed,
+  `failed_count: 0`, `skipped_count: 0`. Disclosures the grader cannot make:
+  - **The annotation is partial.** `environment.sdf` in the cited envelope
+    reads `annotated: true`, `corner: "typ"`, `entries: "all"`,
+    `partial: true`, two `dropped` classes and 44 `renamed` entries:
+    - `dropped.timingcheck`, `count: 4`: Icarus Verilog implements SDF delay
+      annotation (`IOPATH`/`INTERCONNECT`) but not SDF `TIMINGCHECK`, so every
+      `TIMINGCHECK` section is dropped (here the four `dfxtp_1` sections) and
+      `$setup`/`$hold`/`$width` run against the cell library's own placeholder
+      timing, not the limits in the SDF. **No setup, hold or Fmax claim rests
+      on this run.**
+    - `dropped.zero_delay_bus_port_source_interconnect`, `count: 116`: an
+      `INTERCONNECT` entry whose source is a bit-selected top-level input port
+      can fail to insert an intermodpath in Icarus; entries whose every
+      min:typ:max delay value is zero are removed before annotation and
+      counted here instead of failing the run. No delay is lost -- all 179
+      `INTERCONNECT` entries in this SDF are `0.000:0.000:0.000` -- and a
+      non-zero-delay entry of the same source is left in place and still
+      fails loudly.
+    - Net annotated population: **215/215 cell `IOPATH` arcs and 63/179
+      `INTERCONNECT` entries.** The 44 renames are klt's rewrite of
+      escaped-divider instance names to plain identifiers in build-directory
+      copies of the SDF and its sources; the committed SDF and netlist bytes
+      are untouched.
+    - The delays are observable, not a silent zero-delay pass: the record's
+      scratch polling probe (not a committed test) saw `out` settle at
+      0.60 ns (registered) and 0.53 ns (combinational) on the annotated leg,
+      against 0.01 ns on the zero-delay leg.
+  - **Scope: 4 BEL-level checks of `logic_tile`.** The DUT is
+    `layout/logic_tile.asbuilt.v`, the netlist recovered from the committed
+    DEF and verified against the GDS (#358), annotated with the committed
+    `logic_tile_route.sdf` -- the characterized geometry, with no
+    place-and-route re-run. This is the BEL-only tile, not the composed
+    `logic_tile_routed`: a pass says these four functions hold on the
+    laid-out tile with the routed delays applied, and nothing about the
+    switch matrix or inter-tile routing. The bitstream-level post-layout
+    criterion stays open in
+    [#213](https://github.com/2AMLogic/sky130-fpga/issues/213), and
+    `flow/sdf-resim.sh` -- `sim/tb_logic_tile.v` against an
+    OpenROAD-regenerated route -- stays gated on the layout
+    non-reproducibility tracked by
+    [#162](https://github.com/2AMLogic/sky130-fpga/issues/162).
+  - **What the pin binds.** klt 0.9.1 records no
+    `provenance.input.content_hash` on a `functional-verification` envelope,
+    so the manifest cites item 7 by `file` only and the grader reports
+    `citation.content_hash: null`, `input_verified: null`: a manifest hash
+    would grade `unverifiable_provenance`, and `verify-pins.sh` has no input
+    pin to re-hash for this citation. The binding is the append-only record's
+    `record-meta.provenance.inputs`, which SHA-256-pins the envelope,
+    `layout/logic_tile.asbuilt.v`, `logic_tile_route.sdf`,
+    `sim/cocotb/test_logic_tile.py`, `flow/tile-functional-verification.sh`
+    and the zero-delay envelope, and which `./flow/audit-evidence.sh`
+    re-verifies on every run. Freshness is `./flow/tile-functional-verification.sh`
+    check mode (byte-exact reproduction of both committed envelopes; a cocotb
+    run, so CI does not repeat it). The committed envelope is klt-produced
+    and preserved as emitted apart from machine-local normalisation: bare
+    file names for the run's log and results paths, `real_time_s` set to
+    `0.0`, and `environment.sdf.file` made repo-relative. Its
+    `annotated`/`partial`/`dropped`/`renamed` fields are exactly as klt
+    wrote them.
+  - **History.** Until #360 the item was deliberately uncited: the
+    `flow/sdf-resim.sh` leg aborted in `$sdf_annotate` on escaped identifiers
+    (klayout-tools#1890, closed 2026-09-16 as a fail-loud guard only; its
+    successor klayout-tools#2897 closed upstream on 2026-10-18 via
+    klayout-tools#3293, first contained in tag `v0.8.0`, which the pinned
+    `0.9.1` postdates -- the `v0.8.0` GitHub Release, published 2026-11-15,
+    carries the note), and the rename workaround then left 28 of 179
+    `INTERCONNECT` entries sourced at top-level input ports unapplied
+    (record
+    [`20261017-sdf-sanitize-d811bcd`](../measurements/timing-characterization/records/20261017-sdf-sanitize-d811bcd.md)).
+    [#250](https://github.com/2AMLogic/sky130-fpga/issues/250) isolated that
+    rejection (record
+    [`20261114-sdf-port-interconnect-564db73`](../measurements/timing-characterization/records/20261114-sdf-port-interconnect-564db73.md)).
+    On this netlist klt 0.9.1's zero-delay pass removes all 116
+    bit-selected-port entries, not only the 28 Icarus itself would reject,
+    which is why the dropped count above is 116. The matching upstream defect
+    [klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)
+    is still open. No result was fabricated to fill the row.

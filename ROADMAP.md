@@ -25,8 +25,9 @@ On the README's maturity ladder, the rungs through "tile timing characterized"
 are done for the BEL-only tile, bitstream-level tests exist only as an
 experimental single-tile harness, and the later rungs are not started.
 
-T1 evidence tier, graded by `klt signoff` 0.8.0: **9 of 11 items met, 1 not
-applicable, 1 unmet.**
+T1 evidence tier, graded by `klt signoff` 0.9.1: **10 of 11 items met, 1 not
+applicable, 0 unmet.** Item 7 is `met` since #360, which postdates the
+snapshot above; before it the count was 9 met, 1 not applicable, 1 unmet.
 
 | Item | State | Evidence |
 |---|---|---|
@@ -34,7 +35,7 @@ applicable, 1 unmet.**
 | 2 Layout, 3 DRC clean, 4 LVS clean | met | `layout/logic_tile.{gds,drc.json,lvs.json}` |
 | 5 Full corner verification | met | 18 corners, record `20261027-201500-9111a08` (PR #233) |
 | 6 Monte Carlo evidence | not applicable | `signoff/item-6-not-applicable.json` (PR #214) |
-| 7 Post-layout verification | **unmet** (`no_evidence`) | zero-delay leg passes; SDF-annotated leg has no citable run (#213) |
+| 7 Post-layout verification | met (since #360) | SDF-annotated `logic_tile` cocotb suite, record `20261121-183351-787c7ca` (#359); partial annotation, BEL-level scope only -- `signoff/README.md` |
 | 8 Characterization report | met | `measurements/characterization-summary.md` |
 | 11 Power delivery (structural) | met | `layout/logic_tile.erc.json` |
 
@@ -59,6 +60,19 @@ Two facts changed since the status text in `README.md` and
   PR #215) had shown that renaming escaped identifiers removes the simulator
   abort and that two obstacles remain: the layout drift above, and 28
   `INTERCONNECT` entries sourced from top-level input ports that are not applied.
+
+One change postdates the snapshot above: **T1 item 7 is `met` (#360).**
+#250 isolated the port-sourced `INTERCONNECT`
+rejection (record `20261114-sdf-port-interconnect-564db73`), #358 recovered
+the as-built netlist from the committed DEF and verified it against the
+GDS, and #359 ran the four `logic_tile` checks as a paired cocotb run on
+that netlist -- zero delay and with the committed SDF annotated -- with
+identical passes (record
+`measurements/timing-characterization/records/20261121-183351-787c7ca.md`).
+The annotation is partial (all 215 cell arcs, 63 of 179 interconnects; SDF
+timing checks not modelled by Icarus) and the coverage is the BEL-level
+tile, so `flow/sdf-resim.sh` stays blocked by the layout drift above and
+#213's bitstream-level criterion stays open.
 
 ## Now
 
@@ -87,10 +101,13 @@ Two facts changed since the status text in `README.md` and
 - **Bound `flow/sdf-resim.sh` with `SIM_TIMEOUT_SECONDS`** (#162). Done per the
   issue's acceptance list. Unblocked once the layout decision below gives the
   script a geometry it can reproduce.
-- **T1 item 7: SDF-annotated post-route run** (#213). Done when the tier report
-  grades item 7 `met` from an envelope with `environment.sdf.annotated: true`.
-  Blocked by #162, by the layout decision, and by the outcome of Now item 1.
-  This is the last unmet T1 item.
+- **T1 item 7: SDF-annotated post-route run** (#213). The tier-report half is
+  done: since #360 the report grades item 7 `met` from an envelope with
+  `environment.sdf.annotated: true` (the BEL-level suite above), and no T1
+  item is unmet. What stays open under #213 is its bitstream-level criterion
+  -- an annotated run covering the same bitstream-level test set as the
+  zero-delay leg -- and the `flow/sdf-resim.sh` leg, still blocked by #162
+  and the layout decision.
 - **Composed-tile binding path** (#117). Done when a new record under
   `measurements/timing-characterization-experimental/records/` names the worst
   path per corner with the 158 `cfg` bits excluded. The upstream capability
