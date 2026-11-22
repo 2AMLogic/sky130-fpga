@@ -3,14 +3,14 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 9,
-  "summary": "T1 item 9 (Testbenches shipped): 51/51 attestation checks passed (klt signoff --attest)",
+  "summary": "T1 item 9 (Testbenches shipped): 52/52 attestation checks passed (klt signoff --attest)",
   "source": "signoff/item-9-inventory.json",
   "attestation": {
     "producer": "klt signoff --attest",
     "inventory_schema_version": 1,
     "hash_algorithm": "sha256-raw-bytes",
-    "check_count": 51,
-    "passed_count": 51,
+    "check_count": 52,
+    "passed_count": 52,
     "checks": [
       {
         "check": "present",
@@ -87,7 +87,7 @@
         "role": "testbench",
         "path": "sim/bitstream_load.vh",
         "passed": true,
-        "content_hash": "sha256:e59b7ae4bffabb6ecc7fef13068eb199dc5a2793f3f2e8febfed3d012feab134"
+        "content_hash": "sha256:c9afcd673f95188c7e582250ba80f9c550dd70275aabc4996a846491aad13ab7"
       },
       {
         "check": "present",
@@ -283,7 +283,7 @@
         "role": "testbench",
         "path": "sim/tb_ctrl_route.v",
         "passed": true,
-        "content_hash": "sha256:f72b280abbfe83f9bc76f431677992a1fdb46dc2f4830316195f50af754111e0"
+        "content_hash": "sha256:5cc3b0908e36000f20668bad036ed394cf823a0642cf5f7f3f1b7d4119c60e2b"
       },
       {
         "check": "present",
@@ -297,7 +297,7 @@
         "role": "testbench",
         "path": "sim/tb_logic_tile_bitstream.v",
         "passed": true,
-        "content_hash": "sha256:301e6f6eeaccec175fce6b8facc1fbdbabd885a34edc04ae262a922f423bdbef"
+        "content_hash": "sha256:ea30328d094bdd431b470b8b4a5fb1f7113f5896a3865328182535230c923244"
       },
       {
         "check": "present",
@@ -325,21 +325,21 @@
         "role": "testbench",
         "path": "sim/tb_lut_basis.v",
         "passed": true,
-        "content_hash": "sha256:b7e6a554ee7d1894b2af4e25eb0b19b7a88924da99b002052111b607410d7211"
+        "content_hash": "sha256:c9bb10fa91d40008d7c8e96bd8d9e63f4502fb39b441af30375bd3edd53a6396"
       },
       {
         "check": "present",
         "role": "testbench",
         "path": "sim/tb_output_route.v",
         "passed": true,
-        "content_hash": "sha256:855d4e0c0442fa64059d293a1c585a3630db0d101496158749cbbd4fc01f7ca1"
+        "content_hash": "sha256:009fc5ed93b5c4442d54c0f4c44c942702c1b2f384280ea0e15f6770ded7de28"
       },
       {
         "check": "present",
         "role": "testbench",
         "path": "sim/tb_route_diag.v",
         "passed": true,
-        "content_hash": "sha256:52335e977d65fbdbc9e365fec4fcdc68fb50797da4f82aec09548b7ea4e56ccc"
+        "content_hash": "sha256:fd6d6a2c1c95017005c0b9f82e7bbfddb383d4dbd89c3a35e91b8ea9e5093885"
       },
       {
         "check": "present",
@@ -347,6 +347,13 @@
         "path": "sim/tb_switch_matrix.v",
         "passed": true,
         "content_hash": "sha256:f8843679a8e444429696f5d9c481ac5220bc6971c09d3ad751bb1751a7ff968a"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/tile_dut.vh",
+        "passed": true,
+        "content_hash": "sha256:cdbf5d3846b67d3533233b094d02646d17de336d18bd1621ae00a5f5e1d2fbd2"
       },
       {
         "check": "command",
@@ -391,7 +398,7 @@
         "path": "signoff/item-9-inventory.json",
         "scope": "repo"
       },
-      "content_hash": "sha256:751b1c9d06d53e21596615fe32f295da3088bb1a397bee2fc425e1a6bf3a30a9"
+      "content_hash": "sha256:bbe2f28d546b03b6306c8d54f6b15b5478c7fa307d61a75525be2b3ab253acd1"
     }
   }
 }

@@ -31,31 +31,9 @@
 
 module tb_route_diag;
 
-    reg          clk = 1'b0;
-    reg  [157:0] cfg = 158'b0;
-    reg  [15:0]  tin = 16'b0;   // tin[4*dir + idx], dir: 0=N 1=E 2=S 3=W
-    wire [15:0]  tout;
-
-`ifdef GEN_TILE
-    reg  [31:0] FrameData   = 32'b0;
-    reg  [19:0] FrameStrobe = 20'b0;
-    wire [31:0] FrameData_O;
-    wire [19:0] FrameStrobe_O;
-    wire        UserCLKo;
-    LOGIC4 dut (
-        .N1END(tin[3:0]),   .E1END(tin[7:4]),   .S1END(tin[11:8]),  .W1END(tin[15:12]),
-        .N1BEG(tout[3:0]),  .E1BEG(tout[7:4]),  .S1BEG(tout[11:8]), .W1BEG(tout[15:12]),
-        .UserCLK(clk), .UserCLKo(UserCLKo),
-        .FrameData(FrameData), .FrameData_O(FrameData_O),
-        .FrameStrobe(FrameStrobe), .FrameStrobe_O(FrameStrobe_O)
-    );
-`else
-    logic_tile_routed dut (
-        .clk(clk), .cfg(cfg),
-        .n_in(tin[3:0]),  .e_in(tin[7:4]),  .s_in(tin[11:8]),  .w_in(tin[15:12]),
-        .n_out(tout[3:0]), .e_out(tout[7:4]), .s_out(tout[11:8]), .w_out(tout[15:12])
-    );
-`endif
+    // DUT hookup shared with the corpus bench and the other diagnostic
+    // benches (sim/tile_dut.vh, issue #384)
+    `include "tile_dut.vh"
 
     // bitstream loader shared with the other generated-tile diagnostic benches
     // (sim/bitstream_load.vh); TB_NAME prefixes the FAIL strings in the include
@@ -64,12 +42,11 @@ module tb_route_diag;
 
     localparam NENV = 6;
 
-    reg [8*256-1:0] f_dir, f_list, f_wire;
     integer out_track [0:3];
 
     task read_wiring;
         reg [8*8-1:0] kw, nm;
-        integer a, d, k, r, ok_all, end_seen, i, b;
+        integer d, k, r, ok_all, end_seen, i, b;
         begin
             for (i = 0; i < 4; i = i + 1) out_track[i] = -1;
             ok_all = 1; end_seen = 0; grid_cols = 0; grid_rows = 0; lx = -1; ly = -1;
@@ -109,11 +86,7 @@ module tb_route_diag;
     integer nseen;
 
     initial begin
-        if (!$value$plusargs("dir=%s", f_dir) || !$value$plusargs("list=%s", f_list) ||
-            !$value$plusargs("wiring=%s", f_wire) || !$value$plusargs("map=%s", f_map)) begin
-            $display("FAIL: tb_route_diag: need +dir= +list= +wiring= +map=");
-            $finish;
-        end
+        read_diag_plusargs;
         for (b = 0; b < 64; b = b + 1) begin route_hits[b] = 0; route_chk[b] = 0; route_tog[b] = 0; end
         nseen = 0;
         read_map;
@@ -132,16 +105,7 @@ module tb_route_diag;
                 end
                 for (k = 0; k < nseen; k = k + 1) if (seen_ids[k] == cid) dup_ids = dup_ids + 1;
                 seen_ids[nseen] = cid; nseen = nseen + 1;
-                $sformat(f_bin, "%0s/%0s.bin", f_dir, cid);
-                load_bitstream;
-                if (!load_ok) begin
-                    $display("FAIL: tb_route_diag: loader rejected case %0s: %0s", cid, reject_reason); $finish;
-                end
-`ifdef GEN_TILE
-                $display("CFG %0s %040h", cid, {2'b00, dut.ConfigBits});
-`else
-                $display("CFG %0s %040h", cid, {2'b00, cfg});
-`endif
+                load_case_and_report_cfg(cid);
                 ncase = ncase + 1;
                 idx = 16*belx + 4*cpin + edx;
                 route_hits[idx] = route_hits[idx] + 1;

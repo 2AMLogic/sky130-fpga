@@ -11,19 +11,32 @@
 // The including bench must, before the `include line:
 //   `define TB_NAME "<bench name>"   -- verbatim prefix of the FAIL strings
 //     (a macro, not %m: inside a task %m expands to the task's scope)
-// and must already have declared, as its DUT hookup does:
+// and must already have declared, as its DUT hookup does (sim/tile_dut.vh):
 //   reg [157:0] cfg;                               (repository composition)
 //   reg [31:0] FrameData; reg [19:0] FrameStrobe;  (under -DGEN_TILE only)
 //
-// This include declares f_map and n_frame_writes and defines read_map,
-// write_frame and load_bitstream; f_bin, the format constants, the parser
+// This include declares f_dir, f_list, f_wire, f_map and n_frame_writes and
+// defines read_diag_plusargs, read_map, write_frame, load_bitstream and
+// load_case_and_report_cfg; f_bin, the format constants, the parser
 // state and parse_bitstream come from bitstream_parse.vh. What genuinely
 // differs per bench stays in the bench: read_wiring, the oracles and the case
 // logic. Both sim/run.sh and flow/generated_tile_replay.sh already pass
 // -I <sim dir>; no build change.
 
     reg [8*256-1:0] f_map;
+    reg [8*256-1:0] f_dir, f_list, f_wire;
     integer n_frame_writes = 0;
+
+    // the diagnostic benches' common plusarg set and guard
+    task read_diag_plusargs;
+        begin
+            if (!$value$plusargs("dir=%s", f_dir) || !$value$plusargs("list=%s", f_list) ||
+                !$value$plusargs("wiring=%s", f_wire) || !$value$plusargs("map=%s", f_map)) begin
+                $display("FAIL: %0s: need +dir= +list= +wiring= +map=", `TB_NAME);
+                $finish;
+            end
+        end
+    endtask
 
     // one legal frame write into the generated tile (no-op for the repository composition)
     task write_frame(input integer fr, input [31:0] data);
@@ -68,6 +81,25 @@
             if (load_ok)
                 for (i = 0; i < CFG_N; i = i + 1)
                     cfg[i] = logic_frame[cb_pos[i] / FBITS][cb_pos[i] % FBITS];
+`endif
+        end
+    endtask
+
+    // per-case load shared by the diagnostic benches: build the <dir>/<case>.bin
+    // path, load the stream, abort on rejection, and print the storage
+    // cross-check CFG line (the generated tile's internal ConfigBits vs the
+    // reconstructed cfg).
+    task load_case_and_report_cfg(input [8*16-1:0] cid);
+        begin
+            $sformat(f_bin, "%0s/%0s.bin", f_dir, cid);
+            load_bitstream;
+            if (!load_ok) begin
+                $display("FAIL: %0s: loader rejected case %0s: %0s", `TB_NAME, cid, reject_reason); $finish;
+            end
+`ifdef GEN_TILE
+            $display("CFG %0s %040h", cid, {2'b00, dut.ConfigBits});
+`else
+            $display("CFG %0s %040h", cid, {2'b00, cfg});
 `endif
         end
     endtask

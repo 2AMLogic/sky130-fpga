@@ -51,7 +51,8 @@
     "sim/tb_lut_basis.v",
     "sim/tb_output_route.v",
     "sim/tb_route_diag.v",
-    "sim/tb_switch_matrix.v"
+    "sim/tb_switch_matrix.v",
+    "sim/tile_dut.vh"
   ],
   "cold_start": {
     "argv": [

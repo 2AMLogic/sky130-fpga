@@ -40,6 +40,7 @@ on:
       - 'flow/pin_experiment.py'
       - 'sim/bitstream_load.vh'
       - 'sim/bitstream_parse.vh'
+      - 'sim/tile_dut.vh'
       - 'sim/tb_logic_tile_bitstream.v'
       - 'sim/tb_fabric_bitstream.v'
       - 'sim/tb_lut_basis.v'
