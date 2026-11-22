@@ -45,6 +45,9 @@
         }
       }
     },
+    "7": {
+      "file": "measurements/timing-characterization/logic_tile.fv-sdf.json"
+    },
     "8": {
       "file": "signoff/characterization-evidence.json",
       "content_hash": "sha256:217e55f53eb0e9bf8b70126a52877082808b0f75e9a50fa8ff6c8c82c7734f9d"

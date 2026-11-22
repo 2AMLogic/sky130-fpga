@@ -108,17 +108,30 @@ netlist from that same run: zero delay **passes**; the SDF-annotated leg is
 **blocked** by a real, generically-reproducible upstream defect in
 `$sdf_annotate`'s handling of this design's `generate`-block-flattened
 escaped identifiers, filed as
-[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked) and its successor gap [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897) (**closed upstream on 2026-10-18** via [klayout-tools#3293](https://github.com/2AMLogic/klayout-tools/pull/3293), which has `klt` rewrite escaped-divider instance names to plain identifiers in build-directory copies of the SDF and of each source that declares them, reported in a new `environment.sdf.renamed` field; first contained in tag `v0.8.0`, the version `.github/workflows/signoff.yml` already pins, and **no GitHub Release carries notes for it** -- upstream releases stop at v0.5.0, 2026-09-15)
+[klayout-tools#1890](https://github.com/2AMLogic/klayout-tools/issues/1890) (closed 2026-09-16, but only as a fail-loud guard in klt v0.6.0 -- re-tried 2026-10-08 under #72, still blocked) and its successor gap [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897) (**closed upstream on 2026-10-18** via [klayout-tools#3293](https://github.com/2AMLogic/klayout-tools/pull/3293), which has `klt` rewrite escaped-divider instance names to plain identifiers in build-directory copies of the SDF and of each source that declares them, reported in a new `environment.sdf.renamed` field; first contained in tag `v0.8.0`, which the pinned grader `0.9.1` postdates; the `v0.8.0` GitHub Release, published 2026-11-15, carries the note)
 rather than worked around with a fabricated result.
-**That closure did not unblock item 7, which is still not met**, and
-klayout-tools#2897 is no longer what holds it. Two blockers do. **(a) The
-annotation is only partial.** With the rename workaround applied `vvp` no
-longer aborts, but 28 of 179 `INTERCONNECT` entries -- every one sourced at a
-top-level input port (`in[N]`, `ce[N]`) -- are rejected, and the cause was not
-isolated (record
-[`20261017-sdf-sanitize-d811bcd`](timing-characterization/records/20261017-sdf-sanitize-d811bcd.md));
-that is [#250](https://github.com/2AMLogic/sky130-fpga/issues/250)'s work, and
-the matching upstream defect is still **open** as
+**Item 7 is `met` since #360, but not through this script.** It is cited on
+the paired BEL-level `logic_tile` cocotb suite of #359
+(`./flow/tile-functional-verification.sh`, record
+[`20261121-183351-787c7ca`](timing-characterization/records/20261121-183351-787c7ca.md);
+envelopes `logic_tile.fv-zero-delay.json` and `logic_tile.fv-sdf.json` in
+this directory): the four `tb_logic_tile.v` checks pass identically on the
+as-built netlist of the committed geometry at zero delay and with this
+directory's committed `logic_tile_route.sdf` back-annotated
+(`environment.sdf.annotated: true`; the annotation is partial and the
+coverage is the BEL-level tile -- `signoff/README.md`, item 7). Under the
+pinned `klt signoff` 0.9.1 that makes 10 of 11 T1 items met, 1 not
+applicable, 0 unmet. This `flow/sdf-resim.sh` leg is unchanged by it: the
+script has not been re-recorded since the two blockers below were measured
+against it, and #162's layout drift still gates it. **(a) The annotation is
+only partial.** With the rename workaround applied `vvp` no longer aborts,
+but 28 of 179 `INTERCONNECT` entries -- every one sourced at a
+top-level input port (`in[N]`, `ce[N]`) -- are rejected (record
+[`20261017-sdf-sanitize-d811bcd`](timing-characterization/records/20261017-sdf-sanitize-d811bcd.md);
+the cause was isolated afterwards by
+[#250](https://github.com/2AMLogic/sky130-fpga/issues/250), record
+[`20261114-sdf-port-interconnect-564db73`](timing-characterization/records/20261114-sdf-port-interconnect-564db73.md)),
+and the matching upstream defect is still **open** as
 [klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)
 (`vvp` aborts in `vpi_scan` on a flat post-route SDF, filed 2026-11-05,
 successor to the `not_planned` klayout-tools#3740), whose own A/B isolates
@@ -194,21 +207,25 @@ re-measures every corner under klt 0.7.0, with SPEF WNS moves of -0.1 to
   the switch matrix and inter-tile routing (`spec/framework-gaps.md`
   G1/G2) have not landed, so no fabric routing delay is characterized
   anywhere here.
-- **Not a full post-layout functional verification.** SDF-back-annotated
-  gate-level re-simulation (issue #29) has a real SDF and a zero-delay
-  gate-level PASS, but no SDF-annotated pass/fail result. klayout-tools#1890
-  closed 2026-09-16 as a fail-loud guard only, and its successor gap
-  [klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897)
-  **closed upstream on 2026-10-18** via
-  [klayout-tools#3293](https://github.com/2AMLogic/klayout-tools/pull/3293)
-  (first contained in tag `v0.8.0`, the version this repo pins; no GitHub
-  Release carries notes for it) -- so #2897 is no longer the blocker, and item
-  7 is still **not met**. Two blockers hold it: the renamed pair leaves 28 of
+- **Not a full post-layout functional verification.** These are STA numbers;
+  the functional evidence is separate. T1 item 7 (issue #29) is `met` since
+  #360 on the paired BEL-level `logic_tile` cocotb suite of #359: the four
+  `sim/tb_logic_tile.v` checks pass identically at zero delay and with
+  `logic_tile_route.sdf` back-annotated
+  (`environment.sdf.annotated: true`; record
+  [`20261121-183351-787c7ca`](timing-characterization/records/20261121-183351-787c7ca.md)).
+  That annotation is partial and SDF `TIMINGCHECK` is not modelled, so it is
+  a functional check, not a timing check, and adds nothing to the numbers
+  above. It is not the bitstream-level post-layout run either: the
+  `flow/sdf-resim.sh` leg still has no SDF-annotated pass/fail result, held
+  by two blockers not re-recorded since -- the renamed pair leaves 28 of
   179 `INTERCONNECT` entries, every one sourced at a top-level input port,
   unapplied (record
   [`20261017-sdf-sanitize-d811bcd`](timing-characterization/records/20261017-sdf-sanitize-d811bcd.md),
-  worked as [#250](https://github.com/2AMLogic/sky130-fpga/issues/250), with
-  the matching upstream defect still **open** as
+  isolated by [#250](https://github.com/2AMLogic/sky130-fpga/issues/250) in
+  record
+  [`20261114-sdf-port-interconnect-564db73`](timing-characterization/records/20261114-sdf-port-interconnect-564db73.md),
+  with the matching upstream defect still **open** as
   [klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)),
   and the characterized geometry no longer reproduces on the current toolchain
   (records
