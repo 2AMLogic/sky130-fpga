@@ -16,6 +16,9 @@ sim/build/
 flow/build/
 # local klt install, created by the setup script
 .venv/
+# Loom daemon token-pool ranking state; kept outside the loom-managed block
+# so `loom-daemon update-gitignore` refreshes don't drop the rule.
+/.loom/account-ranking.codex
 # >>> loom-managed (do not edit) >>>
 # Loom runtime state (don't commit these)
 .loom-in-use
