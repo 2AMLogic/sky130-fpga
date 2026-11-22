@@ -137,6 +137,12 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Shared driver-convention helpers (issue #265), sourced BEFORE the
+# argument parse so the loop can validate --target's operand with
+# target_dir_arg (issue #370); the later position that used to source
+# this file only needed require_klt. Sourcing defines functions only.
+# shellcheck source=./report_check.sh
+source "$SCRIPT_DIR/report_check.sh"
 # Target selection (issue #113, generalized to `--target <dir>` by issue
 # #259). Default: the ratified BEL-only `logic_tile`. `--routed`: the
 # EXPERIMENTAL composed tile `logic_tile_routed` (stand-in matrix, ADR-0004
@@ -159,11 +165,7 @@ while [[ $# -gt 0 ]]; do
                 echo "usage: $0 [--routed | --target <dir>] [--update]" >&2
                 exit 1
             fi
-            if [[ -n "$TARGET_DIR" ]]; then
-                echo "error: --target given twice" >&2
-                exit 1
-            fi
-            TARGET_DIR="$2"
+            target_dir_arg "$2"
             shift
             ;;
         *)
@@ -174,13 +176,13 @@ while [[ $# -gt 0 ]]; do
     shift
 done
 
+# target_dir_arg already validated the operand (non-empty, existing
+# directory) at parse time (issue #370); what stays local is this
+# script's own alias handling: --routed exclusion and the
+# layout/experimental alias.
 if [[ -n "$TARGET_DIR" ]]; then
     if [[ -n "$ROUTED_GIVEN" ]]; then
         echo "error: --routed and --target are mutually exclusive (use --target <repo>/layout/experimental for the routed tile)" >&2
-        exit 1
-    fi
-    if [[ ! -d "$TARGET_DIR" ]]; then
-        echo "error: --target directory does not exist: $TARGET_DIR" >&2
         exit 1
     fi
     TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
@@ -300,9 +302,6 @@ print_tool_version_banner sky130A "$RECORDED_STA_KLT_VERSION" "$RECORDED_STA_OPE
 source "$SCRIPT_DIR/pdk_root.sh"
 export_pdk_root_if_unset "$PDK_VARIANT"
 require_pdk_resolvable "$PDK_VARIANT"
-
-# shellcheck source=./report_check.sh
-source "$SCRIPT_DIR/report_check.sh"
 
 COMMITTED_GDS="$LAYOUT_DIR/${TOP_MODULE}.gds"
 COMMITTED_DEF="$LAYOUT_DIR/${TOP_MODULE}.def"

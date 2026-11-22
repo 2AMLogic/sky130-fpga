@@ -236,4 +236,93 @@ else
     bad "require_klt off PATH" "rc=$src out=$out"
 fi
 
+# target_dir_arg / parse_target_update_mode / resolve_target_mode
+# (issue #370): the shared --target validation. The load-bearing case is
+# the empty operand: the pre-#370 drivers stored it and later treated it
+# as an omitted flag, so an empty shell variable in a write-mode
+# invocation refreshed the committed layout.
+TARGET_DIR=""
+target_dir_arg "$T"
+if [[ "$TARGET_DIR" == "$T" ]]; then
+    ok "target_dir_arg records the operand"
+else
+    bad "target_dir_arg records the operand" "got ${TARGET_DIR:-<unset>}"
+fi
+out="$(TARGET_DIR="" target_dir_arg "" 2>&1)"; src=$?
+if [[ $src -eq 1 && "$out" == *"non-empty directory"* ]]; then
+    ok "target_dir_arg empty operand -> directory diagnostic, rc=1"
+else
+    bad "target_dir_arg empty operand" "rc=$src out=$out"
+fi
+out="$(TARGET_DIR="$T" target_dir_arg "$T" 2>&1)"; src=$?
+if [[ $src -eq 1 && "$out" == "error: --target given twice" ]]; then
+    ok "target_dir_arg second --target -> refused"
+else
+    bad "target_dir_arg second --target" "rc=$src out=$out"
+fi
+out="$(TARGET_DIR="" target_dir_arg "$T/missing" 2>&1)"; src=$?
+if [[ $src -eq 1 && "$out" == *"does not exist"* ]]; then
+    ok "target_dir_arg nonexistent directory -> diagnostic, rc=1"
+else
+    bad "target_dir_arg nonexistent directory" "rc=$src out=$out"
+fi
+
+parse_target_update_mode
+if [[ "$MODE" == "check" && -z "$TARGET_DIR" ]]; then
+    ok "parse_target_update_mode default -> check"
+else
+    bad "parse_target_update_mode default" "mode=$MODE target=${TARGET_DIR:-<unset>}"
+fi
+parse_target_update_mode --update
+if [[ "$MODE" == "update" ]]; then
+    ok "parse_target_update_mode --update -> update"
+else
+    bad "parse_target_update_mode --update" "mode=$MODE"
+fi
+mkdir -p "$T/tlayout"
+parse_target_update_mode --target "$T/tlayout"
+if [[ "$MODE" == "check" && "$TARGET_DIR" == "$T/tlayout" ]]; then
+    ok "parse_target_update_mode --target <dir> recorded"
+else
+    bad "parse_target_update_mode --target" "mode=$MODE target=${TARGET_DIR:-<unset>}"
+fi
+out="$(parse_target_update_mode --target "" 2>&1)"; src=$?
+if [[ $src -eq 1 && "$out" == *"non-empty directory"* ]]; then
+    ok "parse_target_update_mode empty --target operand -> diagnostic, rc=1"
+else
+    bad "parse_target_update_mode empty --target" "rc=$src out=$out"
+fi
+out="$(parse_target_update_mode --bogus 2>&1)"; src=$?
+if [[ $src -eq 1 && "$out" == "usage: $0 [--target <dir>] [--update]" ]]; then
+    ok "parse_target_update_mode bad arg -> usage, rc=1"
+else
+    bad "parse_target_update_mode bad arg" "rc=$src out=$out"
+fi
+
+# resolve_target_mode: the committed-layout alias collapses to the
+# default; any other directory becomes target mode, absolutized.
+# Consumed by the sourced resolve_target_mode, which standalone
+# analysis cannot see.
+# shellcheck disable=SC2034
+REPO_ROOT="$T"
+mkdir -p "$T/layout" "$T/other"
+TARGET_DIR="$T/layout"; resolve_target_mode
+if [[ "$TARGET_MODE" == "default" && -z "$TARGET_DIR" ]]; then
+    ok "resolve_target_mode committed-layout alias -> default"
+else
+    bad "resolve_target_mode committed-layout alias" "mode=$TARGET_MODE target=${TARGET_DIR:-<unset>}"
+fi
+TARGET_DIR="$T/other/"; resolve_target_mode
+if [[ "$TARGET_MODE" == "target" && "$TARGET_DIR" == "$T/other" ]]; then
+    ok "resolve_target_mode other directory -> target, absolutized"
+else
+    bad "resolve_target_mode other directory" "mode=$TARGET_MODE target=${TARGET_DIR:-<unset>}"
+fi
+TARGET_DIR=""; resolve_target_mode
+if [[ "$TARGET_MODE" == "default" && -z "$TARGET_DIR" ]]; then
+    ok "resolve_target_mode omitted -> default"
+else
+    bad "resolve_target_mode omitted" "mode=$TARGET_MODE target=${TARGET_DIR:-<unset>}"
+fi
+
 exit "$rc_all"

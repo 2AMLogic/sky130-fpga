@@ -85,57 +85,15 @@ ERC_PDK="sky130"
 # shellcheck source=./report_check.sh
 source "$SCRIPT_DIR/report_check.sh"
 
-MODE="check"
-TARGET_DIR=""
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --update)
-            MODE="update"
-            ;;
-        --target)
-            if [[ $# -lt 2 ]]; then
-                echo "error: --target requires a directory argument" >&2
-                echo "usage: $0 [--target <dir>] [--update]" >&2
-                exit 1
-            fi
-            if [[ -n "$TARGET_DIR" ]]; then
-                echo "error: --target given twice" >&2
-                exit 1
-            fi
-            TARGET_DIR="$2"
-            shift
-            ;;
-        "")
-            MODE="check"
-            ;;
-        *)
-            echo "usage: $0 [--target <dir>] [--update]" >&2
-            exit 1
-            ;;
-    esac
-    shift
-done
-
 # Issue #259: --target points the measurement at a GDS outside layout/.
 # Normalization and read-only guarantee identical to flow/drc.sh's: the
 # committed layout directory spelled explicitly behaves exactly as the
 # default; anything else refuses --update before anything is written.
-# (Own parse instead of report_check.sh's parse_update_mode, same reason
-# as flow/drc.sh: the argument surface is no longer exactly [--update].)
-TARGET_MODE="default"
-if [[ -n "$TARGET_DIR" ]]; then
-    if [[ ! -d "$TARGET_DIR" ]]; then
-        echo "error: --target directory does not exist: $TARGET_DIR" >&2
-        exit 1
-    fi
-    TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
-    if [[ "$TARGET_DIR" == "$REPO_ROOT/layout" ]]; then
-        TARGET_MODE="default"
-        TARGET_DIR=""
-    else
-        TARGET_MODE="target"
-    fi
-fi
+# (Parse and normalization are report_check.sh's
+# parse_target_update_mode + resolve_target_mode, shared with
+# flow/drc.sh -- issue #370 closed the empty-operand gap here too.)
+parse_target_update_mode "$@"
+resolve_target_mode
 if [[ "$TARGET_MODE" == "target" && "$MODE" == "update" ]]; then
     echo "error: --target is read-only -- it measures a layout outside layout/ and never writes committed evidence; drop --update" >&2
     exit 1

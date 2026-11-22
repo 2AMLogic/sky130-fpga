@@ -68,58 +68,18 @@ PDK_VARIANT="sky130A"
 # shellcheck source=./report_check.sh
 source "$SCRIPT_DIR/report_check.sh"
 
-MODE="check"
-TARGET_DIR=""
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --update)
-            MODE="update"
-            ;;
-        --target)
-            if [[ $# -lt 2 ]]; then
-                echo "error: --target requires a directory argument" >&2
-                echo "usage: $0 [--target <dir>] [--update]" >&2
-                exit 1
-            fi
-            if [[ -n "$TARGET_DIR" ]]; then
-                echo "error: --target given twice" >&2
-                exit 1
-            fi
-            TARGET_DIR="$2"
-            shift
-            ;;
-        "")
-            MODE="check"
-            ;;
-        *)
-            echo "usage: $0 [--target <dir>] [--update]" >&2
-            exit 1
-            ;;
-    esac
-    shift
-done
-
 # Issue #259: --target points the measurement at a GDS outside layout/.
 # Normalization: the committed layout directory spelled explicitly behaves
 # exactly as the default. Anything else is a strictly read-only measurement:
 # --update is refused here, before anything is created or written.
-# (This script keeps its own parse instead of report_check.sh's
-# parse_update_mode: with --target its argument surface is no longer exactly
-# [--update] -- the helper's own documented cut-off, matching flow/lvs.sh.)
-TARGET_MODE="default"
-if [[ -n "$TARGET_DIR" ]]; then
-    if [[ ! -d "$TARGET_DIR" ]]; then
-        echo "error: --target directory does not exist: $TARGET_DIR" >&2
-        exit 1
-    fi
-    TARGET_DIR="$(cd "$TARGET_DIR" && pwd)"
-    if [[ "$TARGET_DIR" == "$REPO_ROOT/layout" ]]; then
-        TARGET_MODE="default"
-        TARGET_DIR=""
-    else
-        TARGET_MODE="target"
-    fi
-fi
+# (The parse and normalization are report_check.sh's
+# parse_target_update_mode + resolve_target_mode -- this script's former
+# own copy accepted an empty --target operand and fell back to the
+# default layout in update mode, issue #370. The update-only
+# parse_update_mode helper still serves flow/layout.sh and flow/synth.sh,
+# whose surface is exactly [--update].)
+parse_target_update_mode "$@"
+resolve_target_mode
 if [[ "$TARGET_MODE" == "target" && "$MODE" == "update" ]]; then
     echo "error: --target is read-only -- it measures a layout outside layout/ and never writes committed evidence; drop --update" >&2
     exit 1
