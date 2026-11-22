@@ -1,0 +1,59 @@
+{
+  "coverage": null,
+  "engine": "icarus",
+  "environment": {
+    "build_log": {
+      "path": "build_icarus.log"
+    },
+    "cocotb_version": "2.1.0",
+    "engine": "icarus",
+    "engine_version": "13.0",
+    "env": {},
+    "initial_state": null,
+    "random_seed": 359,
+    "results_xml": {
+      "path": "results_icarus.xml"
+    },
+    "sdf": null,
+    "source_defines": {},
+    "test_log": {
+      "path": "test_icarus.log"
+    },
+    "tools": []
+  },
+  "failed_count": 0,
+  "hdl_toplevel": "logic_tile",
+  "passed_count": 4,
+  "schema_version": 2,
+  "skipped_count": 0,
+  "status": "pass",
+  "test_count": 4,
+  "testbench": "test_logic_tile",
+  "tests": [
+    {
+      "name": "test_independent_lut_config",
+      "real_time_s": 0.0,
+      "sim_time_ns": 12.0,
+      "status": "passed"
+    },
+    {
+      "name": "test_reset_with_all_enables_low",
+      "real_time_s": 0.0,
+      "sim_time_ns": 28.0,
+      "status": "passed"
+    },
+    {
+      "name": "test_selective_capture",
+      "real_time_s": 0.0,
+      "sim_time_ns": 51.99999999999999,
+      "status": "passed"
+    },
+    {
+      "name": "test_reset_from_mixed_state_all_enables_high",
+      "real_time_s": 0.0,
+      "sim_time_ns": 75.99999999999999,
+      "status": "passed"
+    }
+  ],
+  "trace": null
+}

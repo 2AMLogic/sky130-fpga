@@ -254,7 +254,7 @@ GUARD_RUN="$T/guard-run.sh"
 # stripped -- i.e. exactly the script the CI runner would execute.
 awk '
   BEGIN { in_step = 0; in_run = 0; ci = -1 }
-  !in_step && /^      - name: Base-freshness guard/ { in_step = 1; next }
+  !in_step && /^      - name: .?Base-freshness guard/ { in_step = 1; next }
   in_step && !in_run && /^        run: \|/ { in_run = 1; next }
   in_run {
       if ($0 ~ /^[[:space:]]*$/) { print ""; next }
@@ -404,7 +404,7 @@ fi
 GUARD_RUN3="$T/guard-run3.sh"
 awk '
   BEGIN { in_step = 0; in_run = 0; ci = -1 }
-  !in_step && /^      - name: Base-freshness guard/ { in_step = 1; next }
+  !in_step && /^      - name: .?Base-freshness guard/ { in_step = 1; next }
   in_step && !in_run && /^        run: \|/ { in_run = 1; next }
   in_run {
       if ($0 ~ /^[[:space:]]*$/) { print ""; next }

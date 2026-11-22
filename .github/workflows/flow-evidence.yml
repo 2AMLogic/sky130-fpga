@@ -106,5 +106,8 @@ jobs:
         if: ${{ !cancelled() }}
         run: python3 measurements/generate-characterization-summary.py --check
 
-      - name: PDK-resolution gate regression (hermetic, issue #269)
+      - name: 'PDK-resolution gate regression (hermetic, issue #269)'
         run: ./sim/sdf_port_interconnect/test_pdk_gate.sh
+
+      - name: 'Cell-model resolution helper regression (hermetic, issue #375)'
+        run: ./flow/test_pdk_root.sh
