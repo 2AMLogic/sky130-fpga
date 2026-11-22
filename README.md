@@ -12,10 +12,7 @@ canary, not a fabric. Each row is a pointer to the committed evidence; the
 machine-checkable cells carry a marker that `flow/check_status_claims.py`
 verifies against its source on every PR (see `flow/README.md`). Aggregated
 snapshot:
-[`measurements/characterization-summary.md`](measurements/characterization-summary.md)
-(its SDF rows are item 8's hash-pinned snapshot of the `flow/sdf-resim.sh`
-leg, so they still describe that leg as blocked and do not carry the item-7
-result in the table below; refreshing them is an item-8 re-attestation);
+[`measurements/characterization-summary.md`](measurements/characterization-summary.md);
 full per-issue narrative: ["Current position" in `spec/framework-gaps.md`](spec/framework-gaps.md#current-position-moved-from-readme).
 
 | Rung | State | Detail |

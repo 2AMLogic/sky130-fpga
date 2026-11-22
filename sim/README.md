@@ -884,3 +884,34 @@ frame streams into `design/rtl/logic_tile_routed.v` and checks the `comb` and
 `signoff/item-5-functional-verification.json` is cited for T1 item 5. Scope:
 zero-delay RTL on the G1 harness fabric; see the test module's header and
 `signoff/README.md`.
+
+## cocotb tile regression, zero-delay vs SDF-annotated (issue #359)
+
+`sim/cocotb/test_logic_tile.py` ports the four checks of `sim/tb_logic_tile.v`
+one-to-one as named cocotb tests, so `klt functional-verification` reports
+four verdicts instead of one aggregate:
+
+1. `test_independent_lut_config` (expected `out = 4'b0110`)
+2. `test_reset_with_all_enables_low` (expected `out = 4'b0000`)
+3. `test_selective_capture` (expected `out = 4'b0101`)
+4. `test_reset_from_mixed_state_all_enables_high` (expected `out = 4'b0000`)
+
+It runs against the as-built netlist `layout/logic_tile.asbuilt.v`, twice:
+at zero delay, then with `measurements/timing-characterization/logic_tile_route.sdf`
+back-annotated. The two envelopes are committed under
+`measurements/timing-characterization/` (`logic_tile.fv-zero-delay.json`,
+`logic_tile.fv-sdf.json`). Issue #360 cites the SDF-annotated envelope for
+the four BEL-level checks in item 7. The test module's header states the
+timing contract.
+
+Run it through the driver (needs `uvx`, Icarus Verilog 13.0+ and a
+`sky130_fd_sc_hd` model directory whose hashes match `flow/tool_versions.sh`;
+not part of `sim/run.sh`, and **not run in CI**):
+
+```bash
+./flow/tile-functional-verification.sh            # run, diff against the committed envelopes
+./flow/tile-functional-verification.sh --update   # run, rewrite them
+```
+
+See the [driver’s row in the flow index](../flow/README.md#tile-functional-verification)
+and the [paired-run record](../measurements/timing-characterization/records/20261121-183351-787c7ca.md).

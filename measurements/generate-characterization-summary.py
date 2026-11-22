@@ -32,9 +32,16 @@ cross-checked against each one):
 - spec/tile-spec.md and
   spec/decisions/0002-tile-timing-spec-ratification.md (ratified spec row)
 - measurements/timing-characterization/records/20261008-233733-23e6b5e.md
-  (SDF generation + gate-level re-simulation: the 20261008-233733-23e6b5e
-  record, the #72 re-try after klayout-tools#1890 closed, supersedes
-  20260921-062530-e8a37ad, itself the post-PDN successor of 20260915-133517-234b13b)
+  (SDF generation + gate-level re-simulation on the `flow/sdf-resim.sh`
+  route: the 20261008-233733-23e6b5e record, the #72 re-try after
+  klayout-tools#1890 closed, supersedes 20260921-062530-e8a37ad, itself
+  the post-PDN successor of 20260915-133517-234b13b)
+- measurements/timing-characterization/records/20261121-183351-787c7ca.md
+  (the paired zero-delay / SDF-annotated cocotb run that is T1 item 7's
+  current evidence, issues #358/#359, graded `met` by #360; read together
+  with its two committed envelopes logic_tile.fv-zero-delay.json and
+  logic_tile.fv-sdf.json, and with the item-7 grade in
+  signoff/tier-report.json that cites the annotated envelope)
 
 Usage:
     python3 measurements/generate-characterization-summary.py [--check]
@@ -78,6 +85,10 @@ OUTPUT_PATH = REPO_ROOT / "measurements" / "characterization-summary.md"
 
 STA_RECORD_ID = "20261027-201500-9111a08"
 SDF_RECORD_ID = "20261008-233733-23e6b5e"
+# The paired zero-delay / SDF-annotated cocotb run that is T1 item 7's
+# current evidence (issues #358/#359, graded met by #360). The sdf-resim
+# record above stays the record of the still-BLOCKED flow/sdf-resim.sh leg.
+FV_RECORD_ID = "20261121-183351-787c7ca"
 # The record id ADR-0002 cites as its evidentiary source. A ratified
 # decision record is never edited, so this historical id stays fixed even
 # while a successor sweep record (see its meta's `supersedes`) becomes the
@@ -86,6 +97,14 @@ RATIFIED_STA_RECORD_ID = "20260909-225431-86f71d2"
 RECORDS_DIR = REPO_ROOT / "measurements/timing-characterization/records"
 STA_RECORD_PATH = RECORDS_DIR / f"{STA_RECORD_ID}.md"
 SDF_RECORD_PATH = RECORDS_DIR / f"{SDF_RECORD_ID}.md"
+FV_RECORD_PATH = RECORDS_DIR / f"{FV_RECORD_ID}.md"
+FV_SDF_ENV_PATH = (
+    REPO_ROOT / "measurements/timing-characterization/logic_tile.fv-sdf.json"
+)
+FV_ZD_ENV_PATH = (
+    REPO_ROOT / "measurements/timing-characterization/logic_tile.fv-zero-delay.json"
+)
+TIER_REPORT_PATH = REPO_ROOT / "signoff/tier-report.json"
 CORNERS_DIR = REPO_ROOT / "measurements/timing-characterization/corners"
 STA_ENVELOPE_PATH = REPO_ROOT / "measurements/timing-characterization/logic_tile.sta.json"
 
@@ -414,6 +433,117 @@ def collect_sdf_resim():
     }
 
 
+def collect_fv_pair():
+    """T1 item 7's current evidence: the paired zero-delay /
+    SDF-annotated cocotb run of record 20261121-183351-787c7ca (issues
+    #358/#359, harness flow/tile-functional-verification.sh), read from
+    its two committed envelopes and cross-checked against the signoff
+    grade in signoff/tier-report.json that cites the annotated envelope
+    (issue #360), so the summary can never state an item-7 status the
+    committed tier report contradicts."""
+    require(FV_RECORD_PATH.exists(), f"{FV_RECORD_PATH} is missing")
+    meta = parse_record_meta(FV_RECORD_PATH)
+    require(meta["record_id"] == FV_RECORD_ID, "FV record_id mismatch")
+    require(
+        meta["experiment"] == "timing-characterization",
+        "FV record experiment is not timing-characterization",
+    )
+    require(
+        meta["harness"] == "flow/tile-functional-verification.sh",
+        "FV record harness is not flow/tile-functional-verification.sh",
+    )
+    paired = meta["paired_runs"]
+    require(
+        paired["zero_delay_envelope"] == rel(FV_ZD_ENV_PATH),
+        "FV record no longer names logic_tile.fv-zero-delay.json as leg 1",
+    )
+    require(
+        paired["sdf_annotated_envelope"] == rel(FV_SDF_ENV_PATH),
+        "FV record no longer names logic_tile.fv-sdf.json as leg 2",
+    )
+
+    text = FV_RECORD_PATH.read_text()
+    require(
+        "**pass identically**" in text,
+        "FV record no longer states the paired runs pass identically",
+    )
+    require(
+        "215/215 cell arcs and 63/179 interconnects" in text,
+        "FV record no longer states the net annotated population",
+    )
+
+    legs = {}
+    for leg, path in (
+        ("zero-delay", FV_ZD_ENV_PATH),
+        ("SDF-annotated", FV_SDF_ENV_PATH),
+    ):
+        env = load_json(path)
+        require(env["status"] == "pass", f"FV {leg} envelope status is not pass")
+        require(env["test_count"] == 4, f"FV {leg} envelope test_count is not 4")
+        require(env["passed_count"] == 4, f"FV {leg} envelope passed_count is not 4")
+        require(env["failed_count"] == 0, f"FV {leg} envelope failed_count is not 0")
+        require(env["skipped_count"] == 0, f"FV {leg} envelope skipped_count is not 0")
+        legs[leg] = env
+
+    zd, sd = legs["zero-delay"], legs["SDF-annotated"]
+    require(
+        zd["environment"]["sdf"] is None,
+        "FV zero-delay envelope is not zero-delay (environment.sdf not null)",
+    )
+    sdf = sd["environment"]["sdf"]
+    require(
+        isinstance(sdf, dict) and sdf["annotated"] is True,
+        "FV SDF-annotated envelope does not report annotated: true",
+    )
+    require(sdf["corner"] == "typ", "FV SDF-annotated envelope corner is not typ")
+    require(sdf["entries"] == "all", "FV SDF-annotated envelope entry mode is not all")
+    require(
+        sdf["partial"] is True,
+        "FV SDF-annotated envelope no longer discloses partial: true",
+    )
+    dropped = sdf["dropped"]
+    require(
+        dropped["timingcheck"]["count"] == 4,
+        "FV SDF-annotated envelope timingcheck drop count is not 4",
+    )
+    require(
+        dropped["zero_delay_bus_port_source_interconnect"]["count"] == 116,
+        "FV SDF-annotated envelope zero-delay bus-port INTERCONNECT drop "
+        "count is not 116",
+    )
+    require(
+        len(sdf["renamed"]) == 44,
+        "FV SDF-annotated envelope renamed count is not 44",
+    )
+    require(
+        [t["name"] for t in zd["tests"]] == [t["name"] for t in sd["tests"]],
+        "FV paired envelopes no longer run the same four named tests",
+    )
+
+    tier = load_json(TIER_REPORT_PATH)
+    item7 = next(i for i in tier["items"] if i["id"] == 7)
+    require(
+        item7["status"] == "met",
+        "T1 item 7 is not graded met in signoff/tier-report.json",
+    )
+    require(
+        item7["citation"]["file"] == rel(FV_SDF_ENV_PATH),
+        "T1 item 7 citation no longer names the SDF-annotated FV envelope",
+    )
+
+    return {
+        "path": FV_RECORD_PATH,
+        "record_id": meta["record_id"],
+        "git_revision": meta["git_revision"],
+        "zd_env_path": FV_ZD_ENV_PATH,
+        "sdf_env_path": FV_SDF_ENV_PATH,
+        "test_count": sd["test_count"],
+        "passed_count": sd["passed_count"],
+        "corner": sdf["corner"],
+        "entries": sdf["entries"],
+    }
+
+
 def rel(path: Path) -> str:
     return str(path.relative_to(REPO_ROOT))
 
@@ -430,7 +560,7 @@ def hash_prefix(content_hash: str) -> str:
     return content_hash[: len("sha256:") + 12]
 
 
-def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
+def render(drc, lvs, erc, sta, spec_row, sdf, fv) -> str:
     lines = []
     lines.append("<!-- GENERATED FILE -- do not hand-edit.")
     lines.append(
@@ -498,15 +628,19 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         f"| decision record ADR-0002 |"
     )
     lines.append(
-        f"| SDF-generation + gate-level re-sim | **zero-delay: PASS; "
-        f"SDF-annotated: BLOCKED** (klayout-tools#1890 closed as a fail-loud guard only; "
-        f"successor gap klayout-tools#2897 closed upstream on 2026-10-18 via "
-        f"klayout-tools#3293, first contained in tag v0.8.0 with no GitHub Release "
-        f"notes -- #2897 is no longer the blocker: 28 of 179 port-sourced "
-        f"`INTERCONNECT` entries unapplied (upstream klayout-tools#5002 open) and "
-        f"the characterized geometry non-reproducible (#162, #213)) "
-        f"| [`{rel(sdf['path'])}`]({link(sdf['path'])}) "
-        f"| record `{sdf['record_id']}`, git revision `{sdf['git_revision'][:7]}` |"
+        f"| SDF-generation + gate-level re-sim | **T1 item 7 `met`: paired "
+        f"zero-delay + SDF-annotated `logic_tile` suite passes** "
+        f"({fv['passed_count']}/{fv['test_count']} in both legs; "
+        f"`environment.sdf.annotated: true`, corner `{fv['corner']}`, "
+        f"entries `{fv['entries']}`; partial -- 215/215 cell `IOPATH` arcs "
+        f"and 63/179 `INTERCONNECT` entries apply, no nonzero delay "
+        f"dropped, SDF `TIMINGCHECK` not modelled by Icarus, so no "
+        f"setup/hold claim rests on it); the `flow/sdf-resim.sh` leg stays "
+        f"**BLOCKED** (28 of 179 port-sourced `INTERCONNECT` entries "
+        f"unapplied, upstream klayout-tools#5002 open; characterized "
+        f"geometry non-reproducible, #162/#213) "
+        f"| [`{rel(fv['path'])}`]({link(fv['path'])}) "
+        f"| record `{fv['record_id']}`, git revision `{fv['git_revision'][:7]}` |"
     )
     lines.append("")
 
@@ -661,43 +795,65 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
     lines.append("## SDF-generation + gate-level re-simulation")
     lines.append("")
     lines.append(
-        "- **Zero-delay leg**: PASS (`sim/tb_logic_tile.v`, unmodified, run gate-level "
-        "against the as-built netlist) -- functional-only, no timing claim."
+        f"- **T1 item 7 status**: **met** (graded `met` by `klt signoff` since "
+        f"issue #360). The four tile-level checks of `sim/tb_logic_tile.v`, "
+        f"ported one-to-one as named cocotb tests in "
+        f"`sim/cocotb/test_logic_tile.py`, **pass identically** against the "
+        f"as-built netlist `layout/logic_tile.asbuilt.v` in a paired "
+        f"`flow/tile-functional-verification.sh` run (issues #358/#359): "
+        f"{fv['passed_count']} of {fv['test_count']} passed, 0 failed, 0 skipped "
+        f"in both legs -- once at zero delay, once with the committed "
+        f"post-route SDF back-annotated by `klt functional-verification` "
+        f"(Icarus `$sdf_annotate`, corner `{fv['corner']}`, entry mode "
+        f"`{fv['entries']}`). The annotation is **partial**: all 215 cell "
+        f"`IOPATH` arcs and 63 of 179 `INTERCONNECT` entries apply; the 116 "
+        f"bit-selected-port entries dropped are all `0.000:0.000:0.000`, so "
+        f"no nonzero delay is dropped, and the 4 SDF `TIMINGCHECK` sections "
+        f"are not modelled by Icarus -- a functional check only; no "
+        f"setup/hold claim rests on it. Scope: the 4 BEL-level `logic_tile` "
+        f"checks, not the bitstream-level post-layout criterion of #213."
     )
     lines.append(
-        "- **SDF-annotated leg**: BLOCKED. klayout-tools#1890 (`$sdf_annotate` crash on "
-        "escaped identifiers containing `.`/`[]`, which this design's flattened "
-        "`generate`-block RTL produces) is closed, but its fix (klt v0.6.0) is only a "
-        "fail-loud guard on `klt functional-verification`'s `options.sdf` path; a raw "
-        "`$sdf_annotate` still aborts `vvp` identically (re-verified 2026-10-08). Its "
-        "successor gap "
+        "- **`flow/sdf-resim.sh` leg**: BLOCKED, unchanged by the item-7 "
+        "grade above. klayout-tools#1890 (`$sdf_annotate` crash on escaped "
+        "identifiers containing `.`/`[]`, which this design's flattened "
+        "`generate`-block RTL produces) is closed, but its fix (klt "
+        "v0.6.0) is only a fail-loud guard on `klt functional-verification`'s "
+        "`options.sdf` path; a raw `$sdf_annotate` still aborts `vvp` "
+        "identically (re-verified 2026-10-08). Its successor gap "
         "[klayout-tools#2897](https://github.com/2AMLogic/klayout-tools/issues/2897) "
         "**closed upstream on 2026-10-18** via "
         "[klayout-tools#3293](https://github.com/2AMLogic/klayout-tools/pull/3293) "
-        "(first contained in tag `v0.8.0`; no GitHub Release carries notes for it) -- "
-        "so #2897 is no longer the blocker, and item 7 is still **not met**. Two "
-        "blockers hold it: the renamed pair leaves 28 of 179 `INTERCONNECT` entries, "
-        "every one sourced at a top-level input port, unapplied (record "
+        "(first contained in tag `v0.8.0`; the pinned grader `0.9.1` "
+        "postdates it). Two blockers hold this leg: the renamed pair "
+        "leaves 28 of 179 `INTERCONNECT` entries, every one sourced at a "
+        "top-level input port, unapplied (record "
         "[`timing-characterization/records/20261017-sdf-sanitize-d811bcd.md`]"
-        "(timing-characterization/records/20261017-sdf-sanitize-d811bcd.md), worked as "
-        "[#250](https://github.com/2AMLogic/sky130-fpga/issues/250), with the matching "
-        "upstream defect still **open** as "
+        "(timing-characterization/records/20261017-sdf-sanitize-d811bcd.md), "
+        "worked as [#250](https://github.com/2AMLogic/sky130-fpga/issues/250), "
+        "with the matching upstream defect still **open** as "
         "[klayout-tools#5002](https://github.com/2AMLogic/klayout-tools/issues/5002)), "
-        "and the characterized geometry no longer reproduces on the current toolchain "
-        "([#162](https://github.com/2AMLogic/sky130-fpga/issues/162), "
+        "and the characterized geometry no longer reproduces on the current "
+        "toolchain ([#162](https://github.com/2AMLogic/sky130-fpga/issues/162), "
         "[#213](https://github.com/2AMLogic/sky130-fpga/issues/213)). "
-        "Not worked around with a fabricated result. The latest re-try's full "
-        "`flow/sdf-resim.sh` run under klt 0.6.0 also stops at the DEF-reproducibility "
-        "gate (toolchain drift); its zero-delay PASS was run by hand on a "
+        "Not worked around with a fabricated result; the latest re-try's "
+        "full run under klt 0.6.0 stops at the DEF-reproducibility gate "
+        "(toolchain drift), and its zero-delay PASS was run by hand on a "
         "non-matching netlist, so supporting only."
     )
     lines.append(
-        f"- **Source**: [`{rel(sdf['path'])}`]({link(sdf['path'])}); post-route SDF "
+        f"- **Source**: [`{rel(fv['path'])}`]({link(fv['path'])}); paired "
+        f"envelopes [`{rel(fv['zd_env_path'])}`]({link(fv['zd_env_path'])}) "
+        f"and [`{rel(fv['sdf_env_path'])}`]({link(fv['sdf_env_path'])}); "
+        f"`flow/sdf-resim.sh` leg record "
+        f"[`{rel(sdf['path'])}`]({link(sdf['path'])}); post-route SDF "
         f"artifact: [`{rel(sdf['sdf_path'])}`]({link(sdf['sdf_path'])})."
     )
     lines.append(
-        f"- **Record / git revision**: `{sdf['record_id']}`, produced at git revision "
-        f"`{sdf['git_revision']}`."
+        f"- **Record / git revision**: `{fv['record_id']}`, produced at git "
+        f"revision `{fv['git_revision']}` (`flow/sdf-resim.sh` leg: "
+        f"`{sdf['record_id']}`, produced at git revision "
+        f"`{sdf['git_revision']}`)."
     )
     lines.append("")
 
@@ -711,7 +867,8 @@ def render(drc, lvs, erc, sta, spec_row, sdf) -> str:
         "Reads and cross-checks the JSON/markdown sources named above; fails loudly "
         "(non-zero exit, no file written) rather than emitting a report that has "
         "drifted from them. It does not re-run any tool -- run `./flow/layout.sh`, "
-        "`./flow/sta-sweep.sh` and/or `./flow/sdf-resim.sh` first if you need to "
+        "`./flow/sta-sweep.sh`, `./flow/tile-functional-verification.sh` and/or "
+        "`./flow/sdf-resim.sh` first if you need to "
         "regenerate the underlying evidence itself (see `measurements/README.md`)."
     )
     lines.append("")
@@ -728,8 +885,9 @@ def main() -> int:
     sta = collect_sta_sweep()
     spec_row = collect_ratified_spec_row()
     sdf = collect_sdf_resim()
+    fv = collect_fv_pair()
 
-    rendered = render(drc, lvs, erc, sta, spec_row, sdf)
+    rendered = render(drc, lvs, erc, sta, spec_row, sdf, fv)
 
     if check_only:
         current = OUTPUT_PATH.read_text() if OUTPUT_PATH.exists() else ""
