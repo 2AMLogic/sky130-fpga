@@ -900,8 +900,8 @@ It runs against the as-built netlist `layout/logic_tile.asbuilt.v`, twice:
 at zero delay, then with `measurements/timing-characterization/logic_tile_route.sdf`
 back-annotated. The two envelopes are committed under
 `measurements/timing-characterization/` (`logic_tile.fv-zero-delay.json`,
-`logic_tile.fv-sdf.json`) and are the harness of the item-7 envelope cited by
-#360. Scope: BEL-level coverage only; the test module's header states the
+`logic_tile.fv-sdf.json`). Issue #360 cites the SDF-annotated envelope for
+the four BEL-level checks in item 7. The test module's header states the
 timing contract.
 
 Run it through the driver (needs `uvx`, Icarus Verilog 13.0+ and a
@@ -913,6 +913,5 @@ not part of `sim/run.sh`, and **not run in CI**):
 ./flow/tile-functional-verification.sh --update   # run, rewrite them
 ```
 
-Flow-side entry: the `tile-functional-verification.sh` row in
-[`flow/README.md`](../flow/README.md). Record:
-`measurements/timing-characterization/records/20261121-183351-787c7ca.md`.
+See the [driver’s row in the flow index](../flow/README.md#tile-functional-verification)
+and the [paired-run record](../measurements/timing-characterization/records/20261121-183351-787c7ca.md).
