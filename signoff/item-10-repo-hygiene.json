@@ -24,14 +24,14 @@
         "role": "hygiene",
         "path": ".github/workflows/flow-evidence.yml",
         "passed": true,
-        "content_hash": "sha256:233210a4dd744f8b9f8248ccedf51ad78c708550aa4c9d356983689633ef68eb"
+        "content_hash": "sha256:5930784eae254a331bebd35848a8beb17e428750cf3a9b4797a7d7074aa65a27"
       },
       {
         "check": "present",
         "role": "hygiene",
         "path": ".github/workflows/gate-sim.yml",
         "passed": true,
-        "content_hash": "sha256:f14e93ab65215cec81238730d1abc25ef8f42bfc19c13024c1afa8bd099f03f1"
+        "content_hash": "sha256:67f8db2b30eb1aaa701b8042bed439e62bae5b205aecdd00a90f6edfc6428942"
       },
       {
         "check": "present",
