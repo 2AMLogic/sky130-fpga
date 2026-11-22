@@ -60,6 +60,11 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | `check_status_claims.py` | README/framework-gaps status drift check | `flow-evidence.yml` |
 | `gen_bitstream_format.py` | `design/bitstream-format.md` drift check | `flow-evidence.yml` |
 | `def_to_netlist.py`, `test_def_to_netlist.py` | `layout/logic_tile.asbuilt.v`: signal-only Verilog recovered from the routed `layout/logic_tile.def` (no PDK, SDF or klt needed); `--check` fails on drift (issue #358) | `flow-evidence.yml` |
+| `tile-functional-verification.sh` | paired zero-delay vs SDF-annotated `klt functional-verification` (klt 0.9.1) of `layout/logic_tile.asbuilt.v` with `sim/cocotb/test_logic_tile.py` (the four `sim/tb_logic_tile.v` checks as named tests); writes the two committed envelopes `measurements/timing-characterization/logic_tile.fv-zero-delay.json` and `logic_tile.fv-sdf.json` (only machine-local fields normalised before commit: file names, `real_time_s`, the SDF path); `sky130_fd_sc_hd` models accepted only when both model files hash-match `flow/tool_versions.sh` (`$PDK_ROOT`, then `klt pdk find`); check mode diffs against the committed envelopes, `--update` rewrites them. The harness of the item-7 envelope cited by #360 — BEL-level coverage only. Issue #359; record `measurements/timing-characterization/records/20261121-183351-787c7ca.md`; see `sim/README.md` "cocotb tile regression" | - (not run in CI) |
+| `fabric_bitstream.sh` | multi-tile 2x2 fabric bitstream replay: `sim/bitstream/fabric_2x2/` goldens, `sim/fabric_bitstream_results.txt` (EXPERIMENTAL, issue #355; see `sim/README.md`); run by `bitstream.sh` | `fabulous-nextpnr.yml` |
+| `functional-verification.sh` | `signoff/item-5-functional-verification.json`: `klt functional-verification` of `sim/cocotb/test_bitstream_fabric.py` over the committed `sim/bitstream/*.bin` (issue #228) | - |
+| `_modload.py` | shared `load_module(name, path)` helper for the `flow/` scripts and their unit tests (imported by e.g. `route_diag.py`, `lut_basis.py`) | with its callers |
+| `_stream_gen.py` | shared scaffolding of the frame-stream generators `ctrl_route.py`, `output_route.py`, `route_diag.py`, `lut_basis.py` and `route_diag_negative.py` | `gate-sim.yml`, `fabulous-nextpnr.yml` (with its callers) |
 
 ## Toolchain versions
 
