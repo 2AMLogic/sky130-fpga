@@ -108,3 +108,6 @@ jobs:
 
       - name: 'PDK-resolution gate regression (hermetic, issue #269)'
         run: ./sim/sdf_port_interconnect/test_pdk_gate.sh
+
+      - name: 'Cell-model resolution helper regression (hermetic, issue #375)'
+        run: ./flow/test_pdk_root.sh

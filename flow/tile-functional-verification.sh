@@ -29,9 +29,13 @@
 #       sky130 -l sky130_fd_sc_hd a492ff787163f93ce9ebc382b23c58c0de33afa3
 #
 # (the nearest published revision whose two model files are byte-identical
-# to the recorded one's). Candidates, in order: $PDK_ROOT, then the root
-# `klt pdk find --pdk sky130A` resolves. The installed revision is printed
-# alongside the two verified digests and recorded in the issue-#359 record.
+# to the recorded one's). Candidates, in order: $PDK_ROOT, then the
+# `<libs_ref>/sky130_fd_sc_hd/verilog` directory `klt pdk find` resolves
+# (flow/pdk_root.sh's sky130_cell_models_from_klt, issue #375 -- the
+# pre-#375 inline block queried the find result's bare root, where the
+# models never live, so that fallback never matched). The installed
+# revision is printed alongside the two verified digests and recorded in
+# the issue-#359 record.
 #
 # USE_POWER_PINS and FUNCTIONAL are deliberately left UNDEFINED in both
 # runs: the as-built netlist carries no supply pins, and only the models'
@@ -88,13 +92,14 @@ command -v iverilog >/dev/null 2>&1 || { echo "error: iverilog not found on PATH
 # The pinned model digests, from the repo's single committed source.
 # shellcheck source=./tool_versions.sh
 source "$SCRIPT_DIR/tool_versions.sh"
+# shellcheck source=./pdk_root.sh
+source "$SCRIPT_DIR/pdk_root.sh"   # sky130_cell_models_from_klt (issue #375)
 
 # --- resolve the sky130_fd_sc_hd Verilog models (hash-gated) -------------
 MODELS_DIR=""
 INSTALLED_REV=""
 for c in "${PDK_ROOT:+$PDK_ROOT/sky130A/libs.ref/sky130_fd_sc_hd/verilog}" \
-         "$(klt pdk find --pdk sky130A --format json 2>/dev/null \
-            | python3 -c 'import json,sys; print(json.load(sys.stdin).get("root",""))' 2>/dev/null || true)"; do
+         "$(sky130_cell_models_from_klt sky130A)"; do
     d="${c%/}/"
     d="${d%/}"
     [[ -n "$c" && -f "$d/sky130_fd_sc_hd.v" && -f "$d/primitives.v" ]] || continue
