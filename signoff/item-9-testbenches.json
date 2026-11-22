@@ -3,14 +3,14 @@
   "kind": "generic",
   "status": "pass",
   "t1_item": 9,
-  "summary": "T1 item 9 (Testbenches shipped): 48/48 attestation checks passed (klt signoff --attest)",
+  "summary": "T1 item 9 (Testbenches shipped): 51/51 attestation checks passed (klt signoff --attest)",
   "source": "signoff/item-9-inventory.json",
   "attestation": {
     "producer": "klt signoff --attest",
     "inventory_schema_version": 1,
     "hash_algorithm": "sha256-raw-bytes",
-    "check_count": 48,
-    "passed_count": 48,
+    "check_count": 51,
+    "passed_count": 51,
     "checks": [
       {
         "check": "present",
@@ -45,14 +45,28 @@
         "role": "testbench",
         "path": "flow/audit_evidence.py",
         "passed": true,
-        "content_hash": "sha256:c9232b7878f9958e8c0fcd96f6a4c38f4cf30488e6f8923096799a1b44c9ccba"
+        "content_hash": "sha256:4f6eebebec33c3a80bd4ef208a17739fdfec514f6819879e7f483bae760e55b0"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "flow/test_tile_sdf_probe_gate.py",
+        "passed": true,
+        "content_hash": "sha256:8a266581027496bbf3a6b598d253c61c75d342a8e2601e8656206981551a4df9"
       },
       {
         "check": "present",
         "role": "testbench",
         "path": "flow/tile-functional-verification.sh",
         "passed": true,
-        "content_hash": "sha256:abceac8d7eb1b52eab7b29ae575b00d26c2765ce47a9f7a067f7b9cc2721ee91"
+        "content_hash": "sha256:c97134087ca046fac83ccb53facc2e7c11a3170d59918b1f5b62a049d12a44a5"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "flow/tile_sdf_probe_gate.py",
+        "passed": true,
+        "content_hash": "sha256:26813097826d7cc8a8727ce4c0950aa53d2e259cad06647c978ce0a9df254041"
       },
       {
         "check": "present",
@@ -66,7 +80,7 @@
         "role": "testbench",
         "path": "measurements/claim-traceability.md",
         "passed": true,
-        "content_hash": "sha256:3931b0063f470613cbb63c21b56147bdb25e27fc01523651580018189a4a7e98"
+        "content_hash": "sha256:dc5fd514adca7128de3aeb1058459393cc23084ebaa4a0911e08e2546e6bf4c6"
       },
       {
         "check": "present",
@@ -102,6 +116,13 @@
         "path": "sim/cocotb/test_logic_tile.py",
         "passed": true,
         "content_hash": "sha256:28964ba515ba7a546475d5a82dd524052d39757b411318264f1b0197e4aca22f"
+      },
+      {
+        "check": "present",
+        "role": "testbench",
+        "path": "sim/cocotb/test_logic_tile_sdf_probe.py",
+        "passed": true,
+        "content_hash": "sha256:cb063e2d1c55678fe3299e5e70c3dca7168ef6d69e23a98b9e1071229123a828"
       },
       {
         "check": "present",
@@ -370,7 +391,7 @@
         "path": "signoff/item-9-inventory.json",
         "scope": "repo"
       },
-      "content_hash": "sha256:785a80b906187d91552f367e429181e87f4054f3a0db0c8f40677eed05a6024d"
+      "content_hash": "sha256:751b1c9d06d53e21596615fe32f295da3088bb1a397bee2fc425e1a6bf3a30a9"
     }
   }
 }

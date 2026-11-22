@@ -111,3 +111,13 @@ jobs:
 
       - name: 'Cell-model resolution helper regression (hermetic, issue #375)'
         run: ./flow/test_pdk_root.sh
+
+      # The gate half of the SDF settle-time probe (issue #382) that
+      # flow/tile-functional-verification.sh runs after its paired
+      # zero-delay / SDF-annotated cocotb legs. The cocotb runs themselves
+      # are not repeated in CI (same as the #359 pair); this is the
+      # toolchain-free regression of the gate's fail-loud rules -- a missing,
+      # malformed or duplicated SETTLE_PROBE reading, and an annotated leg
+      # that does not settle later than the zero-delay leg.
+      - name: 'SDF settle-time probe gate regression (hermetic, issue #382)'
+        run: python3 -I flow/test_tile_sdf_probe_gate.py

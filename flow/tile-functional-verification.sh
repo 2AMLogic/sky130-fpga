@@ -57,6 +57,27 @@
 # seed, and environment.sdf's annotated/partial/renamed/dropped -- is kept
 # exactly as klt wrote it.
 #
+# Why a second pair, the SDF settle-time probe (issue #382): the four named
+# checks pass identically on both legs above, so they observe no delay -- a
+# toolchain change that made the annotation a silent no-op (zero arcs
+# applied, environment.sdf.annotated still true) would leave both committed
+# envelopes byte-identical. The probe module
+# sim/cocotb/test_logic_tile_sdf_probe.py therefore runs on the same two
+# requests with only testbench.module swapped: it repeats two of the bench's
+# stimuli (one registered capture, one combinational input change), reads
+# `out` every 10 ps across each, and prints the first poll after the last
+# one that read anything but the expected value. It asserts only functional
+# correctness, so it too passes on both legs. The readings are embedded in
+# the trimmed probe envelopes as `sdf_probe` (the one key here that is not
+# klt's) and committed as measurements/timing-characterization/
+# logic_tile.sdf-probe-zero-delay.json / logic_tile.sdf-probe-sdf.json.
+# flow/tile_sdf_probe_gate.py then reads both legs' test logs and requires
+# the annotated leg to settle at least PROBE_MIN_DELTA_NS later on both
+# paths -- refusing a missing or malformed reading rather than reading it as
+# a pass. The margin is deliberately loose (the probe observed 0.60 /
+# 0.53 ns against 0.01 ns; record 20261121-183351-787c7ca): this is evidence
+# that annotation took effect, not a timing measurement.
+#
 # Usage:
 #   ./flow/tile-functional-verification.sh            # run, diff against the committed envelopes
 #   ./flow/tile-functional-verification.sh --update   # run, rewrite the committed envelopes
@@ -65,8 +86,8 @@
 #   PDK_ROOT      volare/ciel root holding hash-matching sky130_fd_sc_hd models
 #   KLT_FV_CMD    override the pinned klt invocation (default: uvx, klt 0.9.1)
 #
-# Exit 0 iff both runs pass their gates and (check mode) both envelopes are
-# unchanged.
+# Exit 0 iff all four runs pass their gates, the probe gate passes, and
+# (check mode) all four envelopes are unchanged.
 
 set -euo pipefail
 
@@ -78,6 +99,12 @@ BENCH_DIR="$REPO_ROOT/sim/cocotb"
 BUILD_DIR="$SCRIPT_DIR/build/tile-functional-verification"
 COMMITTED_ZERO="$REPO_ROOT/measurements/timing-characterization/logic_tile.fv-zero-delay.json"
 COMMITTED_SDF="$REPO_ROOT/measurements/timing-characterization/logic_tile.fv-sdf.json"
+# The SDF settle-time probe pair (issue #382): same netlist, models, SDF and
+# request options as the pair above, only the bench module differs.
+PROBE_BENCH="test_logic_tile_sdf_probe"
+PROBE_MIN_DELTA_NS="0.1"
+COMMITTED_PROBE_ZERO="$REPO_ROOT/measurements/timing-characterization/logic_tile.sdf-probe-zero-delay.json"
+COMMITTED_PROBE_SDF="$REPO_ROOT/measurements/timing-characterization/logic_tile.sdf-probe-sdf.json"
 
 MODE="check"
 case "${1:-}" in
@@ -142,16 +169,20 @@ echo "=== models: $MODELS_DIR (installed PDK: ${INSTALLED_REV:-unknown}) ==="
 echo "    sha256(sky130_fd_sc_hd.v) ${RECORDED_PDK_MODELS_SHA256} (verified)"
 echo "    sha256(primitives.v)      ${RECORDED_PDK_PRIMITIVES_SHA256} (verified)"
 
-# --- generate the two requests -------------------------------------------
+# --- generate the two request pairs ---------------------------------------
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
 REQUEST_ZERO="$BUILD_DIR/fv_tile_request_zero.json"
 REQUEST_SDF="$BUILD_DIR/fv_tile_request_sdf.json"
-python3 - "$NETLIST" "$MODELS_DIR" "$BENCH_DIR" "$REQUEST_ZERO" "$REQUEST_SDF" "$SDF" <<'PY'
+REQUEST_PROBE_ZERO="$BUILD_DIR/fv_tile_probe_request_zero.json"
+REQUEST_PROBE_SDF="$BUILD_DIR/fv_tile_probe_request_sdf.json"
+python3 - "$NETLIST" "$MODELS_DIR" "$BENCH_DIR" "$REQUEST_ZERO" "$REQUEST_SDF" "$SDF" \
+          "$PROBE_BENCH" "$REQUEST_PROBE_ZERO" "$REQUEST_PROBE_SDF" <<'PY'
 import json, sys
 
 netlist, models, bench_dir, req_zero, req_sdf, sdf = sys.argv[1:7]
+probe_bench, probe_zero, probe_sdf = sys.argv[7:10]
 
 common = {
     "schema": "klt.functional_verification.request/1",
@@ -181,6 +212,17 @@ annotated["options"]["sdf"] = {"file": sdf, "corner": "typ"}  # entries: "all" (
 with open(req_sdf, "w") as f:
     json.dump(annotated, f, indent=2)
     f.write("\n")
+
+# The probe pair (issue #382) is derived from the two documents just written,
+# so it differs from them in exactly one field, testbench.module, by
+# construction rather than by copy.
+for src, dst in ((req_zero, probe_zero), (req_sdf, probe_sdf)):
+    with open(src) as f:
+        probe = json.load(f)
+    probe["testbench"]["module"] = probe_bench
+    with open(dst, "w") as f:
+        json.dump(probe, f, indent=2)
+        f.write("\n")
 PY
 
 run_klt() {
@@ -200,13 +242,30 @@ echo "=== zero-delay run ==="
 run_klt "$REQUEST_ZERO" "$BUILD_DIR/run-zero" "$BUILD_DIR/response-zero.json"
 echo "=== SDF-annotated run (corner typ, entries all) ==="
 run_klt "$REQUEST_SDF" "$BUILD_DIR/run-sdf" "$BUILD_DIR/response-sdf.json"
+echo "=== SDF settle-time probe: zero-delay run ==="
+run_klt "$REQUEST_PROBE_ZERO" "$BUILD_DIR/run-probe-zero" "$BUILD_DIR/response-probe-zero.json"
+echo "=== SDF settle-time probe: SDF-annotated run (corner typ, entries all) ==="
+run_klt "$REQUEST_PROBE_SDF" "$BUILD_DIR/run-probe-sdf" "$BUILD_DIR/response-probe-sdf.json"
 
-# --- gate + trim both envelopes -------------------------------------------
+# --- gate + trim all four envelopes -----------------------------------------
+# Argument groups of five: <raw response> <trimmed output> <repo root> <leg>
+# <probe run dir>. An empty fifth field is the four-check pair; a non-empty one
+# is a probe leg, whose SETTLE_PROBE readings are read from that run's own test
+# log (resolved the way the artifact trimming below reads the same field) and
+# embedded as `sdf_probe`.
 TRIMMED_ZERO="$BUILD_DIR/logic_tile.fv-zero-delay.json"
 TRIMMED_SDF="$BUILD_DIR/logic_tile.fv-sdf.json"
-python3 - "$BUILD_DIR/response-zero.json" "$TRIMMED_ZERO" "$REPO_ROOT" zero \
-         "$BUILD_DIR/response-sdf.json" "$TRIMMED_SDF" "$REPO_ROOT" sdf <<'PY'
+TRIMMED_PROBE_ZERO="$BUILD_DIR/logic_tile.sdf-probe-zero-delay.json"
+TRIMMED_PROBE_SDF="$BUILD_DIR/logic_tile.sdf-probe-sdf.json"
+python3 - "$SCRIPT_DIR" \
+         "$BUILD_DIR/response-zero.json" "$TRIMMED_ZERO" "$REPO_ROOT" zero "" \
+         "$BUILD_DIR/response-sdf.json" "$TRIMMED_SDF" "$REPO_ROOT" sdf "" \
+         "$BUILD_DIR/response-probe-zero.json" "$TRIMMED_PROBE_ZERO" "$REPO_ROOT" zero "$BUILD_DIR/run-probe-zero" \
+         "$BUILD_DIR/response-probe-sdf.json" "$TRIMMED_PROBE_SDF" "$REPO_ROOT" sdf "$BUILD_DIR/run-probe-sdf" <<'PY'
 import json, os, sys
+from decimal import Decimal
+
+FLOW_DIR = sys.argv[1]
 
 EXPECT_TESTS = [
     "test_independent_lut_config",
@@ -214,8 +273,34 @@ EXPECT_TESTS = [
     "test_selective_capture",
     "test_reset_from_mixed_state_all_enables_high",
 ]
+EXPECT_PROBE_TESTS = [
+    "test_probe_registered_settle",
+    "test_probe_combinational_settle",
+]
 
-def load_trim_gate(raw_path, out_path, repo_root, leg):
+def read_probe(env, probe_dir, repo_root, leg):
+    """The SETTLE_PROBE readings of a probe leg, from its run's own test log."""
+    sys.path.insert(0, FLOW_DIR)
+    from _modload import load_module
+    gate = load_module("tile_sdf_probe_gate", os.path.join(FLOW_DIR, "tile_sdf_probe_gate.py"))
+    artifact = env["environment"].get("test_log")
+    name = artifact.get("path") if isinstance(artifact, dict) else None
+    if not name:
+        raise SystemExit(f"error: {leg} probe envelope refused: it names no test_log "
+                         "artifact to read the SETTLE_PROBE readings from")
+    candidates = [name] if os.path.isabs(name) else [os.path.join(repo_root, name)]
+    candidates.append(os.path.join(probe_dir, os.path.basename(name)))
+    log = next((c for c in candidates if os.path.isfile(c)), None)
+    if log is None:
+        raise SystemExit(f"error: {leg} probe envelope refused: test log {name!r} not found "
+                         f"(looked at {candidates})")
+    with open(log, encoding="utf-8", errors="replace") as f:
+        try:
+            return gate.parse_probe(f.read(), os.path.relpath(log, repo_root))
+        except gate.ProbeError as exc:
+            raise SystemExit(f"error: {leg} probe envelope refused: {exc}")
+
+def load_trim_gate(raw_path, out_path, repo_root, leg, expect_tests, probe_dir=None):
     with open(raw_path) as f:
         env = json.load(f)
 
@@ -227,8 +312,8 @@ def load_trim_gate(raw_path, out_path, repo_root, leg):
         problems.append(f"skipped_count is {env['skipped_count']} (baseline must have no skips)")
     if env.get("failed_count") != 0:
         problems.append(f"failed_count is {env['failed_count']}")
-    if names != EXPECT_TESTS:
-        problems.append(f"test names {names} != the four named tile checks")
+    if names != expect_tests:
+        problems.append(f"test names {names} != the {len(expect_tests)} expected named tests {expect_tests}")
     sdf = env["environment"]["sdf"]
     if leg == "zero":
         if sdf is not None:
@@ -245,6 +330,8 @@ def load_trim_gate(raw_path, out_path, repo_root, leg):
     if problems:
         raise SystemExit(f"error: {leg} envelope refused: " + "; ".join(problems))
 
+    probe = read_probe(env, probe_dir, repo_root, leg) if probe_dir else None
+
     for key in ("results_xml", "test_log", "build_log"):
         artifact = env["environment"].get(key)
         if isinstance(artifact, dict) and artifact.get("path"):
@@ -258,13 +345,21 @@ def load_trim_gate(raw_path, out_path, repo_root, leg):
         sdf["file"] = f
     for t in env["tests"]:
         t["real_time_s"] = 0.0
+    if probe is not None:
+        # The one key of a committed envelope that is not klt's: the readings
+        # the probe printed, exactly as the gate module parsed them from the
+        # run's own log.
+        env["sdf_probe"] = {k: float(v) if isinstance(v, Decimal) else v
+                            for k, v in probe.items()}
 
     with open(out_path, "w") as f:
         json.dump(env, f, indent=2, sort_keys=True)
         f.write("\n")
 
-load_trim_gate(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
-load_trim_gate(sys.argv[5], sys.argv[6], sys.argv[7], sys.argv[8])
+for i in range(2, len(sys.argv), 5):
+    raw, out, repo_root, leg, probe_dir = sys.argv[i:i + 5]
+    load_trim_gate(raw, out, repo_root, leg,
+                   EXPECT_PROBE_TESTS if probe_dir else EXPECT_TESTS, probe_dir or None)
 PY
 
 python3 -c "
@@ -277,22 +372,56 @@ for leg in ('zero', 'sdf'):
         print('    [%s] %s  %.0f ns' % (t['status'], t['name'], t['sim_time_ns']))
 "
 
+python3 -c "
+import json
+for leg, name in (('zero', 'zero-delay'), ('sdf', 'sdf')):
+    d = json.load(open('$BUILD_DIR/logic_tile.sdf-probe-%s.json' % name))
+    print('=== probe %s: %s  tests: %d passed: %d failed: %d skipped: %d ===' % (
+        leg, d['status'], d['test_count'], d['passed_count'], d['failed_count'], d['skipped_count']))
+    for t in d['tests']:
+        print('    [%s] %s  %.0f ns' % (t['status'], t['name'], t['sim_time_ns']))
+    p = d['sdf_probe']
+    print('    out settled: registered %.2f ns, combinational %.2f ns (first poll after the last unsettled one, %d ps grid)' % (
+        p['registered_ns'], p['combinational_ns'], p['poll_step_ps']))
+"
+
+# --- probe gate: the annotated leg must settle later (issue #382) ------------
+# The logs are the runs' own test_log artifacts (the same field the envelope
+# trimming names). flow/tile_sdf_probe_gate.py refuses a missing or malformed
+# reading outright, so a probe that did not run or printed nothing can never
+# read as a pass; under set -e its exit 1 ends the run before anything below
+# writes or compares a committed file.
+probe_log() {  # <raw response> <run dir> -> the run's test log
+    python3 -c 'import json, os, sys
+print(os.path.join(sys.argv[2], os.path.basename(json.load(open(sys.argv[1]))["environment"]["test_log"]["path"])))' "$1" "$2"
+}
+LOG_PROBE_ZERO="$(probe_log "$BUILD_DIR/response-probe-zero.json" "$BUILD_DIR/run-probe-zero")"
+LOG_PROBE_SDF="$(probe_log "$BUILD_DIR/response-probe-sdf.json" "$BUILD_DIR/run-probe-sdf")"
+python3 "$SCRIPT_DIR/tile_sdf_probe_gate.py" \
+    --zero-log "$LOG_PROBE_ZERO" --sdf-log "$LOG_PROBE_SDF" \
+    --min-delta-ns "$PROBE_MIN_DELTA_NS"
+
 if [[ "$MODE" == "update" ]]; then
     cp "$TRIMMED_ZERO" "$COMMITTED_ZERO"
     cp "$TRIMMED_SDF" "$COMMITTED_SDF"
+    cp "$TRIMMED_PROBE_ZERO" "$COMMITTED_PROBE_ZERO"
+    cp "$TRIMMED_PROBE_SDF" "$COMMITTED_PROBE_SDF"
     echo "=== paired envelopes written to $COMMITTED_ZERO and $COMMITTED_SDF ==="
+    echo "=== probe envelopes written to $COMMITTED_PROBE_ZERO and $COMMITTED_PROBE_SDF ==="
     exit 0
 fi
 
 rc=0
-if ! diff -u "$COMMITTED_ZERO" "$TRIMMED_ZERO"; then
-    echo "error: zero-delay envelope differs from $COMMITTED_ZERO; run '$0 --update'" >&2
-    rc=1
-fi
-if ! diff -u "$COMMITTED_SDF" "$TRIMMED_SDF"; then
-    echo "error: SDF envelope differs from $COMMITTED_SDF; run '$0 --update'" >&2
-    rc=1
-fi
+check_envelope() {  # <label> <committed> <regenerated>
+    if ! diff -u "$2" "$3"; then
+        echo "error: $1 envelope differs from $2; run '$0 --update'" >&2
+        rc=1
+    fi
+}
+check_envelope "zero-delay" "$COMMITTED_ZERO" "$TRIMMED_ZERO"
+check_envelope "SDF" "$COMMITTED_SDF" "$TRIMMED_SDF"
+check_envelope "probe zero-delay" "$COMMITTED_PROBE_ZERO" "$TRIMMED_PROBE_ZERO"
+check_envelope "probe SDF" "$COMMITTED_PROBE_SDF" "$TRIMMED_PROBE_SDF"
 if [[ "$rc" -eq 0 ]]; then
     echo "=== paired envelopes reproduce the committed copies ==="
 fi
