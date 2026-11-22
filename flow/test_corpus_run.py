@@ -91,6 +91,102 @@ class Topology(unittest.TestCase):
         self.assertIsNone(t)
 
 
+class PostSynthTrial(unittest.TestCase):
+    """The shared per-seed post-synthesis pipeline (corpus_run.main, pin_experiment.run_side).
+    Tool steps are stubbed: only the pipeline's own sequencing and error classifications
+    are under test here; the tool-facing behaviour is exercised by flow/corpus.sh."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.sd = Path(self.tmp.name)
+        self.case = {"name": "c", "oracle": "o.v"}
+        self._saved = (cr.nextpnr, cr.assemble, cr.simulate)
+
+    def tearDown(self):
+        cr.nextpnr, cr.assemble, cr.simulate = self._saved
+        self.tmp.cleanup()
+
+    def start(self, np_rc=0, np_out="Info: Routing complete.\nInfo: Program finished normally.\n",
+              asm=None, sim=None):
+        """Patch the tool steps and return a fresh Run ready for post_synth_trial."""
+        (self.sd / "c_s1.post.json").write_text(json.dumps(
+            {"modules": {"top": {"cells": {
+                "b0": {"type": "lut4_ff_bel", "attributes": {"NEXTPNR_BEL": "X0/Y0/b0"},
+                        "parameters": {"FF": "0"}},
+                "b1": {"type": "lut4_ff_bel", "attributes": {"NEXTPNR_BEL": "X0/Y0/b1"},
+                        "parameters": {"FF": "1"}}}}}}))
+        cr.nextpnr = lambda case, seed, sd, env, model, budget: (np_rc, np_out)
+
+        def assemble(stem, seed_dir, snap, fab_run):
+            ok, why = asm if asm is not None else (True, "")
+            if ok:  # the real assemble leaves the streams it verified behind
+                (seed_dir / f"{stem}.fasm").write_text("fasm")
+                (seed_dir / f"{stem}.bin").write_bytes(b"bin")
+            return ok, why
+        cr.assemble = assemble
+
+        def simulate(tb, binf, wiring, cfgf, oracle, snap_dir):
+            return sim if sim is not None else (True, "61697 checks, 0 failures; 38/38 perturbations detected")
+        cr.simulate = simulate
+        return cr.Run("c", 1)
+
+    def trial(self, case=None, **kw):
+        r = self.start(**kw)
+        cr.post_synth_trial(r, case if case is not None else self.case, 1, self.sd,
+                            "env", "model", 60, "tb", Path("snap"), "fab")
+        return r
+
+    def test_success(self):
+        r = self.trial()
+        self.assertEqual(r.outcome, "success")
+        self.assertEqual(r.detail, "")
+        self.assertEqual(r.bels, [("X0/Y0/b0", "LUT"), ("X0/Y0/b1", "FF")])
+        self.assertEqual(r.sha["fasm"], cr.sha256(self.sd / "c_s1.fasm"))
+        self.assertEqual(r.sha["bin"], cr.sha256(self.sd / "c_s1.bin"))
+        self.assertEqual(r.sim, "61697 checks, 0 failures; 38/38 perturbations detected")
+
+    def test_route_fail(self):
+        def unreachable(*a, **k):
+            raise AssertionError("assembly/simulation must not run after a route failure")
+        r = self.start(np_rc=125, np_out="ERROR: Failed to find a route for arc 0 of net x\n")
+        cr.assemble = cr.simulate = unreachable
+        cr.post_synth_trial(r, self.case, 1, self.sd, "env", "model", 60, "tb", Path("snap"), "fab")
+        self.assertEqual(r.outcome, "route_fail")
+        self.assertEqual(r.bels, [])
+        self.assertEqual(r.sha, {})
+        self.assertEqual(r.sim, "")
+
+    def test_pinned_placement_mismatch_is_tool_error(self):
+        def unreachable(*a, **k):
+            raise AssertionError("assembly must not run after a placement mismatch")
+        case = dict(self.case, placement={"X0/Y0/b0": "FF"})
+        r = self.start()
+        cr.assemble = unreachable
+        cr.post_synth_trial(r, case, 1, self.sd, "env", "model", 60, "tb", Path("snap"), "fab")
+        self.assertEqual(r.outcome, "tool_error")
+        self.assertIn("placement", r.detail)
+        self.assertEqual(r.sha, {})
+
+    def test_pinned_placement_match_proceeds(self):
+        case = dict(self.case, placement={"X0/Y0/b0": "LUT", "X0/Y0/b1": "FF"})
+        r = self.trial(case=case)
+        self.assertEqual(r.outcome, "success")
+
+    def test_assembly_failure_is_tool_error(self):
+        r = self.trial(asm=(False, "bit_gen rc=1"))
+        self.assertEqual(r.outcome, "tool_error")
+        self.assertEqual(r.detail, "assembly: bit_gen rc=1")
+        self.assertEqual(r.sha, {})
+        self.assertEqual(r.sim, "")
+
+    def test_simulation_failure_is_sim_fail(self):
+        r = self.trial(sim=(False, "simulation did not PASS: x"))
+        self.assertEqual(r.outcome, "sim_fail")
+        self.assertEqual(r.detail, "simulation did not PASS: x")
+        self.assertEqual(r.sim, "")
+        self.assertEqual(r.sha["fasm"], cr.sha256(self.sd / "c_s1.fasm"))
+
+
 class ShChildLifetime(unittest.TestCase):
     """Issue #204: children of sh() must not outlive a SIGKILLed parent."""
 
