@@ -303,7 +303,7 @@ byte-identical signoff code.
   | Item | Envelope | Inventory members |
   | ---- | -------- | ----------------- |
   | 1 Design sources | `item-1-design-sources.json` | all four `design/rtl/*.v` files plus `design/netlist/logic_tile_netlist.v`, whose freshness command is `./flow/synth.sh` (yosys; `local_only`) |
-  | 9 Testbenches shipped | `item-9-testbenches.json` | every `sim/tb_*.v` plus the two `sim/*.vh` bench includes, the cocotb test and its `fv_request.json` request fixture, the FABulous equivalence benches, the `sim/sdf_port_interconnect/` regression harness (scripts, benches, DUT) and its `.sdf` fixtures, `measurements/claim-traceability.md`, the audit scripts; cold start `./flow/audit-evidence.sh`; PDK and tool pins |
+  | 9 Testbenches shipped | `item-9-testbenches.json` | every `sim/tb_*.v` plus the two `sim/*.vh` bench includes, the cocotb test and its `fv_request.json` request fixture, the paired zero-delay/SDF tile cocotb bench, its SDF settle-time probe bench and the gate they share a harness with (issues #359, #382), the FABulous equivalence benches, the `sim/sdf_port_interconnect/` regression harness (scripts, benches, DUT) and its `.sdf` fixtures, `measurements/claim-traceability.md`, the audit scripts; cold start `./flow/audit-evidence.sh`; PDK and tool pins |
   | 10 Repo hygiene | `item-10-repo-hygiene.json` | `README.md`, `LICENSE`, `spec/tile-spec.md`, every `.github/workflows/*.yml`; check: the status-claim checker's unit tests |
 
   Limits: item 1's yosys freshness command cannot run on the CI runner, so
@@ -464,7 +464,16 @@ byte-identical signoff code.
     - The delays are observable, not a silent zero-delay pass: the record's
       scratch polling probe (not a committed test) saw `out` settle at
       0.60 ns (registered) and 0.53 ns (combinational) on the annotated leg,
-      against 0.01 ns on the zero-delay leg.
+      against 0.01 ns on the zero-delay leg. Since
+      [#382](https://github.com/2AMLogic/sky130-fpga/issues/382) the same two
+      readings come from a committed bench,
+      `sim/cocotb/test_logic_tile_sdf_probe.py`, which the same harness runs
+      on the same two requests and commits as
+      `logic_tile.sdf-probe-zero-delay.json` / `logic_tile.sdf-probe-sdf.json`
+      (0.60 / 0.53 ns against 0.01 / 0.01 ns); the harness fails unless the
+      annotated leg settles at least 0.1 ns later on both paths, so a
+      silently no-op annotation now fails it. That gate is evidence the
+      annotation took effect, not a timing measurement.
   - **Scope: 4 BEL-level checks of `logic_tile`.** The DUT is
     `layout/logic_tile.asbuilt.v`, the netlist recovered from the committed
     DEF and verified against the GDS (#358), annotated with the committed
