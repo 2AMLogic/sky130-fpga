@@ -228,6 +228,26 @@ ALLOWED_INPUT_DRIFT = {
         "consecutive runs; a one-byte-corrupted primitives.v is refused "
         "with the named error."
     ),
+    ("20261121-183351-787c7ca", "flow/tile-functional-verification.sh"): (
+        "5aa9873 (issue #375) single-sourced the harness's inline `klt pdk "
+        "find` candidate into flow/pdk_root.sh's sky130_cell_models_from_klt "
+        "(now sourced). Method-neutral by construction: the candidate ORDER "
+        "($PDK_ROOT first, then klt) is unchanged, and the only behavioural "
+        "difference is that the second candidate is now the "
+        "<libs_ref>/sky130_fd_sc_hd/verilog directory the find result's "
+        "assets.libs_ref actually names, instead of the bare root it printed "
+        "before -- a root under which -f sky130_fd_sc_hd.v was always false, "
+        "so the pre-#375 klt fallback was a dead candidate that could never "
+        "have produced this record's runs (they resolved through $PDK_ROOT). "
+        "The strict RECORDED_PDK_MODELS_SHA256 / RECORDED_PDK_PRIMITIVES_SHA256 "
+        "gate, the request pair, both klt invocations, the envelope gating "
+        "and trimming are byte-identical; verified in the PR: with $PDK_ROOT "
+        "unset the harness now reaches the hash gate on the klt candidate "
+        "and refuses the installed non-matching models with the unchanged "
+        "pinned-digest error, while the PDK_ROOT path it actually used for "
+        "the record is untouched. Nothing that can move this record's "
+        "numbers changed."
+    ),
 }
 
 # Committed reports whose `provenance.pdk` may be null without failing
