@@ -116,6 +116,33 @@ class Malformed(unittest.TestCase):
         rejects(self, GOOD[:C.frame_off(0, 0) + 4 + 2], "truncated")
 
 
+class SharedReader(unittest.TestCase):
+    """The adapter and the strict decoder share one framing reader (issue #363):
+    every structural fault is rejected by both, each with its own error type."""
+
+    STRUCTURAL = ("truncated_mid_frame", "truncated_no_desync", "truncated_header",
+                  "empty", "bad_sync", "duplicate_frame", "two_strobes", "bad_column",
+                  "cap_column_data", "trailing_byte", "missing_frame")
+
+    def test_both_readers_reject_every_structural_fault(self):
+        for name, data in C.variants(GOOD).items():
+            if name not in self.STRUCTURAL:
+                continue
+            with self.subTest(name):
+                with self.assertRaises(M.FrameStreamError):
+                    M.frames(data, SNAP)
+                with self.assertRaises(M.f2b.BitstreamError):
+                    M.f2b.decode(data, SNAP)
+
+    def test_both_readers_reject_every_truncation_length(self):
+        for n in range(len(GOOD)):
+            with self.subTest(n):
+                with self.assertRaises(M.FrameStreamError):
+                    M.frames(GOOD[:n], SNAP)
+                with self.assertRaises(M.f2b.BitstreamError):
+                    M.f2b.decode(GOOD[:n], SNAP)
+
+
 class Cli(unittest.TestCase):
     def run_cli(self, d):
         return subprocess.run([sys.executable, str(REPO / "flow" / "configmem_frames.py"), str(d)],

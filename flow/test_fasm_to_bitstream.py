@@ -138,6 +138,33 @@ class FabricTests(unittest.TestCase):
             F.assemble(text.replace(f"{dst}.A.INIT[1]", f"{dst}.A.INIT"), snap, mapped)
 
 
+class FrameRecordsTests(unittest.TestCase):
+    """The shared structural reader (issue #363): framing validated once, per
+    LOGIC4-row records (column, row, frame, raw word) handed to both callers."""
+
+    def test_single_tile_records_carry_the_tile_coordinate(self):
+        recs = F.frame_records((FIX / "top_io.bin").read_bytes(), SNAP)
+        self.assertEqual([(c, r) for c, r, _, _ in recs], [(1, 1)] * 20)
+        self.assertEqual([f for _, _, f, _ in recs], list(range(20)))
+
+    def test_multi_tile_records_match_independently_derived_wire_bytes(self):
+        # layout derived by hand from the documented format: 20-byte header,
+        # then per column x frame one 4-byte select word + 4-byte words for
+        # the interior rows Y descending ([2, 1] on the 4x4 grid)
+        tiles = ("X1Y1", "X2Y1", "X1Y2", "X2Y2")
+        snap = dict(SNAP, grid=[4, 4], tile_map=dict.fromkeys(tiles, "LOGIC4"))
+        data = (FIX / "fabric_2x2" / "cross_tile.bin").read_bytes()
+        want = []
+        for col in (1, 2):
+            for f in range(20):
+                base = 20 + (col * 20 + f) * 12
+                for y, off in ((2, 4), (1, 8)):
+                    w = int.from_bytes(data[base + off:base + off + 4], "big")
+                    want.append((col, y, f, w))
+        # 2 logic columns x 20 frames x 2 logic rows: zero words are retained
+        self.assertEqual(F.frame_records(data, snap), want)
+
+
 class LayoutTests(unittest.TestCase):
     def test_round_trip_every_config_bit(self):
         for cb in range(F.CFG_BITS):
