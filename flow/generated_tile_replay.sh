@@ -96,7 +96,8 @@
 # / prediction / description functions to the shared drivers (diag_drive,
 # diag_mutants) BY NAME, so ShellCheck's reachability pass cannot see those call
 # sites and reports every one of them as unreachable. The indirection is the
-# point -- the coverage contracts stay three separate functions -- so SC2317 is
+# point -- each diagnostic binds the one shared replay check of
+# flow/route_diag_helpers.sh to its own directory and images -- so SC2317 is
 # a false positive for this file.
 # shellcheck disable=SC2317
 set -uo pipefail
@@ -115,6 +116,8 @@ source "$REPO/flow/gate_sim_verdict.sh"
 rm -rf "$OUT"; mkdir -p "$OUT"
 status=0
 die() { echo "error: $*" >&2; echo "generated-tile replay: FAIL" >&2; exit 1; }
+# shellcheck source=flow/route_diag_helpers.sh
+source "$REPO/flow/route_diag_helpers.sh" || die "could not source flow/route_diag_helpers.sh (the shared per-case replay checks)"
 gs_budget_check || die "invalid simulation wall-clock budget settings"
 echo "simulation wall-clock budget: $(gs_budget)s per run (SIM_TIMEOUT_SECONDS), kill grace $(gs_kill_after)s (SIM_KILL_AFTER_SECONDS)"
 
@@ -217,34 +220,16 @@ summary() { grep -m1 -o '([0-9]* checks, [0-9]* failures[^)]*)' "$1"; }
 # ---- shared scaffolding for the per-case diagnostics (steps 5-8) -------------
 # Steps 6, 7 and 8 each drive a DIFFERENT coverage contract (64 = 4 BELs x 4 pins
 # x 4 edges; 20 = 16 enable + 4 shared reset; 112 = 4 edges x 4 tracks x 7
-# sources) through an identical shell driver. Those contracts stay in three
-# separate `*_cov_ok` functions -- they ARE the check and are deliberately NOT
-# parameterized into one regex. Only the scaffolding is shared here, so that a
-# fix to the bounded-run invocation, the ConfigBits readback loop, the
-# composition-disagreement report or the mutant-compile guard lands on every
-# diagnostic at once instead of on two copies out of three (issue #255).
-
-# diag_run <tag> <dir> <wiring> <tb-name> <vvp> <log>: one bounded run of every
-# case in <dir>/cases.txt; prints the verdict. Bounded (issue #157): a timeout
-# returns 124/137 -> INFRA, never FUNC_FAIL.
-diag_run() {
-    local tag="$1" dir="$2" wiring="$3" name="$4" vvp="$5" log="$6" rc=0
-    gs_run_bounded "$(basename "$vvp" .vvp)[$tag]" "$log" vvp "$vvp" +dir="$dir" \
-        +list="$dir/cases.txt" +wiring="$wiring" +map="$MAP" || rc=$?
-    gs_classify "$rc" "$log" "$name" "$tag"
-}
-
-# diag_cfg_ok <case-noun> <dir> <log>: every case's ConfigBits/cfg readback ==
-# python decode of its stream. <case-noun> only names the case in the message.
-diag_cfg_ok() {
-    local noun="$1" dir="$2" log="$3" id got
-    while read -r id _; do
-        got="$(grep -m1 "^CFG $id " "$log" | cut -d' ' -f3)"
-        if [[ -z "$got" || "$got" != "$(tr -d '\n' < "$dir/$id.cfg")" ]]; then
-            echo "  $noun $id: readback '$got' != decoded $(tr -d '\n' < "$dir/$id.cfg")" >&2; return 1
-        fi
-    done < "$dir/cases.txt"
-}
+# sources). Since #260 each suite's contract -- its coverage-line parser, its
+# absolute route count and its full summary line -- is table data in
+# flow/route_diag_helpers.sh, the one run / readback / coverage implementation
+# shared with flow/gate-sim-bitstream.sh and flow/gate_route_diag.sh, so the
+# generated and the gate-level replay can no longer judge the same diagnostic
+# log differently. The per-diagnostic `*_run` / `*_cov_ok` / `*_cfg_ok` below
+# are one-line adapters binding that implementation to this driver's case
+# directories, wiring manifests and images; diag_drive and diag_mutants (issue
+# #255) hold the two-composition and the mutant orchestration, which is this
+# driver's own.
 
 # diag_drive <prefix> <label> <count> <run-fn> <cov-fn> <cfg-fn>: run the
 # diagnostic on both compositions, require a terminal PASS + the coverage
@@ -452,9 +437,9 @@ iverilog -g2012 -Wall -I "$REPO/sim" -o "$LB_RTL" "$REPO/design/rtl/lut4_slice.v
     "$LB_TB" >"$LB_RTL.compile.log" 2>&1 \
     || { cat "$LB_RTL.compile.log" >&2; die "compile of the repository-composition basis bench failed"; }
 # basis_run <vvp> <log>: one bounded run of all 73 cases; prints the verdict
-basis_run() { diag_run basis "$LB" "$LB/basis.wiring" "$LB_NAME" "$1" "$2"; }
-# basis_cfg_ok <log>: every case's ConfigBits/cfg readback == python decode of its stream
-basis_cfg_ok() { diag_cfg_ok case "$LB" "$1"; }
+basis_run() { rd_run basis "$LB_NAME" "$MAP" "$LB" "$LB/cases.txt" "$LB/basis.wiring" "$2" vvp "$1"; }
+# basis_cfg_ok <log>: exactly one ConfigBits/cfg readback per case == python decode of its stream
+basis_cfg_ok() { rd_cfg_ok case "$LB" "$LB/cases.txt" "$1"; }
 COV_RE='^COVERAGE: 4 BELs x 16 addresses = 64/64 one-hot cases; 4 all-ones, 5 all-zero cases; 73 cases loaded in sequence into one live tile$'
 basis_ok=1
 for comp in gen rtl; do
@@ -559,16 +544,11 @@ iverilog -g2012 -Wall -I "$REPO/sim" -o "$RD_RTL" "$REPO/design/rtl/lut4_slice.v
     "$RD_TB" >"$RD_RTL.compile.log" 2>&1 \
     || { cat "$RD_RTL.compile.log" >&2; die "compile of the repository-composition route bench failed"; }
 # <vvp> <log>; prints the verdict
-route_run() { diag_run route "$RD" "$RD/route.wiring" "$RD_NAME" "$1" "$2"; }
-# <log>: per-case ConfigBits/cfg readback == python decode of the stream
-route_cfg_ok() { diag_cfg_ok "route case" "$RD" "$1"; }
-route_cov_ok() {   # <log>: the coverage report must equal the required set, each route exactly once
-    local got
-    got="$(sed -n 's/^COVERAGE: ROUTE \([A-D]\) \([0-3]\) \([NESW]\): selected track toggled.*$/\1 \2 \3/p' "$1" | sort)"
-    [[ "$got" == "$(sort "$RD/required.txt")" ]] \
-        && [[ "$(echo "$got" | wc -l)" -eq 64 && "$(echo "$got" | uniq -d | wc -l)" -eq 0 ]] \
-        && grep -qE '^COVERAGE: 64/64 routes \(4 BELs x 4 pins x 4 edges\); 64 cases loaded in sequence into one live tile; [0-9]+ adversarial .* 0 duplicate case ids$' "$1"
-}
+route_run() { rd_run route "$RD_NAME" "$MAP" "$RD" "$RD/cases.txt" "$RD/route.wiring" "$2" vvp "$1"; }
+# <log>: exactly one ConfigBits/cfg readback per case == python decode of the stream
+route_cfg_ok() { rd_cfg_ok "route case" "$RD" "$RD/cases.txt" "$1"; }
+# <log>: the coverage report is the required route set, each route once, all 64 of them
+route_cov_ok() { rd_cov_ok route "$RD" "$1"; }
 diag_drive route route 64 route_run route_cov_ok route_cfg_ok
 
 echo "--- scratch generated-matrix source-selection permutations vs the route diagnostic (each must give a completed functional FAIL on the predicted routes) ---"
@@ -624,16 +604,11 @@ iverilog -g2012 -Wall -I "$REPO/sim" -o "$CR_RTL" "$REPO/design/rtl/lut4_slice.v
     "$CR_TB" >"$CR_RTL.compile.log" 2>&1 \
     || { cat "$CR_RTL.compile.log" >&2; die "compile of the repository-composition control-route bench failed"; }
 # <vvp> <log>; prints the verdict
-ctrl_run() { diag_run ctrl "$CR" "$CR/ctrl.wiring" "$CR_NAME" "$1" "$2"; }
-# <log>: per-case ConfigBits/cfg readback == python decode of the stream
-ctrl_cfg_ok() { diag_cfg_ok "control case" "$CR" "$1"; }
-ctrl_cov_ok() {   # <log>: the coverage report must equal the required set, each route exactly once
-    local got
-    got="$(sed -n 's/^COVERAGE: ROUTE \(EN\|SR\) \([A-D-]\) \([NESW]\): .*checked on .*$/\1 \2 \3/p' "$1" | sort)"
-    [[ "$got" == "$(sort "$CR/required.txt")" ]] \
-        && [[ "$(echo "$got" | wc -l)" -eq 20 && "$(echo "$got" | uniq -d | wc -l)" -eq 0 ]] \
-        && grep -qE '^COVERAGE: 20/20 routes \(16 enable = 4 BELs x 4 edges, 4 shared-reset edges\); 20 cases loaded in sequence into one live tile; [0-9]+ phases; [0-9]+ full-disagreement phases .*; 0 duplicate case ids$' "$1"
-}
+ctrl_run() { rd_run ctrl "$CR_NAME" "$MAP" "$CR" "$CR/cases.txt" "$CR/ctrl.wiring" "$2" vvp "$1"; }
+# <log>: exactly one ConfigBits/cfg readback per case == python decode of the stream
+ctrl_cfg_ok() { rd_cfg_ok "control case" "$CR" "$CR/cases.txt" "$1"; }
+# <log>: the coverage report is the required route set, each route once, all 20 of them
+ctrl_cov_ok() { rd_cov_ok ctrl "$CR" "$1"; }
 diag_drive ctrl control-route 20 ctrl_run ctrl_cov_ok ctrl_cfg_ok
 
 echo "--- scratch generated-matrix control-source permutations and enable-destination aliases vs the control-route diagnostic (each must give a completed functional FAIL on the predicted cases) ---"
@@ -705,16 +680,11 @@ iverilog -g2012 -Wall -I "$REPO/sim" -o "$OR_RTL" "$REPO/design/rtl/lut4_slice.v
     "$OR_TB" >"$OR_RTL.compile.log" 2>&1 \
     || { cat "$OR_RTL.compile.log" >&2; die "compile of the repository-composition output-route bench failed"; }
 # <vvp> <log>; prints the verdict
-outroute_run() { diag_run outroute "$OR" "$OR/out.wiring" "$OR_NAME" "$1" "$2"; }
-# <log>: per-case ConfigBits/cfg readback == python decode of the stream
-outroute_cfg_ok() { diag_cfg_ok "output-route case" "$OR" "$1"; }
-outroute_cov_ok() {   # <log>: the coverage report must equal the required set, each tuple exactly once
-    local got
-    got="$(sed -n 's/^COVERAGE: ROUTE \([NESW]\) \([0-3]\) \([NESWA-D]\): selected source toggled.*$/\1 \2 \3/p' "$1" | sort)"
-    [[ "$got" == "$(sort "$OR/required.txt")" ]] \
-        && [[ "$(echo "$got" | wc -l)" -eq 112 && "$(echo "$got" | uniq -d | wc -l)" -eq 0 ]] \
-        && grep -qE '^COVERAGE: 112/112 routes \(4 edges x 4 tracks x 7 sources\); 112 cases loaded in sequence into one live tile; [0-9]+ adversarial .* 0 duplicate case ids$' "$1"
-}
+outroute_run() { rd_run outroute "$OR_NAME" "$MAP" "$OR" "$OR/cases.txt" "$OR/out.wiring" "$2" vvp "$1"; }
+# <log>: exactly one ConfigBits/cfg readback per case == python decode of the stream
+outroute_cfg_ok() { rd_cfg_ok "output-route case" "$OR" "$OR/cases.txt" "$1"; }
+# <log>: the coverage report is the required route set, each route once, all 112 of them
+outroute_cov_ok() { rd_cov_ok outroute "$OR" "$1"; }
 diag_drive outroute output-route 112 outroute_run outroute_cov_ok outroute_cfg_ok
 
 echo "--- scratch generated-matrix output-source permutations and output-sink select aliases vs the output-route diagnostic (each must give a completed functional FAIL on the predicted cases) ---"

@@ -35,6 +35,8 @@ on:
       - 'sim/bitstream_corrupt.py'
       - 'flow/generated_tile_replay.sh'
       - 'flow/gate_sim_verdict.sh'
+      # shared per-case replay checks of generated_tile_replay.sh (issue #260)
+      - 'flow/route_diag_helpers.sh'
       - 'flow/pin_fixtures.py'
       - 'flow/check_regbel_fixtures.py'
       - 'flow/pin_experiment.py'

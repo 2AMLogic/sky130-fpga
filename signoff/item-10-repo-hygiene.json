@@ -17,7 +17,7 @@
         "role": "hygiene",
         "path": ".github/workflows/fabulous-nextpnr.yml",
         "passed": true,
-        "content_hash": "sha256:ef101a0866b9833c421ddf34d6e27659f48e5fb88269325ee5b032ba76124d70"
+        "content_hash": "sha256:8f765c5d9a6a6b7b370d340664a2d54bc9829d46319827127c033ee6afdc830f"
       },
       {
         "check": "present",
@@ -31,7 +31,7 @@
         "role": "hygiene",
         "path": ".github/workflows/gate-sim.yml",
         "passed": true,
-        "content_hash": "sha256:672248cac9783b84c6676cc748e6001c1994e76070b4c32d86f5b70073e80d1d"
+        "content_hash": "sha256:e80528fcefbef366b9cdba2d046681fea5271ad64341b8d12865a80244481712"
       },
       {
         "check": "present",

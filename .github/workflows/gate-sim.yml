@@ -77,6 +77,8 @@ on:
       - 'flow/output_route.py'
       - 'flow/route_diag_negative.py'
       - 'flow/test_route_diag_negative.py'
+      # shared per-case replay checks of gate-sim-bitstream.sh and gate_route_diag.sh (issue #260)
+      - 'flow/route_diag_helpers.sh'
       - 'flow/gate_route_diag.sh'
       - 'flow/test_gate_route_diag.sh'
       - 'flow/check_regbel_fixtures.py'

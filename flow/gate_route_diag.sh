@@ -10,14 +10,19 @@
 # values from the case identifier and the applied stimulus only). Each suite is loaded in
 # sequence into ONE live instance of the netlist through its flat cfg port, i.e. by the
 # benches' simulation-only stream-to-cfg loader; the generated ConfigMem is not in this
-# netlist. Required coverage is derived from each suite's own manifest (cases.txt and
-# required.txt, which the generators derive from the frozen pip model), never from a list
-# copied here. Zero delay (the benches' `#1` settle steps are a simulation convention).
+# netlist. The case manifest must cover the suite's required set exactly once, and the
+# coverage report must be that full set at the suite's absolute size -- never a set
+# re-derived from the manifest, which a shortened manifest and a matching report would
+# satisfy. The run, readback and coverage checks are the ones of flow/
+# route_diag_helpers.sh, shared with the generated-tile replay (#260); only the
+# generation, compilation and gate-level orchestration live here.
+# Zero delay (the benches' `#1` settle steps are a simulation convention).
 # Functional only: no SDF/timing, inter-tile or ratified-fabric claim (ADR-0004/0005
 # Proposed, experimental same-index matrix).
 #
-# The caller must set: REPO_ROOT, SCRIPT_DIR, BUILD_DIR, BS_DIR, NETLIST, CELL_DIR and
-# source flow/gate_sim_verdict.sh. GATE_SIM_VVP overrides the simulator (stub tests).
+# The caller must set: REPO_ROOT, SCRIPT_DIR, BUILD_DIR, BS_DIR, NETLIST, CELL_DIR, and
+# source flow/gate_sim_verdict.sh and flow/route_diag_helpers.sh. GATE_SIM_VVP overrides
+# the simulator (stub tests).
 #
 # rd_positive <suite>   generate, check the manifest, compile, run; 0 iff a completed
 #                       PASS with exact coverage and per-case cfg readback == decode.
@@ -29,19 +34,16 @@
 #                       error, a timeout or any INFRA verdict is a failure.
 # Every failure prints the reason on stderr; logs land directly in $BUILD_DIR/*.log.
 
-RD_SUITES="route ctrl outroute"
+# The shared replay checks must be sourced first: without RD_SUITES the caller's
+# suite loops would skip every suite and still report success.
+if ! declare -F rd_run >/dev/null || [[ -z "${RD_SUITES:-}" ]]; then
+    echo "error: source flow/route_diag_helpers.sh before flow/gate_route_diag.sh" >&2; return 1
+fi
+
 declare -A RD_GEN=([route]=route_diag.py [ctrl]=ctrl_route.py [outroute]=output_route.py)
-declare -A RD_TB=([route]=tb_route_diag [ctrl]=tb_ctrl_route [outroute]=tb_output_route)
-declare -A RD_WIRE=([route]=route.wiring [ctrl]=ctrl.wiring [outroute]=out.wiring)
 declare -A RD_DESC=([route]="LUT-input directional routes (BEL, pin, edge)"
                     [ctrl]="control-jump routes (16 enable + 4 shared reset)"
                     [outroute]="boundary output-track sources (edge, track, source)")
-# per-route coverage line of each bench -> "<k1> <k2> <k3>" (the required.txt key format)
-declare -A RD_COV_SED=(
-    [route]='s/^COVERAGE: ROUTE \([A-D]\) \([0-3]\) \([NESW]\): selected track toggled.*$/\1 \2 \3/p'
-    [ctrl]='s/^COVERAGE: ROUTE \(EN\|SR\) \([A-D-]\) \([NESW]\): .*checked on .*$/\1 \2 \3/p'
-    [outroute]='s/^COVERAGE: ROUTE \([NESW]\) \([0-3]\) \([NESWA-D]\): selected source toggled.*$/\1 \2 \3/p'
-)
 # negative controls: "<case> <route-under-test FASM pip> <different legal source, same sink>"
 declare -A RD_NEG_ID=([route]=N7 [ctrl]=N8 [outroute]=N9)
 declare -A RD_NEG=(
@@ -53,7 +55,7 @@ declare -A RD_OK=([route]=0 [ctrl]=0 [outroute]=0)
 declare -A RD_N=([route]=0 [ctrl]=0 [outroute]=0)
 
 rd_dir() { echo "$BUILD_DIR/rd_$1"; }
-rd_vvp() { echo "$BUILD_DIR/${RD_TB[$1]}.vvp"; }
+rd_vvp() { echo "$BUILD_DIR/${RD_BENCH[$1]}.vvp"; }
 
 # rd_manifest_ok <suite> <dir>: the case manifest covers the required set exactly once,
 # case ids are unique and every case has its stream and decoded cfg. Sets RD_N[suite].
@@ -75,44 +77,10 @@ rd_manifest_ok() {
 
 # rd_compile <suite> <netlist> <out.vvp>
 rd_compile() {
-    local s="$1" log="$BUILD_DIR/${RD_TB[$1]}_build.log"
-    iverilog -g2012 -s "${RD_TB[$s]}" -I "$REPO_ROOT/sim" -o "$3" \
-        "$REPO_ROOT/sim/${RD_TB[$s]}.v" "$2" "$CELL_DIR/primitives.v" "$CELL_DIR/sky130_fd_sc_hd.v" \
-        >"$log" 2>&1 || { echo "error: [$s] compile of the gate-level ${RD_TB[$s]} bench failed (see $log)" >&2; return 1; }
-}
-
-# rd_run <suite> <dir> <log>: one bounded run of all cases; prints PASS | FUNC_FAIL | INFRA
-rd_run() {
-    local s="$1" d="$2" log="$3" rc=0
-    gs_run_bounded "${RD_TB[$s]}[$s]" "$log" ${GATE_SIM_VVP:-vvp} "$(rd_vvp "$s")" \
-        +dir="$d" +list="$d/cases.txt" +wiring="$d/${RD_WIRE[$s]}" +map="$BS_DIR/logic4_configmem.map" || rc=$?
-    gs_classify "$rc" "$log" "${RD_TB[$s]}" "$s"
-}
-
-# rd_cov_ok <suite> <dir> <log>: reported coverage == the manifest's required set, each once
-rd_cov_ok() {
-    local s="$1" d="$2" log="$3" n="${RD_N[$1]}" got
-    got="$(sed -n "${RD_COV_SED[$s]}" "$log" | sort)"
-    if [[ "$got" != "$(sort "$d/required.txt")" || "$(printf '%s\n' "$got" | uniq -d | wc -l)" -ne 0 ]]; then
-        echo "  [$s] coverage report differs from the required route set ($(printf '%s\n' "$got" | grep -c . || true)/$n reported)" >&2; return 1
-    fi
-    if grep -q 'INCOMPLETE' "$log"; then echo "  [$s] coverage report lists INCOMPLETE routes" >&2; return 1; fi
-    grep -qE "^COVERAGE: $n/$n routes \(.*\); $n cases loaded in sequence into one live tile; .*; 0 duplicate case ids\$" "$log" \
-        || { echo "  [$s] coverage summary is not $n/$n routes, $n cases, 0 duplicate case ids" >&2; return 1; }
-}
-
-# rd_cfg_ok <suite> <dir> <log>: exactly one readback per case, equal to the stream's python decode
-rd_cfg_ok() {
-    local s="$1" d="$2" log="$3" id got
-    [[ "$(grep -c '^CFG ' "$log")" -eq "${RD_N[$s]}" ]] \
-        || { echo "  [$s] $(grep -c '^CFG ' "$log") cfg readbacks for ${RD_N[$s]} cases" >&2; return 1; }
-    while read -r id _; do
-        [[ "$(grep -c "^CFG $id " "$log")" -eq 1 ]] || { echo "  [$s] case $id: not exactly one cfg readback" >&2; return 1; }
-        got="$(grep -m1 "^CFG $id " "$log" | cut -d' ' -f3)"
-        if [[ -z "$got" || "$got" != "$(tr -d '\n' < "$d/$id.cfg")" ]]; then
-            echo "  [$s] case $id: readback '$got' != decoded $(tr -d '\n' < "$d/$id.cfg")" >&2; return 1
-        fi
-    done < "$d/cases.txt"
+    local s="$1" log="$BUILD_DIR/${RD_BENCH[$1]}_build.log"
+    iverilog -g2012 -s "${RD_BENCH[$s]}" -I "$REPO_ROOT/sim" -o "$3" \
+        "$REPO_ROOT/sim/${RD_BENCH[$s]}.v" "$2" "$CELL_DIR/primitives.v" "$CELL_DIR/sky130_fd_sc_hd.v" \
+        >"$log" 2>&1 || { echo "error: [$s] compile of the gate-level ${RD_BENCH[$s]} bench failed (see $log)" >&2; return 1; }
 }
 
 rd_failing_cases() {  # <log>: sorted ids of the cases the bench reported as failing
@@ -122,22 +90,23 @@ rd_failing_cases() {  # <log>: sorted ids of the cases the bench reported as fai
 # rd_check <suite> <dir> <log>: run and require a completed PASS, exact coverage and readback
 rd_check() {
     local s="$1" d="$2" log="$3" v
-    v="$(rd_run "$s" "$d" "$log")"
+    v="$(rd_run "$s" "${RD_BENCH[$s]}" "$BS_DIR/logic4_configmem.map" "$d" "$d/cases.txt" \
+        "$d/${RD_WIRE[$s]}" "$log" "${GATE_SIM_VVP:-vvp}" "$(rd_vvp "$s")")"
     if [[ "$v" != PASS ]]; then
-        echo "error: [$s] gate-level ${RD_TB[$s]} did not complete with PASS (verdict $v; see $log)" >&2
+        echo "error: [$s] gate-level ${RD_BENCH[$s]} did not complete with PASS (verdict $v; see $log)" >&2
         tail -n 8 "$log" >&2 || true; return 1
     fi
     rd_cov_ok "$s" "$d" "$log" || { echo "error: [$s] gate-level coverage incomplete (see $log)" >&2; return 1; }
-    rd_cfg_ok "$s" "$d" "$log" || { echo "error: [$s] gate-level loaded cfg != python decode" >&2; return 1; }
+    rd_cfg_ok "[$s] case" "$d" "$d/cases.txt" "$log" || { echo "error: [$s] gate-level loaded cfg != python decode" >&2; return 1; }
 }
 
 rd_positive() {
     local s="$1" d log
-    d="$(rd_dir "$s")"; log="$BUILD_DIR/${RD_TB[$s]}_gate.log"
+    d="$(rd_dir "$s")"; log="$BUILD_DIR/${RD_BENCH[$s]}_gate.log"
     RD_OK[$s]=0
     rm -rf "$d" "${d}_neg"
-    python3 -I "$SCRIPT_DIR/${RD_GEN[$s]}" "$d" --snapshot "$BS_DIR/fabric_spec.json" >"$BUILD_DIR/${RD_TB[$s]}_gen.log" 2>&1 \
-        || { echo "error: [$s] stream generation failed (see $BUILD_DIR/${RD_TB[$s]}_gen.log)" >&2; return 1; }
+    python3 -I "$SCRIPT_DIR/${RD_GEN[$s]}" "$d" --snapshot "$BS_DIR/fabric_spec.json" >"$BUILD_DIR/${RD_BENCH[$s]}_gen.log" 2>&1 \
+        || { echo "error: [$s] stream generation failed (see $BUILD_DIR/${RD_BENCH[$s]}_gen.log)" >&2; return 1; }
     rd_manifest_ok "$s" "$d" || return 1
     rd_compile "$s" "$NETLIST" "$(rd_vvp "$s")" || return 1
     rd_check "$s" "$d" "$log" || return 1
@@ -153,12 +122,13 @@ rd_negative() {
         echo "error: negative $nid [$s] skipped: the positive gate-level leg did not pass" >&2; return 1
     fi
     read -r ncase nold nnew <<<"${RD_NEG[$s]}"
-    nd="$(rd_dir "$s")_neg"; nlog="$BUILD_DIR/neg_${RD_TB[$s]}_other_source.log"
+    nd="$(rd_dir "$s")_neg"; nlog="$BUILD_DIR/neg_${RD_BENCH[$s]}_other_source.log"
     rm -rf "$nd"
     python3 -I "$SCRIPT_DIR/route_diag_negative.py" "$(rd_dir "$s")" "$nd" "$ncase" "$nold" "$nnew" \
-            --snapshot "$BS_DIR/fabric_spec.json" >"$BUILD_DIR/neg_${RD_TB[$s]}_gen.log" 2>&1 \
-        || { echo "error: negative $nid [$s] could not build the altered stream (setup failure, not a detection; see $BUILD_DIR/neg_${RD_TB[$s]}_gen.log)" >&2; return 1; }
-    v="$(rd_run "$s" "$nd" "$nlog")"
+            --snapshot "$BS_DIR/fabric_spec.json" >"$BUILD_DIR/neg_${RD_BENCH[$s]}_gen.log" 2>&1 \
+        || { echo "error: negative $nid [$s] could not build the altered stream (setup failure, not a detection; see $BUILD_DIR/neg_${RD_BENCH[$s]}_gen.log)" >&2; return 1; }
+    v="$(rd_run "$s" "${RD_BENCH[$s]}" "$BS_DIR/logic4_configmem.map" "$nd" "$nd/cases.txt" \
+        "$nd/${RD_WIRE[$s]}" "$nlog" "${GATE_SIM_VVP:-vvp}" "$(rd_vvp "$s")")"
     case "$v" in
         FUNC_FAIL) ;;
         PASS) echo "error: negative $nid [$s] (case $ncase: $nold -> $nnew) was ACCEPTED" >&2; return 1 ;;
@@ -169,7 +139,7 @@ rd_negative() {
     if [[ "$got" != "$ncase" ]]; then
         echo "error: negative $nid [$s] failing cases [$got] != predicted [$ncase]" >&2; return 1
     fi
-    if ! rd_cov_ok "$s" "$nd" "$nlog" || ! rd_cfg_ok "$s" "$nd" "$nlog"; then
+    if ! rd_cov_ok "$s" "$nd" "$nlog" || ! rd_cfg_ok "[$s] case" "$nd" "$nd/cases.txt" "$nlog"; then
         echo "error: negative $nid [$s] coverage/readback not intact on the altered streams" >&2; return 1
     fi
     echo "negative $nid ($s case $ncase: $nold -> $nnew) OK: completed functional rejection -> $(grep -m1 -E '^FAIL' "$nlog")"
