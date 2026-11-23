@@ -435,9 +435,13 @@ LUT-input directional routes (`flow/route_diag.py` -> `sim/tb_route_diag.v`,
 64 cases), control-jump enable/reset routes (`flow/ctrl_route.py` ->
 `sim/tb_ctrl_route.v`, 20) and boundary output-track sources
 (`flow/output_route.py` -> `sim/tb_output_route.v`, 112). Each needs a completed
-PASS, a coverage report exactly equal to that suite's own required-route
-manifest (`required.txt`, which must also equal the case list) and one cfg
-readback per case equal to the python decode. `--negative` adds N7/N8/N9: one
+PASS, coverage of the suite's required set at its absolute size (64 / 20 / 112
+from `RD_COUNT` in `flow/route_diag_helpers.sh`, never re-derived from the
+manifest: the coverage report must list each route once with no `INCOMPLETE`
+entry, match the bench's full summary line `RD_SUMMARY` in
+`flow/route_diag_helpers.sh`, and agree with `required.txt`, which the case
+list must also cover once) and one cfg readback per case equal to the python
+decode. `--negative` adds N7/N8/N9: one
 case per suite re-pointed to a different legal source of the same sink
 (`flow/route_diag_negative.py` re-assembles it; the oracle is unchanged) must
 give a completed functional FAIL on exactly that case; a setup/assembly error

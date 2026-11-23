@@ -41,8 +41,9 @@ The `sim/` ledgers are append-only (`flow/audit_sim_ledgers.py`).
 | `lut_basis.py` | 73-stream LUT-address basis for `sim/tb_lut_basis.v` | `gate-sim.yml`, `fabulous-nextpnr.yml` |
 | `route_diag.py`, `ctrl_route.py`, `output_route.py` | route diagnostic suites for `sim/tb_route_diag.v`, `sim/tb_ctrl_route.v`, `sim/tb_output_route.v` | `gate-sim.yml`, `fabulous-nextpnr.yml` |
 | `route_diag_negative.py` | legal-other-source negative controls N7/N8/N9 for those suites | `gate-sim.yml` |
+| `route_diag_helpers.sh` | sourced helper holding the shared route-diagnostic replay run, cfg readback and coverage check (`rd_run`, `rd_cfg_ok`, `rd_cov_ok`) and the `RD_COUNT` (64 / 20 / 112) / `RD_SUMMARY` contract, sourced by `generated_tile_replay.sh`, `gate-sim-bitstream.sh` and `gate_route_diag.sh` (issue #260) | `gate-sim.yml`, `fabulous-nextpnr.yml` |
 | `gate-sim-bitstream.sh` | `sim/logic_tile_bitstream_gate_results.txt` (EXPERIMENTAL, zero-delay) | `gate-sim.yml` |
-| `gate_route_diag.sh` | sourced by `gate-sim-bitstream.sh`; route diagnostic replay (feeds the same ledger) | `gate-sim.yml` |
+| `gate_route_diag.sh` | sourced by `gate-sim-bitstream.sh` (`flow/route_diag_helpers.sh` must be sourced first; refuses otherwise); route diagnostic replay (feeds the same ledger) | `gate-sim.yml` |
 | `gate-sim-routed.sh` | `sim/logic_tile_routed_gate_results.txt` (EXPERIMENTAL, zero-delay) | `gate-sim.yml` |
 | `sdf-resim.sh`, `sdf_annotate_shim.py`, `sdf_canonicalize.py` | SDF-annotated gate-level re-simulation | - |
 | `sdf_sanitize_names.py`, `test_sdf_sanitize_names.py` | paired netlist + SDF escaped-identifier rename (issue #213; not wired into `sdf-resim.sh`) | `flow-evidence.yml` (unit test) |
@@ -1392,13 +1393,18 @@ EXPERIMENTAL)".
 
 ### `flow/gate_route_diag.sh` - EXPERIMENTAL route-diagnostic gate replay (issue #189)
 
-A sourced helper, not a command: `flow/gate-sim-bitstream.sh` sources it to
+A sourced helper, not a command (`flow/route_diag_helpers.sh` must be sourced
+first): `flow/gate-sim-bitstream.sh` sources it to
 replay the three route diagnostic suites (`flow/route_diag.py` ->
 `sim/tb_route_diag.v`, `flow/ctrl_route.py` -> `sim/tb_ctrl_route.v`,
 `flow/output_route.py` -> `sim/tb_output_route.v`) against the synthesized
-netlist, with each suite's own generator, bench and oracle, coverage checked
-against that suite's own manifest, and (with `--negative`)
-one legal-other-source negative control per suite built by
+netlist, with each suite's own generator, bench and oracle, coverage checked as
+the suite's required set at its absolute size (64 / 20 / 112 from `RD_COUNT` in
+`flow/route_diag_helpers.sh`, never re-derived from the manifest: the report
+must list each route once with no `INCOMPLETE` entry, match the bench's full
+summary line `RD_SUMMARY` in `flow/route_diag_helpers.sh`, and agree with the
+`required.txt` manifest, which the case list must cover once), and (with
+`--negative`) one legal-other-source negative control per suite built by
 `flow/route_diag_negative.py`. Zero-delay, observation-only, functional only,
 experimental same-index hardware. Inputs are the caller's `REPO_ROOT`,
 `BUILD_DIR`, `NETLIST`, `CELL_DIR`; there is no ledger of its own, the result
