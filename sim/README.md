@@ -530,8 +530,9 @@ instances wired together by the generator (unmodified, in gitignored
   below. No inter-tile chaining is exercised. The script first checks that
   the generated header declares exactly these ports and that the module
   composes the ConfigMem, the matrix and the four BELs. The adapter is the
-  `ifdef GEN_TILE` block of `sim/tb_logic_tile_bitstream.v`: ports are joined
-  by name, `<dir>1END`/`<dir>1BEG` to the bench's `<dir>` input/output tracks.
+  `ifdef GEN_TILE` block of `sim/tile_dut.vh`, the DUT hookup shared by this
+  bench and the four diagnostic benches (issue #384): ports are joined by
+  name, `<dir>1END`/`<dir>1BEG` to the bench's `<dir>` input/output tracks.
 - **Configuration only through the frame ports**: each frame of the committed
   stream that addresses the logic tile is written in stream order as a legal
   frame write (data, one-hot `FrameStrobe`, strobe release, `FrameData`
@@ -813,7 +814,8 @@ class (c).
 **Minimum stamp for class (b):** `flow/` (generators, `gate_sim_verdict.sh`,
 `sim_budget.py`), `sim/bitstream/` (at least `fabric_spec.json` and
 `logic4_configmem.map`), `design/rtl/` and `sim/` itself (benches,
-`bitstream_load.vh`, `bitstream_parse.vh` and `switch_matrix_tb_gen.vh`).
+`bitstream_load.vh`, `bitstream_parse.vh`, `tile_dut.vh` and
+`switch_matrix_tb_gen.vh`).
 
 ### (c) Needs a FABulous run (not runnable from a stamp)
 

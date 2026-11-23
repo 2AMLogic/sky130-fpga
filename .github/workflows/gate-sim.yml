@@ -65,6 +65,7 @@ on:
       - 'sim/tb_logic_tile*.v'
       - 'sim/bitstream_load.vh'
       - 'sim/bitstream_parse.vh'
+      - 'sim/tile_dut.vh'
       - 'sim/tb_lut_basis.v'
       - 'flow/lut_basis.py'
       - 'flow/fasm_to_bitstream.py'

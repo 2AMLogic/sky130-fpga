@@ -32,31 +32,9 @@
 
 module tb_lut_basis;
 
-    reg          clk = 1'b0;
-    reg  [157:0] cfg = 158'b0;
-    reg  [15:0]  tin = 16'b0;   // tin[4*dir + idx], dir: 0=N 1=E 2=S 3=W
-    wire [15:0]  tout;
-
-`ifdef GEN_TILE
-    reg  [31:0] FrameData   = 32'b0;
-    reg  [19:0] FrameStrobe = 20'b0;
-    wire [31:0] FrameData_O;
-    wire [19:0] FrameStrobe_O;
-    wire        UserCLKo;
-    LOGIC4 dut (
-        .N1END(tin[3:0]),   .E1END(tin[7:4]),   .S1END(tin[11:8]),  .W1END(tin[15:12]),
-        .N1BEG(tout[3:0]),  .E1BEG(tout[7:4]),  .S1BEG(tout[11:8]), .W1BEG(tout[15:12]),
-        .UserCLK(clk), .UserCLKo(UserCLKo),
-        .FrameData(FrameData), .FrameData_O(FrameData_O),
-        .FrameStrobe(FrameStrobe), .FrameStrobe_O(FrameStrobe_O)
-    );
-`else
-    logic_tile_routed dut (
-        .clk(clk), .cfg(cfg),
-        .n_in(tin[3:0]),  .e_in(tin[7:4]),  .s_in(tin[11:8]),  .w_in(tin[15:12]),
-        .n_out(tout[3:0]), .e_out(tout[7:4]), .s_out(tout[11:8]), .w_out(tout[15:12])
-    );
-`endif
+    // DUT hookup shared with the corpus bench and the other diagnostic
+    // benches (sim/tile_dut.vh, issue #384)
+    `include "tile_dut.vh"
 
     // bitstream loader shared with the other generated-tile diagnostic benches
     // (sim/bitstream_load.vh); TB_NAME prefixes the FAIL strings in the include
@@ -65,7 +43,6 @@ module tb_lut_basis;
 
     localparam NENV = 6;
 
-    reg [8*256-1:0] f_dir, f_list, f_wire;
     integer in_track [0:3];
     integer out_track [0:3];
 
@@ -105,18 +82,14 @@ module tb_lut_basis;
     integer vec_cov [0:63];      // (bel, addr) -> input vectors checked on that one-hot case
     integer cov_hits [0:63];     // (bel, addr) -> number of one-hot cases seen
     reg [8*16-1:0] cid;
-    reg [8*4-1:0]  cbel, ckind_s;
+    reg [8*4-1:0]  cbel;
     reg [8*8-1:0]  ckind;
     integer caddr, belx, r, e, v, b, cf, first_shown;
     reg [15:0] unused;
     reg expect_o, got;
 
     initial begin
-        if (!$value$plusargs("dir=%s", f_dir) || !$value$plusargs("list=%s", f_list) ||
-            !$value$plusargs("wiring=%s", f_wire) || !$value$plusargs("map=%s", f_map)) begin
-            $display("FAIL: tb_lut_basis: need +dir= +list= +wiring= +map=");
-            $finish;
-        end
+        read_diag_plusargs;
         for (b = 0; b < 64; b = b + 1) begin vec_cov[b] = 0; cov_hits[b] = 0; end
         read_map;
         read_wiring;
@@ -133,16 +106,7 @@ module tb_lut_basis;
                       (ckind == "onehot" && belx >= 0 && caddr >= 0 && caddr < 16))) begin
                     $display("FAIL: tb_lut_basis: malformed case line for %0s", cid); $finish;
                 end
-                $sformat(f_bin, "%0s/%0s.bin", f_dir, cid);
-                load_bitstream;
-                if (!load_ok) begin
-                    $display("FAIL: tb_lut_basis: loader rejected case %0s: %0s", cid, reject_reason); $finish;
-                end
-`ifdef GEN_TILE
-                $display("CFG %0s %040h", cid, {2'b00, dut.ConfigBits});
-`else
-                $display("CFG %0s %040h", cid, {2'b00, cfg});
-`endif
+                load_case_and_report_cfg(cid);
                 ncase = ncase + 1;
                 if (ckind == "onehot") n_onehot = n_onehot + 1;
                 else if (ckind == "ones") n_ones = n_ones + 1;
