@@ -140,7 +140,7 @@ def topology(json_path):
         max_input_fanout=max([len(sinks.get(b, [])) for b in in_bits], default=0)), ""
 
 
-def synth(case, seed_dir, env, io_prims_dir):
+def synth(case, seed_dir, env):
     mode = case["mode"]
     name = case["name"]
     raw = seed_dir / f"{name}.raw.json"
@@ -226,10 +226,8 @@ def occupancy(post_json):
                   for c in m["cells"].values() if c["type"] == "lut4_ff_bel")
 
 
-def assemble(case, stem, seed_dir, snap, fab_run):
-    py = BUILD / "fab-venv" / "bin" / "python"
+def assemble(stem, seed_dir, snap, fab_run):
     post = seed_dir / f"{stem}.post.json"
-    ok = []
     for cmd in (
         [sys.executable, TOOL, "summary", post, "--out", seed_dir / f"{stem}.mapped.json"],
         [sys.executable, TOOL, "assemble", "--fasm", seed_dir / f"{stem}.fasm", "--snapshot", snap,
@@ -246,10 +244,11 @@ def assemble(case, stem, seed_dir, snap, fab_run):
     return True, ""
 
 
-def compile_tb():
-    """Simulation uses the host Icarus (iverilog + vvp from the same install, as sim/run.sh)."""
+def compile_tb(out_dir):
+    """Simulation uses the host Icarus (iverilog + vvp from the same install, as sim/run.sh);
+    tb.out is compiled into the caller's scratch work directory."""
     env = None
-    out = BUILD / "corpus-run" / "tb.out"
+    out = out_dir / "tb.out"
     rc, o = sh(["iverilog", "-g2012", "-Wall", "-I", REPO / "sim", "-o", out,
                 RTL / "lut4_slice.v", RTL / "logic_tile_switch_matrix.v", RTL / "logic_tile_routed.v",
                 REPO / "sim" / "tb_logic_tile_bitstream.v"], env=env)
@@ -275,6 +274,65 @@ def simulate(tb, binf, wiring, cfgf, oracle, snap_dir):
     return True, m.group(1)
 
 
+def prepare_harness(work, flow_sh):
+    """Shared runner setup for corpus_run.main and pin_experiment.main: reset the scratch
+    work directory, verify the regenerated bitstream-run spec snapshot matches the committed
+    sim/bitstream one, parse the tool versions and compile the testbench into `work`.
+    Returns (env, model, fab_run, snap_dir, cfgd, versions, tb)."""
+    oss = BUILD / "oss-cad-suite"
+    env = dict(os.environ, PATH=f"{oss / 'bin'}:{os.environ['PATH']}")
+    model = BUILD / "nextpnr-run" / "io-model"
+    fab_run = BUILD / "fabulous-run"
+    snap_dir = BSDIR
+    cfgd = json.loads((CORPUS / "corpus.json").read_text())
+    shutil.rmtree(work, ignore_errors=True)
+    work.mkdir(parents=True)
+    # the fabric model this run maps against must be the one the committed spec snapshot describes
+    regen_snap = BUILD / "bitstream-run" / "fabric_spec.json"
+    if not regen_snap.exists() or sha256(regen_snap) != sha256(snap_dir / "fabric_spec.json"):
+        sys.exit("error: flow/build/bitstream-run/fabric_spec.json missing or differs from sim/bitstream/ "
+                 f"(run {flow_sh}, which runs flow/bitstream.sh first)")
+    versions = {}
+    for t, cmd in (("yosys", ["yosys", "-V"]), ("nextpnr", ["nextpnr-generic", "--version"])):
+        rc, o = sh(cmd, env=env)
+        versions[t] = (re.search(r"nextpnr-[0-9][^)\" ]*", o) or re.search(r"Yosys (\S+)", o) or [None])[0] \
+            if rc is not None else "MISSING"
+    tb, tbout = compile_tb(work)
+    if tb is None:
+        sys.exit("error: testbench compile failed (Icarus Verilog missing?):\n" + tbout)
+    return env, model, fab_run, snap_dir, cfgd, versions, tb
+
+
+def post_synth_trial(r, case, seed, sd, env, model, budget, tb, snap_dir, fab_run):
+    """One post-synthesis (case, seed) trial, shared by corpus_run.main and
+    pin_experiment.run_side: nextpnr -> classify -> occupancy (with the pinned-placement
+    check, issue #156) -> assemble -> fasm/bin sha256 -> simulate, updating `r` in place."""
+    rc, out = nextpnr(case, seed, sd, env, model, budget)
+    r.outcome, r.detail, r.diag = classify(rc, out)
+    if r.outcome != "success":
+        return
+    stem = f"{case['name']}_s{seed}"
+    r.bels = occupancy(sd / f"{stem}.post.json")
+    want_pl = case.get("placement")
+    if want_pl is not None and dict(r.bels) != want_pl:
+        # a case that pins BEL placement must land exactly there (issue #156)
+        r.outcome = "tool_error"
+        r.detail = f"placement {dict(r.bels)} != required {want_pl}"
+        return
+    ok, why = assemble(stem, sd, snap_dir / "fabric_spec.json", fab_run)
+    if not ok:
+        r.outcome, r.detail = "tool_error", "assembly: " + why
+        return
+    r.sha["fasm"] = sha256(sd / f"{stem}.fasm")
+    r.sha["bin"] = sha256(sd / f"{stem}.bin")
+    ok, info = simulate(tb, sd / f"{stem}.bin", sd / f"{stem}.wiring", sd / f"{stem}.cfg",
+                        case["oracle"], snap_dir)
+    if not ok:
+        r.outcome, r.detail = "sim_fail", info
+        return
+    r.sim = info
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--update", action="store_true", help="rewrite sim/bitstream/corpus fixtures")
@@ -282,29 +340,8 @@ def main():
     ap.add_argument("--cases", help="comma-separated subset (baseline still required)")
     a = ap.parse_args()
 
-    oss = BUILD / "oss-cad-suite"
-    env = dict(os.environ, PATH=f"{oss / 'bin'}:{os.environ['PATH']}")
-    model = BUILD / "nextpnr-run" / "io-model"
-    fab_run = BUILD / "fabulous-run"
-    snap_dir = BSDIR
-    cfgd = json.loads((CORPUS / "corpus.json").read_text())
     work = BUILD / "corpus-run"
-    shutil.rmtree(work, ignore_errors=True)
-    work.mkdir(parents=True)
-    # the fabric model this run maps against must be the one the committed spec snapshot describes
-    regen_snap = BUILD / "bitstream-run" / "fabric_spec.json"
-    if not regen_snap.exists() or sha256(regen_snap) != sha256(snap_dir / "fabric_spec.json"):
-        sys.exit("error: flow/build/bitstream-run/fabric_spec.json missing or differs from sim/bitstream/ "
-                 "(run flow/corpus.sh, which runs flow/bitstream.sh first)")
-
-    versions = {}
-    for t, cmd in (("yosys", ["yosys", "-V"]), ("nextpnr", ["nextpnr-generic", "--version"])):
-        rc, o = sh(cmd, env=env)
-        versions[t] = (re.search(r"nextpnr-[0-9][^)\" ]*", o) or re.search(r"Yosys (\S+)", o) or [None])[0] \
-            if rc is not None else "MISSING"
-    tb, tbout = compile_tb()
-    if tb is None:
-        sys.exit("error: testbench compile failed (Icarus Verilog missing?):\n" + tbout)
+    env, model, fab_run, snap_dir, cfgd, versions, tb = prepare_harness(work, "flow/corpus.sh")
 
     runs, problems = [], []
     want = set(a.cases.split(",")) if a.cases else None
@@ -319,7 +356,7 @@ def main():
             stem = f"{case['name']}_s{seed}"
             r.sha["source"] = sha256(REPO / case["src"])
             r.sha["pcf"] = sha256(REPO / case["pcf"])
-            ok, why = synth(case, sd, env, SRC)
+            ok, why = synth(case, sd, env)
             if not ok:
                 r.outcome, r.detail = "synthesis_error", why
                 continue
@@ -329,29 +366,10 @@ def main():
                 r.outcome = "topology_mismatch"
                 r.detail = why or f"observed {topo} != intended {case['topology']}"
                 continue
-            rc, out = nextpnr(case, seed, sd, env, model, cfgd.get("route_budget_s", 60))
-            r.outcome, r.detail, r.diag = classify(rc, out)
+            post_synth_trial(r, case, seed, sd, env, model, cfgd.get("route_budget_s", 60),
+                             tb, snap_dir, fab_run)
             if r.outcome != "success":
                 continue
-            r.bels = occupancy(sd / f"{stem}.post.json")
-            want_pl = case.get("placement")
-            if want_pl is not None and dict(r.bels) != want_pl:
-                # a case that pins BEL placement must land exactly there (issue #156)
-                r.outcome = "tool_error"
-                r.detail = f"placement {dict(r.bels)} != required {want_pl}"
-                continue
-            ok, why = assemble(case, stem, sd, snap_dir / "fabric_spec.json", fab_run)
-            if not ok:
-                r.outcome, r.detail = "tool_error", "assembly: " + why
-                continue
-            r.sha["fasm"] = sha256(sd / f"{stem}.fasm")
-            r.sha["bin"] = sha256(sd / f"{stem}.bin")
-            ok, info = simulate(tb, sd / f"{stem}.bin", sd / f"{stem}.wiring", sd / f"{stem}.cfg",
-                                case["oracle"], snap_dir)
-            if not ok:
-                r.outcome, r.detail = "sim_fail", info
-                continue
-            r.sim = info
             # committed fixtures: baseline cases must reproduce sim/bitstream/<stem>.*,
             # corpus cases sim/bitstream/corpus/<case>.s<seed>.*
             if "fixture" in case:

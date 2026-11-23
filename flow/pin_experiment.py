@@ -58,7 +58,6 @@ import argparse
 import hashlib
 import itertools
 import json
-import os
 import shutil
 import sys
 from pathlib import Path
@@ -281,17 +280,8 @@ def cell_function(c, live=None):
 
 def io_nets(mod):
     """(primary-input bits, primary-output bits) via the harness IO cells (as corpus_run.topology)."""
-    pi, po = set(), set()
-    for c in mod["cells"].values():
-        if not c["type"].startswith("IO_1_"):
-            continue
-        for pin, bits in c["connections"].items():
-            if pin == "PAD":
-                continue
-            for b in bits:
-                if isinstance(b, int):
-                    (pi if c["port_directions"][pin] == "output" else po).add(b)
-    return sorted(pi), sorted(po)
+    pi, po = io_ports(mod)
+    return sorted({b for _, b in pi if isinstance(b, int)}), sorted({b for _, b in po if isinstance(b, int)})
 
 
 def netlist_function(mod):
@@ -652,29 +642,15 @@ def sha_json(mod):
 
 # ------------------------------------------------------------------ runner
 def run_side(cr, side, case, seed, sd, env, model, budget, tb, snap_dir, fab_run):
-    """One (side, seed) trial -> dict. Mirrors corpus_run.main's per-seed pipeline."""
-    r = dict(side=side, seed=seed, outcome="tool_error", detail="", diag=[], sha={}, bels=[], sim="",
-             stem=f"{case['name']}_s{seed}", dir=sd)
-    rc, out = cr.nextpnr(case, seed, sd, env, model, budget)
-    r["outcome"], r["detail"], r["diag"] = cr.classify(rc, out)
-    if r["outcome"] != "success":
-        return r
-    stem = f"{case['name']}_s{seed}"
-    r["bels"] = cr.occupancy(sd / f"{stem}.post.json")
-    ok, why = cr.assemble(case, stem, sd, snap_dir / "fabric_spec.json", fab_run)
-    if not ok:
-        r["outcome"], r["detail"] = "tool_error", "assembly: " + why
-        return r
-    r["sha"]["fasm"] = cr.sha256(sd / f"{stem}.fasm")
-    r["sha"]["bin"] = cr.sha256(sd / f"{stem}.bin")
-    ok, info = cr.simulate(tb, sd / f"{stem}.bin", sd / f"{stem}.wiring", sd / f"{stem}.cfg",
-                           case["oracle"], snap_dir)
-    if not ok:
-        r["outcome"], r["detail"] = "sim_fail", info
-        return r
-    r["sim"] = info
-    if not oracle_clean(info):
-        r["outcome"], r["detail"] = "sim_fail", f"oracle verdict not clean: {info!r}"
+    """One (side, seed) trial -> dict. The per-seed pipeline is corpus_run's shared
+    post_synth_trial (nextpnr -> classify -> occupancy -> assemble -> simulate); the pin
+    experiment adds the oracle-clean verdict check on the simulated result."""
+    t = cr.Run(case["name"], seed)
+    cr.post_synth_trial(t, case, seed, sd, env, model, budget, tb, snap_dir, fab_run)
+    r = dict(side=side, seed=seed, outcome=t.outcome, detail=t.detail, diag=t.diag, sha=t.sha,
+             bels=t.bels, sim=t.sim, stem=f"{case['name']}_s{seed}", dir=sd)
+    if t.sim and not oracle_clean(t.sim):
+        r["outcome"], r["detail"] = "sim_fail", f"oracle verdict not clean: {t.sim!r}"
     return r
 
 
@@ -687,7 +663,6 @@ def oracle_clean(info):
 
 def export_fixtures(cr, case, seeds, rows, variants, problems, base_sha, versions, dest):
     """Guarded, all-or-nothing export of the variant-distinct successes. Returns (ok, message)."""
-    import re
     pf = _load_pin_fixtures()
     if case["name"] != "fan4":
         return False, "fixture export is only defined for the fan4 case"
@@ -701,8 +676,7 @@ def export_fixtures(cr, case, seeds, rows, variants, problems, base_sha, version
         if len(row) != 1 or row[0]["outcome"] != "success":
             return False, f"variant-distinct seed {seed} is not a success; nothing exported"
         r = row[0]
-        m = re.match(r"^(\d+) checks, (\d+) failures; (\d+)/(\d+) perturbations detected$", r["sim"])
-        if not m or m.group(2) != "0" or int(m.group(1)) <= 0 or m.group(3) != m.group(4) or m.group(3) == "0":
+        if not oracle_clean(r["sim"]):
             return False, f"seed {seed}: oracle verdict not clean ({r['sim']!r}); nothing exported"
         chosen.append(r)
     if len(chosen) != pf.EXPECTED_CASES:
@@ -793,39 +767,19 @@ def main():
                          "fixture set (default sim/bitstream/pin_experiment/)")
     a = ap.parse_args()
     cr = _load_corpus_run()
-    BUILD = cr.BUILD
-    oss = BUILD / "oss-cad-suite"
-    env = dict(os.environ, PATH=f"{oss / 'bin'}:{os.environ['PATH']}")
-    model, fab_run, snap_dir = BUILD / "nextpnr-run" / "io-model", BUILD / "fabulous-run", cr.BSDIR
-    cfgd = json.loads((cr.CORPUS / "corpus.json").read_text())
+    work = cr.BUILD / "pin-experiment"
+    env, model, fab_run, snap_dir, cfgd, versions, tb = cr.prepare_harness(work, "flow/pin_experiment.sh")
     case = next(c for c in cfgd["cases"] if c["name"] == a.case)
     if case["mode"] not in ("comb", "reg"):
         sys.exit(f"error: case mode {case['mode']!r} is not supported (comb, or reg via the one-register model)")
     registered = case["mode"] == "reg"
     if registered and a.export_fixtures is not None:
         sys.exit("error: --export-fixtures is not defined for registered cases (issue #160: separate follow-up)")
-    work = BUILD / "pin-experiment"
-    shutil.rmtree(work, ignore_errors=True)
-    work.mkdir(parents=True)
-    regen = BUILD / "bitstream-run" / "fabric_spec.json"
-    if not regen.exists() or cr.sha256(regen) != cr.sha256(snap_dir / "fabric_spec.json"):
-        sys.exit("error: flow/build/bitstream-run/fabric_spec.json missing or differs from sim/bitstream/ "
-                 "(run flow/pin_experiment.sh, which runs flow/bitstream.sh first)")
-    versions = {}
-    import re
-    for t, cmd in (("yosys", ["yosys", "-V"]), ("nextpnr", ["nextpnr-generic", "--version"])):
-        rc, o = cr.sh(cmd, env=env)
-        versions[t] = (re.search(r"nextpnr-[0-9][^)\" ]*", o) or re.search(r"Yosys (\S+)", o) or [None])[0] \
-            if rc is not None else "MISSING"
-    (BUILD / "corpus-run").mkdir(parents=True, exist_ok=True)  # compile_tb's output dir
-    tb, tbout = cr.compile_tb()
-    if tb is None:
-        sys.exit("error: testbench compile failed:\n" + tbout)
 
     problems = []
     base_dir = work / "baseline"
     base_dir.mkdir()
-    ok, why = cr.synth(case, base_dir, env, cr.SRC)
+    ok, why = cr.synth(case, base_dir, env)
     if not ok:
         sys.exit(f"error: synthesis failed (setup problem, not evidence): {why}")
     topo, why = cr.topology(base_dir / f"{case['name']}.json")
@@ -837,7 +791,6 @@ def main():
     sides = [("baseline", base_dir)]
     variants = {}
     controls = None
-    all_eq = True
     if registered:
         try:
             seq_shape(base_mod)
@@ -884,7 +837,6 @@ def main():
             problems.append(f"{policy}: variant topology {vtopo} differs from baseline {topo}")
         if not ok_eq:
             problems.append(f"{policy}: variant NOT equivalent to baseline; not routed: {verdict}")
-        all_eq &= ok_eq
         variants[policy] = dict(sha=sha_json(var), log=log, verdict=verdict, equivalent=ok_eq)
         if checks:
             variants[policy]["checks"] = checks

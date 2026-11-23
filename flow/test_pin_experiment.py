@@ -328,6 +328,52 @@ class Registered(unittest.TestCase):
         self.assertEqual(len(pe.lut_cells(reg_mod(), registered=True)), 3)
 
 
+class RunSide(unittest.TestCase):
+    """run_side delegates the post-synthesis pipeline to corpus_run's shared trial
+    (cr.post_synth_trial on a cr.Run) and adds the oracle-clean verdict check."""
+
+    def setUp(self):
+        self.cr = _load("corpus_run", Path(__file__).with_name("corpus_run.py"))
+        self.case = {"name": "fan4", "oracle": "o.v"}
+        self.saved = self.cr.post_synth_trial
+
+    def tearDown(self):
+        self.cr.post_synth_trial = self.saved
+
+    def _stub(self, outcome="success", sim="", seen=None):
+        def trial(t, case, seed, sd, env, model, budget, tb, snap_dir, fab_run):
+            if seen is not None:
+                seen.update(case=case, seed=seed, sd=sd, env=env, model=model, budget=budget,
+                            tb=tb, snap_dir=snap_dir, fab_run=fab_run)
+            t.outcome, t.sim = outcome, sim
+            return t
+        self.cr.post_synth_trial = trial
+
+    def test_delegates_to_corpus_run_trial(self):
+        seen = {}
+        self._stub(sim="61697 checks, 0 failures; 38/38 perturbations detected", seen=seen)
+        sd = Path("/tmp/x")
+        r = pe.run_side(self.cr, "variant-distinct", self.case, 3, sd, "ENV", "MODEL", 42, "TB", "SNAP", "FAB")
+        self.assertEqual(seen, dict(case=self.case, seed=3, sd=sd, env="ENV", model="MODEL",
+                                    budget=42, tb="TB", snap_dir="SNAP", fab_run="FAB"))
+        self.assertEqual(r, dict(side="variant-distinct", seed=3, outcome="success", detail="", diag=[],
+                                 sha={}, bels=[], sim="61697 checks, 0 failures; 38/38 perturbations detected",
+                                 stem="fan4_s3", dir=sd))
+
+    def test_unclean_oracle_flips_outcome_but_keeps_verdict(self):
+        self._stub(sim="10 checks, 0 failures; 2/3 perturbations detected")
+        r = pe.run_side(self.cr, "baseline", self.case, 1, Path("/tmp/x"), None, None, 60, None, None, None)
+        self.assertEqual(r["outcome"], "sim_fail")
+        self.assertIn("not clean", r["detail"])
+        self.assertEqual(r["sim"], "10 checks, 0 failures; 2/3 perturbations detected")
+
+    def test_measured_failure_passes_through_unchanged(self):
+        self._stub(outcome="route_fail")
+        r = pe.run_side(self.cr, "baseline", self.case, 2, Path("/tmp/x"), None, None, 60, None, None, None)
+        self.assertEqual(r["outcome"], "route_fail")
+        self.assertEqual(r["sim"], "")
+
+
 class Oracle(unittest.TestCase):
     def test_oracle_clean(self):
         self.assertTrue(pe.oracle_clean("61697 checks, 0 failures; 38/38 perturbations detected"))
