@@ -42,6 +42,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/gate_sim_verdict.sh"
 # shellcheck source=flow/pdk_root.sh
 source "$SCRIPT_DIR/pdk_root.sh"   # sky130_fd_sc_hd model resolution (issue #375)
+# shellcheck source=flow/route_diag_helpers.sh
+source "$SCRIPT_DIR/route_diag_helpers.sh"   # shared per-case replay checks (LUT basis below, route diagnostics; issue #260)
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 BUILD_DIR="$SCRIPT_DIR/build/gate-sim-bitstream"
 TB_NAME="tb_logic_tile_bitstream"
@@ -175,23 +177,11 @@ LB_VVP="$BUILD_DIR/$LB_NAME.vvp"
 LB_COV_RE='^COVERAGE: 4 BELs x 16 addresses = 64/64 one-hot cases; 4 all-ones, 5 all-zero cases; 73 cases loaded in sequence into one live tile$'
 rm -rf "$BUILD_DIR/lut_basis" "$BUILD_DIR/lut_basis_wrong"; mkdir -p "$LB"
 echo "=== LUT-address basis at gate level (issue #177): 4 BELs x 16 addresses, 73 streams, one live instance, zero delay ==="
-# basis_run <dir> <log>: one bounded run of all cases in <dir>; prints PASS | FUNC_FAIL | INFRA
-basis_run() {
-    local dir="$1" log="$2" rc=0
-    gs_run_bounded "$LB_NAME[basis]" "$log" ${GATE_SIM_VVP:-vvp} "$LB_VVP" \
-        +dir="$dir" +list="$LB/cases.txt" +wiring="$LB/basis.wiring" +map="$BS_DIR/logic4_configmem.map" || rc=$?
-    gs_classify "$rc" "$log" "$LB_NAME" basis
-}
-# basis_cfg_ok <dir> <log>: every case's loaded cfg == the stream's python decode
-basis_cfg_ok() {
-    local id got
-    while read -r id _; do
-        got="$(grep -m1 "^CFG $id " "$2" | cut -d' ' -f3)"
-        if [[ -z "$got" || "$got" != "$(tr -d '\n' < "$1/$id.cfg")" ]]; then
-            echo "  case $id: readback '$got' != decoded $(tr -d '\n' < "$1/$id.cfg")" >&2; return 1
-        fi
-    done < "$LB/cases.txt"
-}
+# basis_run <dir> <log>: one bounded run of all cases in the original case list over the
+# streams of <dir> (a negative control substitutes streams, never the case list); prints PASS | FUNC_FAIL | INFRA
+basis_run() { rd_run basis "$LB_NAME" "$BS_DIR/logic4_configmem.map" "$1" "$LB/cases.txt" "$LB/basis.wiring" "$2" "${GATE_SIM_VVP:-vvp}" "$LB_VVP"; }
+# basis_cfg_ok <dir> <log>: exactly one loaded-cfg readback per case == the python decode of its stream in <dir>
+basis_cfg_ok() { rd_cfg_ok case "$1" "$LB/cases.txt" "$2"; }
 basis_gate_ok=0
 if ! python3 -I "$SCRIPT_DIR/lut_basis.py" "$LB" --snapshot "$BS_DIR/fabric_spec.json" >"$BUILD_DIR/lut_basis_gen.log" 2>&1; then
     echo "error: LUT basis stream generation failed (see $BUILD_DIR/lut_basis_gen.log)" >&2; status=1

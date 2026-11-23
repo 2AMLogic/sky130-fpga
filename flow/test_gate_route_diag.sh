@@ -5,9 +5,14 @@
 # Uses the real LUT-input route suite (flow/route_diag.py + sim/tb_route_diag.v) against
 # the committed synthesized netlist for the positive and negative legs and for manifest,
 # readback and compile defects, and stub simulators with a canned log for simulator
-# errors, timeouts, missing/conflicting verdicts and coverage-report defects. Every
-# defect must make the replay fail; the unmodified suite must pass and its legal-other-
-# source negative control must be a completed functional FAIL on exactly one case.
+# errors, timeouts, missing/conflicting verdicts and coverage-report defects: a report
+# that is not the suite's FULL required set (a manifest, report and summary shortened
+# together satisfy a count re-derived from the manifest), a summary line that lost the
+# suite's own shape or checks, an INCOMPLETE route. The run, readback and coverage
+# checks under test are flow/route_diag_helpers.sh, shared with the generated-tile
+# replay (issue #260). Every defect must make the replay fail; the unmodified suite
+# must pass and its legal-other-source negative control must be a completed functional
+# FAIL on exactly one case.
 # Needs iverilog/vvp and the sky130_fd_sc_hd Verilog models (PDK_ROOT, klt or ~/.volare),
 # like flow/gate-sim-bitstream.sh. Exit nonzero on any mismatch.
 set -uo pipefail
@@ -27,6 +32,8 @@ done
 CELL_DIR="$(resolve_sky130_cell_models sky130A)" || exit 1
 
 BUILD_DIR="$(mktemp -d)"; trap 'rm -rf "$BUILD_DIR"' EXIT
+# shellcheck source=flow/route_diag_helpers.sh
+source "$SCRIPT_DIR/route_diag_helpers.sh"
 # shellcheck source=flow/gate_route_diag.sh
 source "$SCRIPT_DIR/gate_route_diag.sh"
 S=route
@@ -46,11 +53,11 @@ scratch() {  # scratch <name>: fresh copy of the generated suite directory
 if rd_positive "$S" >"$BUILD_DIR/pos.out" 2>&1; then ok "unmodified route suite passes (${RD_N[$S]}/${RD_N[$S]} routes)"
 else bad "unmodified route suite"; cat "$BUILD_DIR/pos.out"; echo "cannot continue"; exit 1; fi
 # canned copies: later runs (real and stub) overwrite the original log paths
-GOOD_LOG="$BUILD_DIR/canned_pass.log"; cp "$BUILD_DIR/${RD_TB[$S]}_gate.log" "$GOOD_LOG"
+GOOD_LOG="$BUILD_DIR/canned_pass.log"; cp "$BUILD_DIR/${RD_BENCH[$S]}_gate.log" "$GOOD_LOG"
 if rd_negative "$S" >"$BUILD_DIR/neg.out" 2>&1 && grep -q '^negative N7 \[route\] failing cases == predicted' "$BUILD_DIR/neg.out"; then
     ok "legal-other-source negative control: completed functional FAIL on exactly the altered case"
 else bad "negative control"; cat "$BUILD_DIR/neg.out"; fi
-NEG_LOG="$BUILD_DIR/canned_neg.log"; cp "$BUILD_DIR/neg_${RD_TB[$S]}_other_source.log" "$NEG_LOG"
+NEG_LOG="$BUILD_DIR/canned_neg.log"; cp "$BUILD_DIR/neg_${RD_BENCH[$S]}_other_source.log" "$NEG_LOG"
 grep -q '^  case R_C_I2_E: [0-9]* mismatches$' "$NEG_LOG" || bad "canned negative log lacks the R_C_I2_E failure line"
 
 # ---- manifest defects ----
@@ -118,6 +125,23 @@ grep -v '^COVERAGE: ROUTE C 2 E:' "$GOOD_LOG" >"$BUILD_DIR/covmiss.log"
 stub "coverage report misses a route" cat "$BUILD_DIR/covmiss.log" pos_check
 awk '{print} /^COVERAGE: ROUTE C 2 E:/{print}' "$GOOD_LOG" >"$BUILD_DIR/covdup.log"
 stub "coverage report duplicates a route" cat "$BUILD_DIR/covdup.log" pos_check
+# ---- the suite's FULL required set (issue #260): the absolute count and the suite's own
+# summary line, not a count re-derived from the manifest nor a wildcarded summary ----
+sed 's/(4 BELs x 4 pins x 4 edges)/(4 edges x 4 pins x 4 BELs)/' "$GOOD_LOG" >"$BUILD_DIR/covshape.log"
+stub "coverage summary with the wrong route shape" cat "$BUILD_DIR/covshape.log" pos_check
+sed 's/adversarial selected-vs-all-unselected-disagree checks; 0 duplicate case ids/other checks; 0 duplicate case ids/' "$GOOD_LOG" >"$BUILD_DIR/covseg.log"
+stub "coverage summary without the adversarial-check segment" cat "$BUILD_DIR/covseg.log" pos_check
+{ cat "$GOOD_LOG"; echo "COVERAGE: ROUTE D 3 W: INCOMPLETE (cases=0 patterns=0 toggled=0)"; } >"$BUILD_DIR/covinc.log"
+stub "coverage report lists an INCOMPLETE route" cat "$BUILD_DIR/covinc.log" pos_check
+# the case list, the required set, the report and the readbacks shortened to 63, consistently:
+# only the absolute 64 can tell this from a 63-route suite
+d="$(scratch short)"; sed -i '/^R_C_I2_E /d' "$d/cases.txt"; sed -i '/^C 2 E$/d' "$d/required.txt"
+rd_manifest_ok "$S" "$d" || bad "shortened manifest setup (63 cases == 63 required routes)"
+grep -v -e '^COVERAGE: ROUTE C 2 E:' -e '^CFG R_C_I2_E ' "$GOOD_LOG" \
+    | sed 's/^COVERAGE: 64\/64 routes/COVERAGE: 63\/63 routes/; s/; 64 cases loaded in sequence/; 63 cases loaded in sequence/' >"$BUILD_DIR/covshort.log"
+STUB_MODE=cat STUB_SRC="$BUILD_DIR/covshort.log" GATE_SIM_VVP="$STUB" must_fail "consistently shortened manifest, report and summary (63/63)" rd_check "$S" "$d" "$BUILD_DIR/short.log"
+grep -q "63 routes, not the suite's full 64" "$BUILD_DIR/t.err" || bad "shortened report was not rejected by the absolute 64-route requirement"
+rd_manifest_ok "$S" "$(rd_dir "$S")" || bad "restoring RD_N after the shortened-manifest test"
 grep -v '^CFG R_B_I1_S ' "$GOOD_LOG" >"$BUILD_DIR/cfgmiss.log"
 stub "missing cfg readback" cat "$BUILD_DIR/cfgmiss.log" pos_check
 awk '{print} /^CFG R_B_I1_S /{print}' "$GOOD_LOG" >"$BUILD_DIR/cfgdup.log"
