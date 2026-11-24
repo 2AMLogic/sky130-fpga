@@ -6,8 +6,42 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-23
+
+- **Issue #364** (closed): Remove the redundant GDS timestamp rewrite from both layout flows
+- **Issue #384** (closed): Share the tile DUT hookup and diagnostic case-loader boilerplate across the five bitstream testbenches
+- **PR #389**: sim: share the tile DUT hookup across the five bitstream testbenches
+- **Issue #386** (closed): Deduplicate harness setup, per-seed trial execution, and dead locals across flow/corpus_run.py and flow/pin_experiment.py
+- **PR #388**: refactor(flow): share harness setup and per-seed trial pipeline across corpus_run and pin_experiment
+
+### 2026-11-22
+
+- **Issue #367** (closed): Update the README verification row for the experimental 2×2 bitstream replay
+- **PR #369**: docs: cover the 2x2 fabric replay in the README verification row
+- **Issue #382** (closed): No committed test distinguishes the SDF-annotated logic_tile run from its zero-delay twin
+- **PR #387**: test: add an SDF settle-time probe and gate to the tile harness
+- **Issue #379** (closed): Pinned evidence docs lag the item-7 grade: characterization-summary.md still says item 7 is not met, claim-traceability.md has no row for it
+- **PR #385**: measurements: bring the characterization summary current with the item-7 grade
+- **Issue #380** (closed): Document flow/tile-functional-verification.sh and sim/cocotb/test_logic_tile.py in flow/README.md and sim/README.md
+- **PR #383**: docs: map tile-functional-verification and remaining flow helpers in READMEs
+- **Issue #357** (closed): T1 item 7 on the committed geometry: as-built netlist from the committed DEF + committed SDF through klt functional-verification options.sdf (no place-and-route re-run)
+- **Issue #360** (closed): Reconcile the committed-geometry item-7 result with the pinned T1 grade
+- **PR #381**: signoff: cite the SDF-annotated logic_tile suite for item 7 and grade the block T1
+- **Issue #377** (closed): .gitignore: add .loom/account-ranking.codex (daemon state dirties the main checkout)
+- **PR #378**: fix: ignore Loom daemon account-ranking.codex ranking state
+- **Issue #370** (closed): Share signoff target validation and reject empty layout paths
+- **PR #372**: flow: share --target validation across signoff drivers, reject empty operands
+- **Issue #375** (closed): Share sky130_fd_sc_hd Verilog cell-model resolution in flow/pdk_root.sh and fix drifted fallbacks
+- **PR #376**: refactor: share sky130_fd_sc_hd cell-model resolution in flow/pdk_root.sh
+- **Issue #359** (closed): Measure the four tile checks on the as-built netlist at zero delay and with SDF
+- **PR #374**: sim: pair the four tile checks at zero delay and under the committed SDF
+- **Issue #366** (closed): Nine workflow step names are truncated by unquoted YAML '#' in issue references
+- **PR #371**: fix: single-quote nine workflow step names so YAML '#' stops truncating them
+
 ### 2026-11-21
 
+- **Issue #358** (closed): Recover the logical tile netlist from its routed DEF and verify it against GDS
+- **PR #365**: Generate the logic_tile Verilog reference from the routed DEF
 - **Issue #355** (closed): Multi-tile support in flow/fasm_to_bitstream.py and an experimental fabric-level bitstream bench (N LOGIC4 tiles, 2x2 first)
 - **PR #361**: feat: assemble multi-tile LOGIC4 streams and replay a routed 2x2 fabric
 
@@ -286,9 +320,4 @@ Chronological record of merged pull requests and closed issues, maintained by th
 - **Issue #73** (closed): G1: pin FABulous and commit a tile description for the logic tile
 - **Issue #72** (closed): Re-run the SDF-annotated gate-level leg now that klayout-tools#1890 is closed
 - **Issue #67** (closed): T1 items 1, 2, 9, 10: bind each to its audited artifact now that klayout-tools#2718 has landed
-
-### 2026-09-22
-
-- **PR #64**: feat: drop git-history-derived stamps from the characterization summary
-- **Issue #61** (closed): Drop git-history-derived "Committed at" stamps from the characterization summary generator (decision per #57 item 4)
 

@@ -2,6 +2,11 @@
 
 Sections moved byte-for-byte from [WORK_LOG.md](../WORK_LOG.md) by `loom-daemon work-docs archive`.
 
+### 2026-09-22
+
+- **PR #64**: feat: drop git-history-derived stamps from the characterization summary
+- **Issue #61** (closed): Drop git-history-derived "Committed at" stamps from the characterization summary generator (decision per #57 item 4)
+
 ### 2026-09-21
 
 - **PR #62**: docs: refresh post-ADR-0003 staleness in traceability row 12, measurements README and ADR index
