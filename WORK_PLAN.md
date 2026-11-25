@@ -3,7 +3,7 @@
 This roadmap is generated from the current GitHub label state by the Loom Guide role.
 
 <!-- guide:plan-body:start -->
-_Generated: 2026-11-23T10:25:53Z (snapshot; compare against live labels)_
+_Generated: 2026-11-25T03:00:00Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
@@ -33,13 +33,13 @@ _None._
 
 Issues currently being built (`loom:building`).
 
-- **#363**: Share frame-stream validation between the ConfigMem adapter and Python decoder
+_None._
 
 ## PRs Awaiting Review
 
 PRs waiting on Judge (`loom:review-requested`).
 
-- **#373**: refactor: extract shared frame_records() reader for adapter and decoder
+_None._
 
 ## Approved (Awaiting Merge)
 
@@ -53,13 +53,11 @@ Issues carrying `loom:curated`.
 
 - **#117**: G4: identify the binding path of the composed-tile STA (cfg-input vs datapath) once klt exposes path reports *(curated)* *(held)*
 - **#213**: T1 item 7: SDF-annotated post-route functional run, via name sanitization or klayout-tools#2897 *(curated)* *(held)*
-- **#260**: Deduplicate the per-suite replay helpers in flow/generated_tile_replay.sh against gate_route_diag.sh's rd_* set *(curated)*
-- **#363**: Share frame-stream validation between the ConfigMem adapter and Python decoder *(curated)*
 
 ## Proposed (Architect / Hermit)
 
 - **#254**: Remove the stranded def-unescape CLI mode: superseded by def-connections since klt 0.6.0, zero callers *(hermit)* *(held)*
-- **#260**: Deduplicate the per-suite replay helpers in flow/generated_tile_replay.sh against gate_route_diag.sh's rd_* set *(hermit)*
+- **#393**: Remove flow/sdf_sanitize_names.py: unwired workaround superseded by klt v0.8.0 *(hermit)* *(operator)*
 
 ## Epics
 
@@ -73,10 +71,10 @@ _None._
 | Very important | 0 |
 | Important | 2 |
 | Ready (`loom:issue`) | 0 |
-| In Progress (`loom:building`) | 1 |
-| PRs awaiting review | 1 |
+| In Progress (`loom:building`) | 0 |
+| PRs awaiting review | 0 |
 | Approved PRs awaiting merge | 0 |
-| Curated | 4 |
+| Curated | 2 |
 | Architect / Hermit proposals | 2 |
 | Active epics | 0 |
 <!-- guide:plan-body:end -->

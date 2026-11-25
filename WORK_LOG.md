@@ -6,8 +6,17 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-24
+
+- **PR #394**: docs: document route_diag_helpers.sh and route-coverage contract
+- **Issue #392** (closed): flow/README.md and sim/README.md still describe the route-diagnostic coverage as manifest-derived, and omit flow/route_diag_helpers.sh
+
 ### 2026-11-23
 
+- **PR #391**: refactor(flow): share one run/readback/coverage check across the diagnostic replays
+- **PR #373**: refactor: extract shared frame_records() reader for adapter and decoder
+- **Issue #363** (closed): Share frame-stream validation between the ConfigMem adapter and Python decoder
+- **Issue #260** (closed): Deduplicate the per-suite replay helpers in flow/generated_tile_replay.sh against gate_route_diag.sh's rd_* set
 - **Issue #364** (closed): Remove the redundant GDS timestamp rewrite from both layout flows
 - **Issue #384** (closed): Share the tile DUT hookup and diagnostic case-loader boilerplate across the five bitstream testbenches
 - **PR #389**: sim: share the tile DUT hookup across the five bitstream testbenches
