@@ -6,6 +6,10 @@ Chronological record of merged pull requests and closed issues, maintained by th
 
 - [2026-09](work_log/WORK_LOG_2026-09.md)
 
+### 2026-11-26
+
+- **Issue #65** (closed): README: embed the fleet burndown chart (one line)
+
 ### 2026-11-24
 
 - **PR #394**: docs: document route_diag_helpers.sh and route-coverage contract
