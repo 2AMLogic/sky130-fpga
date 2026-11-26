@@ -3,7 +3,6 @@
 This roadmap is generated from the current GitHub label state by the Loom Guide role.
 
 <!-- guide:plan-body:start -->
-_Generated: 2026-11-25T03:00:00Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
@@ -20,8 +19,8 @@ _None._
 
 `loom:important`; taken before unlabelled work.
 
-- **#162**: Bound flow/sdf-resim.sh simulator runs with SIM_TIMEOUT_SECONDS once its pinned timing record is re-characterized *(held)*
-- **#213**: T1 item 7: SDF-annotated post-route functional run, via name sanitization or klayout-tools#2897 *(held)*
+- **#162**: Bound flow/sdf-resim.sh simulator runs with SIM_TIMEOUT_SECONDS once its pinned timing record is re-characterized
+- **#213**: T1 item 7: SDF-annotated post-route functional run, via name sanitization or klayout-tools#2897
 
 ## Ready
 
@@ -51,13 +50,13 @@ _None._
 
 Issues carrying `loom:curated`.
 
-- **#117**: G4: identify the binding path of the composed-tile STA (cfg-input vs datapath) once klt exposes path reports *(curated)* *(held)*
-- **#213**: T1 item 7: SDF-annotated post-route functional run, via name sanitization or klayout-tools#2897 *(curated)* *(held)*
+- **#117**: G4: identify the binding path of the composed-tile STA (cfg-input vs datapath) once klt exposes path reports *(curated)*
+- **#213**: T1 item 7: SDF-annotated post-route functional run, via name sanitization or klayout-tools#2897 *(curated)*
 
 ## Proposed (Architect / Hermit)
 
-- **#254**: Remove the stranded def-unescape CLI mode: superseded by def-connections since klt 0.6.0, zero callers *(hermit)* *(held)*
-- **#393**: Remove flow/sdf_sanitize_names.py: unwired workaround superseded by klt v0.8.0 *(hermit)* *(operator)*
+- **#254**: Remove the stranded def-unescape CLI mode: superseded by def-connections since klt 0.6.0, zero callers *(hermit)*
+- **#393**: Remove flow/sdf_sanitize_names.py: unwired workaround superseded by klt v0.8.0 *(hermit)*
 
 ## Epics
 
