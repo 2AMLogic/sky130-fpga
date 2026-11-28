@@ -148,6 +148,117 @@ cstub crash     INFRA     "echo '$CF'; exit 139"
 cstub hang      INFRA     "echo '$CF'; sleep 30"
 cstub novec     INFRA     "echo '$CE0'"
 
+# ---- issue #401: the shared cfg cross-check (gs_cfg_ok), corpus-index validators
+# (gs_corpus_index_ok / gs_corpus_entry_ok) and gate-level bench compile
+# (gs_gate_compile) of the tb_logic_tile_bitstream replay drivers --------------
+pass() { echo "ok   $1"; }
+fail() { echo "FAIL $1${2:+: $2}"; rc_all=1; }
+# agree <tag> <name> <ok | diagnostic substring> <got>: "ok" must be a silent
+# success; anything else must be a failure explained by an "error:" line that
+# contains the substring (never an abort of the caller)
+agree() {
+    if [[ "$3" == ok && "$4" == ok ]] || { [[ "$3" != ok && "$4" != ok && "$4" != aborted* && "$4" == error:*"$3"* ]]; }; then pass "$1 $2"
+    else fail "$1 $2" "want '$3', got '$4'"; fi
+}
+FX="$HERE/../sim/bitstream"
+GOOD_CFG="$(tr -d '\n' < "$FX/top_io.cfg")"
+case "${GOOD_CFG: -1}" in 0) BAD_CFG="${GOOD_CFG%?}1" ;; *) BAD_CFG="${GOOD_CFG%?}0" ;; esac
+printf '%s\n' "$BAD_CFG" >"$T/bad.cfg"
+head -c 20 "$FX/top_io.bin" >"$T/truncated.bin"
+
+# cfg_case <name> <ok | diagnostic substring> <log content> [bin] [cfg] [snapshot]
+# gs_cfg_ok exactly as every caller uses it: under `set -euo pipefail`, in an
+# `if` (so a rejection must reach the caller's error branch, not abort it).
+cfg_case() {
+    local got
+    printf '%s' "$3" >"$T/cfg.log"
+    got="$( set -euo pipefail; if gs_cfg_ok lbl "$T/cfg.log" "${4:-$FX/top_io.bin}" "${5:-$FX/top_io.cfg}" "${6:-$FX/fabric_spec.json}"; then echo ok; fi 2>&1 )" || got="aborted rc=$?: $got"
+    agree cfg "$1" "$2" "$got"
+}
+cfg_case "clean three-way match"                    ok   "CFG=$GOOD_CFG"$'\n'"$PASSL"$'\n'
+cfg_case "no CFG= line"               "CFG=<hex> readback in $T/cfg.log, found 0" "$PASSL"$'\n'
+cfg_case "duplicated CFG= line"       "found 2" "CFG=$GOOD_CFG"$'\n'"CFG=$GOOD_CFG"$'\n'"$PASSL"$'\n'
+cfg_case "empty CFG= line"            "found 0" $'CFG=\n'"$PASSL"$'\n'
+cfg_case "non-hex CFG= line"          "found 0" $'CFG=zzzz\n'"$PASSL"$'\n'
+cfg_case "CFG= line with trailing text" "found 0" "CFG=$GOOD_CFG extra"$'\n'"$PASSL"$'\n'
+cfg_case "loader readback != decode and record" "loaded cfg mismatch: sim=$BAD_CFG python=$GOOD_CFG recorded=$GOOD_CFG" "CFG=$BAD_CFG"$'\n'
+cfg_case "recorded cfg != loader and decode" "loaded cfg mismatch: sim=$GOOD_CFG python=$GOOD_CFG recorded=$BAD_CFG" "CFG=$GOOD_CFG"$'\n' "$FX/top_io.bin" "$T/bad.cfg"
+cfg_case "corrupt .bin: python decode fails" "python decode of $T/truncated.bin failed" "CFG=$GOOD_CFG"$'\n' "$T/truncated.bin"
+cfg_case "empty simulator log"        "missing or empty input $T/cfg.log" ""
+cfg_case "missing recorded cfg"       "missing or empty input $T/nonexistent.cfg" "CFG=$GOOD_CFG"$'\n' "$FX/top_io.bin" "$T/nonexistent.cfg"
+cfg_case "missing bitstream"          "missing or empty input $T/nonexistent.bin" "CFG=$GOOD_CFG"$'\n' "$T/nonexistent.bin"
+cfg_case "missing snapshot"           "missing or empty input $T/nonexistent.json" "CFG=$GOOD_CFG"$'\n' "$FX/top_io.bin" "$FX/top_io.cfg" "$T/nonexistent.json"
+# a diagnostic is never an "infrastructure failure" (sim/pin_fixture_negative.sh
+# reads that phrase as a crash/timeout, not as a rejection by the replay's checks)
+printf 'no verdict\n' >"$T/cfg.log"
+err="$(gs_cfg_ok lbl "$T/cfg.log" "$FX/top_io.bin" "$FX/top_io.cfg" "$FX/fabric_spec.json" 2>&1)"
+if [[ -n "$err" && "$err" != *'infrastructure failure'* ]]; then pass "cfg diagnostic never says 'infrastructure failure'"
+else fail "cfg diagnostic never says 'infrastructure failure'" "'$err'"; fi
+# as a plain statement under `set -euo pipefail` the missing CFG= line is reported,
+# not a silent exit from a `grep | cut` pipeline (the pre-#401 copies: rc 1, no output)
+rc=0
+err="$( set -euo pipefail; gs_cfg_ok lbl "$T/cfg.log" "$FX/top_io.bin" "$FX/top_io.cfg" "$FX/fabric_spec.json" 2>&1 )" || rc=$?
+if [[ $rc -eq 1 && "$err" == "error: lbl:"* ]]; then pass "cfg plain call under set -euo pipefail: exit 1 with a diagnostic"
+else fail "cfg plain call under set -euo pipefail: exit 1 with a diagnostic" "rc=$rc, '$err'"; fi
+# the matched value is handed to the caller; no caller root variable is needed
+printf 'CFG=%s\n' "$GOOD_CFG" >"$T/cfg.log"
+if ( unset REPO_ROOT REPO HERE; gs_cfg_ok lbl "$T/cfg.log" "$FX/top_io.bin" "$FX/top_io.cfg" "$FX/fabric_spec.json" 2>/dev/null ); then pass "cfg needs no caller root variable"
+else fail "cfg needs no caller root variable"; fi
+GS_SIM_CFG=""
+if gs_cfg_ok lbl "$T/cfg.log" "$FX/top_io.bin" "$FX/top_io.cfg" "$FX/fabric_spec.json" 2>/dev/null && [[ "$GS_SIM_CFG" == "$GOOD_CFG" ]]; then pass "cfg GS_SIM_CFG holds the matched readback"
+else fail "cfg GS_SIM_CFG holds the matched readback" "'$GS_SIM_CFG'"; fi
+
+# cmd_case <tag> <name> <ok | diagnostic substring> <cmd...>
+cmd_case() {
+    local got
+    got="$("$4" "${@:5}" 2>&1)" && got=ok
+    agree "$1" "$2" "$3" "$got"
+}
+# gs_corpus_index_ok <index>
+CIX="$T/corpus/index.txt"
+mkdir -p "$T/corpus"
+printf 'casc2_s1 casc2\nregbel_a_s1 regbel\n' >"$CIX"
+cmd_case index "valid index"                  ok                            gs_corpus_index_ok "$CIX"
+printf '\ncasc2_s1 casc2\n\n' >"$CIX"
+cmd_case index "valid index with blank lines" ok                            gs_corpus_index_ok "$CIX"
+rm -f "$CIX"
+cmd_case index "missing index"                "corpus index missing or empty: $CIX" gs_corpus_index_ok "$CIX"
+: >"$CIX"
+cmd_case index "empty index"                  "corpus index missing or empty: $CIX" gs_corpus_index_ok "$CIX"
+printf ' \t\n\n' >"$CIX"
+cmd_case index "whitespace-only index"        "corpus index has no entries: $CIX"    gs_corpus_index_ok "$CIX"
+# gs_corpus_entry_ok <corpus_dir> <stem> <oracle> <extra>
+cmd_case entry "valid entry"                  ok                                gs_corpus_entry_ok "$FX/corpus" casc2_s1 casc2 ""
+cmd_case entry "extra field"                  "entry invalid"                    gs_corpus_entry_ok "$FX/corpus" casc2_s1 casc2 "more fields"
+cmd_case entry "missing oracle"               "oracle '' unrecognised"           gs_corpus_entry_ok "$FX/corpus" casc2_s1 "" ""
+cmd_case entry "unrecognised oracle"          "oracle 'bogus' unrecognised"      gs_corpus_entry_ok "$FX/corpus" casc2_s1 bogus ""
+for ext in bin wiring cfg; do
+    rm -rf "$T/one"; mkdir -p "$T/one"; cp "$FX/corpus/casc2_s1".{bin,wiring,cfg} "$T/one/"; rm "$T/one/casc2_s1.$ext"
+    cmd_case entry "missing .$ext"            "missing corpus file $T/one/casc2_s1.$ext" gs_corpus_entry_ok "$T/one" casc2_s1 casc2 ""
+done
+: >"$T/one/casc2_s1.cfg"
+cmd_case entry "empty .cfg is missing"        "missing corpus file $T/one/casc2_s1.cfg" gs_corpus_entry_ok "$T/one" casc2_s1 casc2 ""
+
+# gs_gate_compile with stub model files, a trivial bench and netlist (needs only iverilog)
+if command -v iverilog >/dev/null 2>&1 && command -v vvp >/dev/null 2>&1; then
+    mkdir -p "$T/gsc/sim" "$T/gsc/cells"
+    : >"$T/gsc/cells/primitives.v"; : >"$T/gsc/cells/sky130_fd_sc_hd.v"
+    echo 'module tiny_net(); wire w; endmodule' >"$T/gsc/tiny_net.v"
+    cat >"$T/gsc/sim/tiny_tb.v" <<'V'
+module tiny_tb(); initial begin $display("PASS: tiny_tb"); $finish; end endmodule
+V
+    cat >"$T/gsc/sim/tiny_bad_tb.v" <<'V'
+module tiny_bad_tb(); no_such_cell u(); endmodule
+V
+    gsc_out="$(gs_gate_compile tiny_tb "$T/gsc/tiny_net.v" "$T/gsc/tiny.vvp" "$T/gsc/tiny_build.log" "$T/gsc/sim" "$T/gsc/cells" 2>&1)"; rc=$?
+    gsc_run="$(vvp "$T/gsc/tiny.vvp" 2>&1 | head -n 1)"
+    if [[ $rc -eq 0 && -z "$gsc_out" && "$gsc_run" == "PASS: tiny_tb" ]]; then pass "gate compile: bench + netlist + stub models -> runnable image, nothing printed"
+    else fail "gate compile: bench + netlist + stub models -> runnable image, nothing printed" "rc=$rc, vvp said '$gsc_run', helper printed '$gsc_out'"; fi
+    gsc_out="$(gs_gate_compile tiny_bad_tb "$T/gsc/tiny_net.v" "$T/gsc/bad.vvp" "$T/gsc/bad_build.log" "$T/gsc/sim" "$T/gsc/cells" 2>&1)"; rc=$?
+    if [[ $rc -ne 0 && -z "$gsc_out" ]] && grep -q no_such_cell "$T/gsc/bad_build.log"; then pass "gate compile: undefined module -> nonzero, diagnostics in the log, nothing printed"
+    else fail "gate compile: undefined module -> nonzero, diagnostics in the log, nothing printed" "rc=$rc, helper printed '$gsc_out'"; fi
+else echo "skip gate compile: needs iverilog/vvp"; fi
+
 # Real bench (PR #198 review): unmodified generated ConfigMem, broken inputs.
 # Needs iverilog/vvp and the scratch FABulous output of flow/fabulous.sh
 # (CM_RUN_DIR, default flow/build/fabulous-run); skipped (and said so) otherwise.

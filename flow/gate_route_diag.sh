@@ -14,8 +14,10 @@
 # coverage report must be that full set at the suite's absolute size -- never a set
 # re-derived from the manifest, which a shortened manifest and a matching report would
 # satisfy. The run, readback and coverage checks are the ones of flow/
-# route_diag_helpers.sh, shared with the generated-tile replay (#260); only the
-# generation, compilation and gate-level orchestration live here.
+# route_diag_helpers.sh, shared with the generated-tile replay (#260), and the
+# bench compile is gs_gate_compile of flow/gate_sim_verdict.sh (issue #401,
+# shared with the bitstream and LUT-basis builds); only the generation and
+# the gate-level orchestration live here.
 # Zero delay (the benches' `#1` settle steps are a simulation convention).
 # Functional only: no SDF/timing, inter-tile or ratified-fabric claim (ADR-0004/0005
 # Proposed, experimental same-index matrix).
@@ -75,12 +77,11 @@ rd_manifest_ok() {
     RD_N[$s]="$(wc -l < "$d/required.txt")"
 }
 
-# rd_compile <suite> <netlist> <out.vvp>
+# rd_compile <suite> <netlist> <out.vvp>: the shared gate-level bench compile (gs_gate_compile)
 rd_compile() {
     local s="$1" log="$BUILD_DIR/${RD_BENCH[$1]}_build.log"
-    iverilog -g2012 -s "${RD_BENCH[$s]}" -I "$REPO_ROOT/sim" -o "$3" \
-        "$REPO_ROOT/sim/${RD_BENCH[$s]}.v" "$2" "$CELL_DIR/primitives.v" "$CELL_DIR/sky130_fd_sc_hd.v" \
-        >"$log" 2>&1 || { echo "error: [$s] compile of the gate-level ${RD_BENCH[$s]} bench failed (see $log)" >&2; return 1; }
+    gs_gate_compile "${RD_BENCH[$s]}" "$2" "$3" "$log" "$REPO_ROOT/sim" "$CELL_DIR" \
+        || { echo "error: [$s] compile of the gate-level ${RD_BENCH[$s]} bench failed (see $log)" >&2; return 1; }
 }
 
 rd_failing_cases() {  # <log>: sorted ids of the cases the bench reported as failing

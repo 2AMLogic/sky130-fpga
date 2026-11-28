@@ -50,7 +50,6 @@ TB_NAME="tb_logic_tile_bitstream"
 NETLIST="$REPO_ROOT/layout/experimental/logic_tile_routed.synth.v"
 BS_DIR="$REPO_ROOT/sim/bitstream"
 CORPUS_DIR="${GATE_SIM_CORPUS_DIR:-$BS_DIR/corpus}"
-RECOGNISED_ORACLES=" comb reg quad4 casc2 fan4 casc_fan regcasc regbel "
 NEGATIVE=0
 [[ "${1:-}" == "--negative" ]] && NEGATIVE=1
 
@@ -70,11 +69,8 @@ echo "=== netlist: layout/experimental/logic_tile_routed.synth.v sha256 $(sha256
 echo "=== models: $CELL_DIR sha256(sky130_fd_sc_hd.v) $(sha256sum "$CELL_DIR/sky130_fd_sc_hd.v" | cut -d' ' -f1) ==="
 echo "=== simulation wall-clock budget: $(gs_budget)s per run (SIM_TIMEOUT_SECONDS), kill grace $(gs_kill_after)s ==="
 
-build() {  # build <netlist> <out.vvp>
-    iverilog -g2012 -s "$TB_NAME" -I "$REPO_ROOT/sim" -o "$2" \
-        "$REPO_ROOT/sim/$TB_NAME.v" "$1" \
-        "$CELL_DIR/primitives.v" "$CELL_DIR/sky130_fd_sc_hd.v" \
-        2>"$BUILD_DIR/build.log" || { echo "error: compile failed (see $BUILD_DIR/build.log)" >&2; return 1; }
+build() {  # build <bench> <netlist> <out.vvp> <log>  (the one compile: gs_gate_compile)
+    gs_gate_compile "$1" "$2" "$3" "$4" "$REPO_ROOT/sim" "$CELL_DIR"
 }
 
 # run_vvp <vvp> <bin> <wiring> <design> <log> ; prints rc-aware verdict to stdout:
@@ -93,7 +89,8 @@ run_one() {
     [[ "$(run_vvp "$@")" == PASS ]]
 }
 
-build "$NETLIST" "$BUILD_DIR/$TB_NAME.vvp" || exit 1
+build "$TB_NAME" "$NETLIST" "$BUILD_DIR/$TB_NAME.vvp" "$BUILD_DIR/build.log" \
+    || { echo "error: compile failed (see $BUILD_DIR/build.log)" >&2; exit 1; }
 
 # Registered-BEL fixture metadata (issue #156): each of BEL A, B, C, D registered, placement pinned.
 python3 -I "$SCRIPT_DIR/check_regbel_fixtures.py" "$REPO_ROOT" || exit 1
@@ -105,12 +102,8 @@ for entry in "comb:top_io" "reg:top_reg"; do
     echo "=== gate-level ${TB_NAME} [${dname}] bitstream sim/bitstream/$stem.bin (zero delay, +mutate) ==="
     if run_one "$BUILD_DIR/$TB_NAME.vvp" "$BS_DIR/$stem.bin" "$BS_DIR/$stem.wiring" "$dname" "$log"; then
         grep -E "^(CFG=|baseline|PASS)" "$log"
-        # the loaded cfg must equal the recorded cfg (same stream read as in RTL suite)
-        sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$log" | cut -d= -f2)"
-        rec_cfg="$(tr -d '\n' < "$BS_DIR/$stem.cfg")"
-        if [[ "$sim_cfg" != "$rec_cfg" ]]; then
-            echo "error: [$dname] loaded cfg $sim_cfg != recorded $rec_cfg" >&2; status=1
-        fi
+        # the loaded cfg must equal the python decode and the recorded cfg (the RTL suite's cross-check)
+        gs_cfg_ok "[$dname]" "$log" "$BS_DIR/$stem.bin" "$BS_DIR/$stem.cfg" "$BS_DIR/fabric_spec.json" || status=1
     else
         echo "error: [$dname] gate-level run did not PASS (see $log)" >&2
         tail -n 15 "$log" >&2 || true
@@ -124,29 +117,20 @@ done
 INDEX="$CORPUS_DIR/index.txt"
 n_corpus=0
 corpus_pass=0
-if [[ ! -s "$INDEX" ]]; then
-    echo "error: corpus index missing or empty: $INDEX" >&2; status=1
+if ! gs_corpus_index_ok "$INDEX"; then
+    status=1
 else
     while read -r stem oracle extra; do
         [[ -z "$stem" ]] && continue
         n_corpus=$((n_corpus + 1))
-        if [[ -n "$extra" || -z "$oracle" || "$RECOGNISED_ORACLES" != *" $oracle "* ]]; then
-            echo "error: [$stem] corpus index entry invalid or oracle '${oracle:-}' unrecognised" >&2; status=1; continue
-        fi
-        missing=0
-        for ext in bin wiring cfg; do
-            [[ -s "$CORPUS_DIR/$stem.$ext" ]] || { echo "error: [$stem] missing corpus file $CORPUS_DIR/$stem.$ext" >&2; missing=1; }
-        done
-        [[ "$missing" -eq 0 ]] || { status=1; continue; }
+        gs_corpus_entry_ok "$CORPUS_DIR" "$stem" "$oracle" "$extra" || { status=1; continue; }
         log="$BUILD_DIR/${TB_NAME}_corpus_${stem}.log"
         if run_one "$BUILD_DIR/$TB_NAME.vvp" "$CORPUS_DIR/$stem.bin" "$CORPUS_DIR/$stem.wiring" "$oracle" "$log"; then
-            sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$log" | cut -d= -f2)"
-            rec_cfg="$(tr -d '\n' < "$CORPUS_DIR/$stem.cfg")"
-            if [[ -z "$sim_cfg" || "$sim_cfg" != "$rec_cfg" ]]; then
-                echo "corpus [$oracle] $stem: FAIL (loaded cfg '$sim_cfg' != recorded '$rec_cfg')" >&2; status=1
-            else
+            if gs_cfg_ok "corpus [$oracle] $stem" "$log" "$CORPUS_DIR/$stem.bin" "$CORPUS_DIR/$stem.cfg" "$BS_DIR/fabric_spec.json"; then
                 corpus_pass=$((corpus_pass + 1))
                 echo "corpus [$oracle] $stem: PASS ($(grep -m1 '^PASS' "$log" | sed 's/^PASS: //'); cfg == recorded)"
+            else
+                status=1
             fi
         else
             echo "corpus [$oracle] $stem: FAIL (see $log)" >&2
@@ -154,7 +138,6 @@ else
             status=1
         fi
     done < "$INDEX"
-    [[ "$n_corpus" -gt 0 ]] || { echo "error: corpus index has no entries: $INDEX" >&2; status=1; }
     echo "=== corpus fixtures replayed at gate level: ${corpus_pass}/${n_corpus} PASS ==="
 fi
 
@@ -187,9 +170,7 @@ if ! python3 -I "$SCRIPT_DIR/lut_basis.py" "$LB" --snapshot "$BS_DIR/fabric_spec
     echo "error: LUT basis stream generation failed (see $BUILD_DIR/lut_basis_gen.log)" >&2; status=1
 elif [[ "$(wc -l < "$LB/cases.txt")" -ne 73 ]]; then
     echo "error: expected 73 LUT basis cases" >&2; status=1
-elif ! iverilog -g2012 -s "$LB_NAME" -I "$REPO_ROOT/sim" -o "$LB_VVP" \
-        "$REPO_ROOT/sim/$LB_NAME.v" "$NETLIST" "$CELL_DIR/primitives.v" "$CELL_DIR/sky130_fd_sc_hd.v" \
-        2>"$BUILD_DIR/lut_basis_build.log"; then
+elif ! build "$LB_NAME" "$NETLIST" "$LB_VVP" "$BUILD_DIR/lut_basis_build.log"; then
     echo "error: compile of the gate-level basis bench failed (see $BUILD_DIR/lut_basis_build.log)" >&2; status=1
 else
     lb_log="$BUILD_DIR/${LB_NAME}_gate.log"
@@ -254,7 +235,7 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
         v="$(basis_run "$NB" "$BUILD_DIR/neg_basis_wrong_program.log")"
         neg_check "N6 (basis A_a05 stream replaced by A_a06's)" "$v" "$BUILD_DIR/neg_basis_wrong_program.log" || status=1
         if [[ "$v" == FUNC_FAIL ]]; then
-            got="$(sed -n 's/^  case \([A-Za-z0-9_]*\): [0-9]* mismatches$/\1/p' "$BUILD_DIR/neg_basis_wrong_program.log" | sort | xargs)"
+            got="$(rd_failing_cases "$BUILD_DIR/neg_basis_wrong_program.log")"
             if [[ "$got" != "A_a05" ]]; then
                 echo "error: negative N6 failing cases [$got] != predicted [A_a05]" >&2; status=1
             elif ! basis_cfg_ok "$NB" "$BUILD_DIR/neg_basis_wrong_program.log"; then
@@ -279,7 +260,7 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
     sed 's/sky130_fd_sc_hd__nand2_1/sky130_fd_sc_hd__nor2_1/g' "$NETLIST" >"$BUILD_DIR/corrupt.synth.v"
     if cmp -s "$NETLIST" "$BUILD_DIR/corrupt.synth.v"; then
         echo "error: negative N2 could not corrupt the netlist copy" >&2; status=1
-    elif build "$BUILD_DIR/corrupt.synth.v" "$BUILD_DIR/corrupt.vvp"; then
+    elif build "$TB_NAME" "$BUILD_DIR/corrupt.synth.v" "$BUILD_DIR/corrupt.vvp" "$BUILD_DIR/corrupt_build.log"; then
         n2_func=0; n2_bad=0
         for entry in "comb:top_io" "reg:top_reg"; do
             dname="${entry%%:*}"; stem="${entry#*:}"
@@ -301,7 +282,7 @@ if [[ "$NEGATIVE" -eq 1 ]]; then
             echo "negative N2 OK: corrupted netlist rejected by a completed functional FAIL ($n2_func/2 fixtures)"
         fi
     else
-        status=1
+        echo "error: negative N2: compile of the corrupted netlist copy failed (see $BUILD_DIR/corrupt_build.log)" >&2; status=1
     fi
 fi
 
