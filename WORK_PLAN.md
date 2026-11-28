@@ -8,7 +8,7 @@ The body below is a snapshot of GitHub label state as of the last merged docs-ma
 <!-- Maintained automatically by the Guide triage agent. Manual edits are fine but may be overwritten. -->
 
 <!-- guide:plan-body:start -->
-_Generated: 2026-11-28T08:00:29Z (snapshot; compare against live labels)_
+_Generated: 2026-11-28T10:30:00Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
 Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — a human merge decision, or the prerequisite shown, is missing.
@@ -32,7 +32,7 @@ _None._
 
 Human-approved issues (`loom:issue`) ready for implementation — excluding held (`loom:blocked`/`loom:operator`/`loom:frozen`), `loom:building`, and issues with an open linked PR (native admission `OPEN_PR`; listed under Issues with Open PRs).
 
-_None._
+- **#399**: Simplify flow/generated_tile_replay.sh after #260: retire the 12 callback adapters, fold route-suite setup, and share rtl_compile/gen_compile
 
 ## Issues with Open PRs (Not Dispatchable)
 
@@ -81,7 +81,7 @@ _None._
 | Operator merge-risk holds | 1 |
 | Very important | 0 |
 | Important | 2 |
-| Ready (`loom:issue`, net of holds/building/open-linked-PRs) | 0 |
+| Ready (`loom:issue`, net of holds/building/open-linked-PRs) | 1 |
 | In Progress (`loom:building`) | 0 |
 | Held, no other bucket | 2 |
 | PRs awaiting review | 0 |
