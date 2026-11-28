@@ -92,14 +92,11 @@
 # loopbacks and pad overlay. No serial configuration loader, no timing claim,
 # no ratified-fabric claim (ADR-0004/0005 remain Proposed).
 #
-# Each per-case diagnostic below hands its own `*_run` / `*_cov_ok` / `*_cfg_ok`
-# / prediction / description functions to the shared drivers (diag_drive,
-# diag_mutants) BY NAME, so ShellCheck's reachability pass cannot see those call
-# sites and reports every one of them as unreachable. The indirection is the
-# point -- each diagnostic binds the one shared replay check of
-# flow/route_diag_helpers.sh to its own directory and images -- so SC2317 is
-# a false positive for this file.
-# shellcheck disable=SC2317
+# The shared drivers below call the replay checks of
+# flow/route_diag_helpers.sh directly. The only helpers still handed over BY
+# NAME are the per-suite mutant predictions of steps 6-8 (rdm_want, crm_expect,
+# orm_want): ShellCheck's reachability pass cannot see those three call sites,
+# so each carries its own SC2317 annotation at its definition.
 set -uo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -166,18 +163,23 @@ PYEOF
 # time). This is a simulation convention, NOT a timing model or claim.
 TS="$OUT/timescale_1ps.v"
 printf '`timescale 1ps/1ps\n' > "$TS"
-gen_compile() {  # $1 = LOGIC4.v to use, $2 = output vvp, [$3 = bench, $4 = lut4_ff_bel.v]
+# gen_compile <LOGIC4.v> <out.vvp> [bench] [lut4_ff_bel.v] [switch_matrix.v]:
+# the generated tile, each generated file behind the 1ps unit.
+gen_compile() {
     iverilog -g2012 -Wall -DGEN_TILE -I "$REPO/sim" -o "$2" \
         "$TS" "$RUN/Fabric/models_pack.v" "$TS" "${4:-$T/lut4_ff_bel.v}" \
-        "$TS" "$T/LOGIC4_ConfigMem.v" "$TS" "$T/LOGIC4_switch_matrix.v" \
+        "$TS" "$T/LOGIC4_ConfigMem.v" "$TS" "${5:-$T/LOGIC4_switch_matrix.v}" \
         "$TS" "$1" "${3:-$TB}" >"$2.compile.log" 2>&1
+}
+# rtl_compile <out.vvp> [bench]: the repository composition with the same bench
+rtl_compile() {
+    iverilog -g2012 -Wall -I "$REPO/sim" -o "$1" "$REPO/design/rtl/lut4_slice.v" \
+        "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
+        "${2:-$TB}" >"$1.compile.log" 2>&1
 }
 GEN_VVP="$OUT/gen.vvp"; RTL_VVP="$OUT/rtl.vvp"
 gen_compile "$GEN_TILE_V" "$GEN_VVP" || { cat "$GEN_VVP.compile.log" >&2; die "compile of the generated tile bench failed"; }
-iverilog -g2012 -Wall -I "$REPO/sim" -o "$RTL_VVP" "$REPO/design/rtl/lut4_slice.v" \
-    "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
-    "$TB" >"$RTL_VVP.compile.log" 2>&1 \
-    || { cat "$RTL_VVP.compile.log" >&2; die "compile of the repository-composition bench failed"; }
+rtl_compile "$RTL_VVP" || { cat "$RTL_VVP.compile.log" >&2; die "compile of the repository-composition bench failed"; }
 echo "compiled: generated LOGIC4 (-DGEN_TILE) and design/rtl/logic_tile_routed.v benches"
 
 # ---- 3. fixture list ---------------------------------------------------------
@@ -217,7 +219,7 @@ run_one() {
 }
 summary() { grep -m1 -o '([0-9]* checks, [0-9]* failures[^)]*)' "$1"; }
 
-# ---- shared scaffolding for the per-case diagnostics (steps 5-8) -------------
+# ---- shared scaffolding for the per-case route diagnostics (steps 6-8) --------
 # Steps 6, 7 and 8 each drive a DIFFERENT coverage contract (64 = 4 BELs x 4 pins
 # x 4 edges; 20 = 16 enable + 4 shared reset; 112 = 4 edges x 4 tracks x 7
 # sources). Since #260 each suite's contract -- its coverage-line parser, its
@@ -225,51 +227,69 @@ summary() { grep -m1 -o '([0-9]* checks, [0-9]* failures[^)]*)' "$1"; }
 # flow/route_diag_helpers.sh, the one run / readback / coverage implementation
 # shared with flow/gate-sim-bitstream.sh and flow/gate_route_diag.sh, so the
 # generated and the gate-level replay can no longer judge the same diagnostic
-# log differently. The per-diagnostic `*_run` / `*_cov_ok` / `*_cfg_ok` below
-# are one-line adapters binding that implementation to this driver's case
-# directories, wiring manifests and images; diag_drive and diag_mutants (issue
-# #255) hold the two-composition and the mutant orchestration, which is this
-# driver's own.
+# log differently. diag_setup, diag_drive and diag_mutants (issues #255, #399)
+# take a suite by name and call that implementation directly; the setup, the
+# two-composition and the mutant orchestration are this driver's own. What
+# stays here is each suite's wording: its message label, and the noun its
+# readback lines are named by.
+declare -A DIAG_LABEL=([route]=route [ctrl]=control-route [outroute]=output-route)
+declare -A DIAG_NOUN=([route]="route case" [ctrl]="control case" [outroute]="output-route case")
 
-# diag_drive <prefix> <label> <count> <run-fn> <cov-fn> <cfg-fn>: run the
-# diagnostic on both compositions, require a terminal PASS + the coverage
+# diag_setup <suite> <dir> <generator> <generator-failure>: prepare route suite
+# <suite> (route | ctrl | outroute) in its case directory <dir>: the streams
+# from <generator>, the case and required-route counts against the suite's
+# RD_COUNT, and the suite's bench (RD_BENCH) compiled against both compositions
+# into $OUT/<suite>_{gen,rtl}.vvp. A missing bench, a failed generation, a wrong
+# count or a failed compile is fatal, exactly as the inlined copies were.
+diag_setup() {
+    local suite="$1" dir="$2" label="${DIAG_LABEL[$1]}" n="${RD_COUNT[$1]}" tb
+    local gen_vvp="$OUT/${suite}_gen.vvp" rtl_vvp="$OUT/${suite}_rtl.vvp"
+    tb="$REPO/sim/${RD_BENCH[$suite]}.v"
+    [[ -s "$tb" ]] || die "missing $tb"
+    python3 -I "$3" "$dir" --snapshot "$BS/fabric_spec.json" || die "$4"
+    [[ "$(wc -l < "$dir/cases.txt")" -eq "$n" && "$(wc -l < "$dir/required.txt")" -eq "$n" ]] \
+        || die "expected $n $label cases and $n required routes"
+    gen_compile "$GEN_TILE_V" "$gen_vvp" "$tb" \
+        || { cat "$gen_vvp.compile.log" >&2; die "compile of the generated-tile $label bench failed"; }
+    rtl_compile "$rtl_vvp" "$tb" \
+        || { cat "$rtl_vvp.compile.log" >&2; die "compile of the repository-composition $label bench failed"; }
+}
+
+# diag_drive <suite> <dir>: run route suite <suite> from its case directory
+# <dir> on both compositions, require a terminal PASS + the suite's coverage
 # contract + the readback on each, then require the two PASS summaries to agree.
-#   <prefix>  the compile step above wrote $OUT/<prefix>_{gen,rtl}.vvp; the logs
-#             are $OUT/<prefix>_{gen,rtl}.log. A prefix that does not match what
-#             was compiled is a hard error, never a silent pass.
-#   <label>   noun used in every message ("route", "control-route", ...)
-#   <count>   the diagnostic's required route count (64 / 20 / 112)
-#   <cov-fn>  <log> -> 0 iff that diagnostic's own coverage contract holds
-# Sets the global `status` on any failure, exactly as the inlined copies did.
+# diag_setup compiled $OUT/<suite>_{gen,rtl}.vvp; the logs are
+# $OUT/<suite>_{gen,rtl}.log. Sets the global `status` on any failure, exactly
+# as the inlined copies did.
 diag_drive() {
-    local prefix="$1" label="$2" count="$3" run_fn="$4" cov_fn="$5" cfg_fn="$6"
+    local suite="$1" dir="$2" label="${DIAG_LABEL[$1]}" count="${RD_COUNT[$1]}"
     local comp vvp_f log v ok=1 gsum rsum
     for comp in gen rtl; do
-        vvp_f="$OUT/${prefix}_${comp}.vvp"
+        vvp_f="$OUT/${suite}_${comp}.vvp"
         [[ -s "$vvp_f" ]] || die "diag_drive: no compiled bench at $vvp_f"
-        log="$OUT/${prefix}_${comp}.log"
-        v="$("$run_fn" "$vvp_f" "$log")"
-        if [[ "$v" != PASS ]] || ! "$cov_fn" "$log"; then
+        log="$OUT/${suite}_${comp}.log"
+        v="$(rd_run "$suite" "${RD_BENCH[$suite]}" "$MAP" "$dir" "$dir/cases.txt" "$dir/${RD_WIRE[$suite]}" "$log" vvp "$vvp_f")"
+        if [[ "$v" != PASS ]] || ! rd_cov_ok "$suite" "$dir" "$log"; then
             echo "  $label diagnostic [$comp]: FAIL (verdict $v or coverage differs from the required route set; see $log)" >&2
             tail -n 8 "$log" >&2; ok=0; status=1; continue
         fi
-        "$cfg_fn" "$log" || { echo "  $label diagnostic [$comp]: readback mismatch" >&2; ok=0; status=1; }
+        rd_cfg_ok "${DIAG_NOUN[$suite]}" "$dir" "$dir/cases.txt" "$log" \
+            || { echo "  $label diagnostic [$comp]: readback mismatch" >&2; ok=0; status=1; }
     done
     [[ "$ok" -eq 1 ]] || return 0
-    gsum="$(grep -m1 '^PASS' "$OUT/${prefix}_gen.log" | sed 's/^PASS: [^ ]* //')"
-    rsum="$(grep -m1 '^PASS' "$OUT/${prefix}_rtl.log" | sed 's/^PASS: [^ ]* //')"
+    gsum="$(grep -m1 '^PASS' "$OUT/${suite}_gen.log" | sed 's/^PASS: [^ ]* //')"
+    rsum="$(grep -m1 '^PASS' "$OUT/${suite}_rtl.log" | sed 's/^PASS: [^ ]* //')"
     if [[ "$gsum" != "$rsum" ]]; then
         echo "  $label diagnostic: compositions disagree (generated $gsum vs repository $rsum)" >&2; status=1
         return 0
     fi
-    grep -m1 "^COVERAGE: $count/$count" "$OUT/${prefix}_gen.log" | sed 's/^/  generated: /'
-    grep -m1 "^COVERAGE: $count/$count" "$OUT/${prefix}_rtl.log" | sed 's/^/  repository: /'
-    echo "  generated: $(grep -m1 '^GEN_TILE:' "$OUT/${prefix}_gen.log")"
+    grep -m1 "^COVERAGE: $count/$count" "$OUT/${suite}_gen.log" | sed 's/^/  generated: /'
+    grep -m1 "^COVERAGE: $count/$count" "$OUT/${suite}_rtl.log" | sed 's/^/  repository: /'
+    echo "  generated: $(grep -m1 '^GEN_TILE:' "$OUT/${suite}_gen.log")"
     echo "  $label diagnostic: PASS on both $gsum; $count/$count routes, readback == python decode for all $count streams on both"
 }
 
-# diag_mutants <prefix> <label> <mut-prefix> <tb> <id-prefix> <shown-total> \
-#              <run-fn> <cov-fn> <cfg-fn> <want-fn> <desc-fn> <mutant>...
+# diag_mutants <suite> <dir> <mut-prefix> <id-prefix> <shown-total> <want-fn> <desc-array> <mutant>...
 # Every listed mutant must be a one-line mutation of the committed switch matrix,
 # must compile, must give a COMPLETED functional FAIL on exactly the predicted
 # cases, and must leave coverage and readback intact. `status` is set unless all
@@ -280,23 +300,21 @@ diag_drive() {
 #   <shown-total>  when non-empty the caught line renders "(<n>/<total>): <ids>";
 #                  step 6 predates that rendering and passes "" so its recorded
 #                  evidence (sim/generated_tile_replay.txt) stays exact
-#   <want-fn> <mutant> -> the predicted failing case ids, space- or newline-
+#   <want-fn>      <mutant> -> the predicted failing case ids, space- or newline-
 #                  separated. A non-zero exit or an empty prediction is a
 #                  failure: a mutant the diagnostic cannot see proves nothing.
-#   <desc-fn> <mutant> -> the human description of the mutation
+#   <desc-array>   name of the associative array <mutant> -> mutation description
 diag_mutants() {
-    local prefix="$1" label="$2" mut_prefix="$3" tb="$4" id_prefix="$5" shown_total="$6"
-    local run_fn="$7" cov_fn="$8" cfg_fn="$9"; shift 9
-    local want_fn="$1" desc_fn="$2"; shift 2
+    local suite="$1" dir="$2" mut_prefix="$3" id_prefix="$4" shown_total="$5" want_fn="$6"
+    local label="${DIAG_LABEL[$1]}"
+    local -n desc="$7"; shift 7
     local m mvvp mlog mt crc v got want shown n=0
     for m in "$@"; do
-        mvvp="$OUT/${prefix}_mut_${m}.vvp"; mlog="$OUT/${prefix}_mut_${m}.log"
+        mvvp="$OUT/${suite}_mut_${m}.vvp"; mlog="$OUT/${suite}_mut_${m}.log"
         mt="$OUT/${mut_prefix}${m}.v"; crc=0
-        [[ -s "$mt" && "$(diff <(cat "$T/LOGIC4_switch_matrix.v") "$mt" | grep -c '^>')" -eq 1 ]] \
+        [[ -s "$mt" && "$(diff "$T/LOGIC4_switch_matrix.v" "$mt" | grep -c '^>')" -eq 1 ]] \
             || { echo "$label mutant '$m': scratch matrix is not a one-line mutation" >&2; status=1; continue; }
-        iverilog -g2012 -Wall -DGEN_TILE -I "$REPO/sim" -o "$mvvp" \
-            "$TS" "$RUN/Fabric/models_pack.v" "$TS" "$T/lut4_ff_bel.v" "$TS" "$T/LOGIC4_ConfigMem.v" \
-            "$TS" "$mt" "$TS" "$GEN_TILE_V" "$tb" >"$mvvp.compile.log" 2>&1 || crc=$?
+        gen_compile "$GEN_TILE_V" "$mvvp" "$REPO/sim/${RD_BENCH[$suite]}.v" "" "$mt" || crc=$?
         if [[ "$crc" -ne 0 ]]; then
             cat "$mvvp.compile.log" >&2
             echo "$label mutant '$m': FAIL (did not compile; a mutation must compile and fail functionally)" >&2
@@ -305,23 +323,45 @@ diag_mutants() {
         want="$("$want_fn" "$m")" || { echo "$label mutant '$m': prediction failed" >&2; status=1; continue; }
         want="$(echo "$want" | tr ' ' '\n' | sort | xargs)"
         [[ -n "$want" ]] || { echo "$label mutant '$m': empty prediction (the mutant would be invisible to the diagnostic)" >&2; status=1; continue; }
-        v="$("$run_fn" "$mvvp" "$mlog")"
+        v="$(rd_run "$suite" "${RD_BENCH[$suite]}" "$MAP" "$dir" "$dir/cases.txt" "$dir/${RD_WIRE[$suite]}" "$mlog" vvp "$mvvp")"
         if [[ "$v" != FUNC_FAIL ]]; then
-            echo "$label mutant '$m' ($("$desc_fn" "$m")): NOT caught (verdict $v; a timeout, simulator error or missing verdict never counts; see $mlog)" >&2
+            echo "$label mutant '$m' (${desc[$m]}): NOT caught (verdict $v; a timeout, simulator error or missing verdict never counts; see $mlog)" >&2
             status=1; continue
         fi
         got="$(sed -n "s/^  case \(${id_prefix}[A-Z0-9_]*\): [0-9]* mismatches\$/\1/p" "$mlog" | sort | xargs)"
         if [[ "$got" != "$want" ]]; then
-            echo "$label mutant '$m' ($("$desc_fn" "$m")): failing cases [$got] != predicted [$want]" >&2
+            echo "$label mutant '$m' (${desc[$m]}): failing cases [$got] != predicted [$want]" >&2
             status=1; continue
         fi
-        "$cov_fn" "$mlog" && "$cfg_fn" "$mlog" || { echo "$label mutant '$m': coverage/readback not intact" >&2; status=1; continue; }
+        rd_cov_ok "$suite" "$dir" "$mlog" && rd_cfg_ok "${DIAG_NOUN[$suite]}" "$dir" "$dir/cases.txt" "$mlog" \
+            || { echo "$label mutant '$m': coverage/readback not intact" >&2; status=1; continue; }
         shown="($got)"
         [[ -z "$shown_total" ]] || shown="($(echo "$got" | wc -w)/$shown_total): $got"
         n=$((n + 1))
-        echo "$label mutant '$m' ($("$desc_fn" "$m")) caught: compiled; $(grep -m1 '^FAIL' "$mlog" | sed 's/^FAIL: //'); failing cases == predicted $shown; ConfigBits == decoded on all"
+        echo "$label mutant '$m' (${desc[$m]}) caught: compiled; $(grep -m1 '^FAIL' "$mlog" | sed 's/^FAIL: //'); failing cases == predicted $shown; ConfigBits == decoded on all"
     done
     [[ "$n" -eq "$#" ]] || status=1
+}
+
+# matrix_mutate <failure message>: build the scratch LOGIC4_switch_matrix.v
+# mutants of steps 6-8. The Python body on stdin sees `sm` (the committed
+# matrix), `out` (the build dir) and the one shared `swap` below, so each step
+# keeps only its own mutations.
+matrix_mutate() {
+    { cat <<'PYEOF'
+import re, sys
+sm, out = open(sys.argv[1]).read(), sys.argv[2]
+def swap(sink, i, j, directional=False):   # exchange the sources at mux positions i, j of one sink (position 0 = leftmost)
+    m = re.findall(r"^assign %s_input = \{([^}]*)\};$" % sink, sm, re.M)
+    assert len(m) == 1, sink
+    if directional:   # a 4-input directional mux is committed in {W,S,E,N} order of its own edge index
+        assert m[0] == "W1END%s,S1END%s,E1END%s,N1END%s" % ((sink[-1],) * 4), m[0]
+    mem = m[0].split(",")[::-1]
+    mem[i], mem[j] = mem[j], mem[i]
+    return sm.replace("assign %s_input = {%s};" % (sink, m[0]), "assign %s_input = {%s};" % (sink, ",".join(mem[::-1])))
+PYEOF
+      cat
+    } | python3 -I - "$T/LOGIC4_switch_matrix.v" "$OUT" || die "$1"
 }
 
 # ---- 3a. registered-BEL fixture metadata (issue #156) ------------------------
@@ -432,9 +472,7 @@ python3 -I "$REPO/flow/lut_basis.py" "$LB" --snapshot "$BS/fabric_spec.json" || 
 LB_GEN="$OUT/basis_gen.vvp"; LB_RTL="$OUT/basis_rtl.vvp"
 gen_compile "$GEN_TILE_V" "$LB_GEN" "$LB_TB" \
     || { cat "$LB_GEN.compile.log" >&2; die "compile of the generated-tile basis bench failed"; }
-iverilog -g2012 -Wall -I "$REPO/sim" -o "$LB_RTL" "$REPO/design/rtl/lut4_slice.v" \
-    "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
-    "$LB_TB" >"$LB_RTL.compile.log" 2>&1 \
+rtl_compile "$LB_RTL" "$LB_TB" \
     || { cat "$LB_RTL.compile.log" >&2; die "compile of the repository-composition basis bench failed"; }
 # basis_run <vvp> <log>: one bounded run of all 73 cases; prints the verdict
 basis_run() { rd_run basis "$LB_NAME" "$MAP" "$LB" "$LB/cases.txt" "$LB/basis.wiring" "$2" vvp "$1"; }
@@ -532,42 +570,19 @@ done
 # programming. Not a component select sweep (tb_switch_matrix_equiv.v drives cfg
 # directly) and not LUT address coverage (step 5 uses the S edge only).
 echo "=== LUT-input route diagnostic (issue #176): 4 BELs x 4 pins x 4 edges through the integrated tile ==="
-RD="$OUT/route_diag"; RD_TB="$REPO/sim/tb_route_diag.v"; RD_NAME=tb_route_diag
-[[ -s "$RD_TB" ]] || die "missing $RD_TB"
-python3 -I "$REPO/flow/route_diag.py" "$RD" --snapshot "$BS/fabric_spec.json" || die "route diagnostic stream generation failed"
-[[ "$(wc -l < "$RD/cases.txt")" -eq 64 && "$(wc -l < "$RD/required.txt")" -eq 64 ]] || die "expected 64 route cases and 64 required routes"
-RD_GEN="$OUT/route_gen.vvp"; RD_RTL="$OUT/route_rtl.vvp"
-gen_compile "$GEN_TILE_V" "$RD_GEN" "$RD_TB" \
-    || { cat "$RD_GEN.compile.log" >&2; die "compile of the generated-tile route bench failed"; }
-iverilog -g2012 -Wall -I "$REPO/sim" -o "$RD_RTL" "$REPO/design/rtl/lut4_slice.v" \
-    "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
-    "$RD_TB" >"$RD_RTL.compile.log" 2>&1 \
-    || { cat "$RD_RTL.compile.log" >&2; die "compile of the repository-composition route bench failed"; }
-# <vvp> <log>; prints the verdict
-route_run() { rd_run route "$RD_NAME" "$MAP" "$RD" "$RD/cases.txt" "$RD/route.wiring" "$2" vvp "$1"; }
-# <log>: exactly one ConfigBits/cfg readback per case == python decode of the stream
-route_cfg_ok() { rd_cfg_ok "route case" "$RD" "$RD/cases.txt" "$1"; }
-# <log>: the coverage report is the required route set, each route once, all 64 of them
-route_cov_ok() { rd_cov_ok route "$RD" "$1"; }
-diag_drive route route 64 route_run route_cov_ok route_cfg_ok
+RD="$OUT/route_diag"
+diag_setup route "$RD" "$REPO/flow/route_diag.py" "route diagnostic stream generation failed"
+diag_drive route "$RD"
 
 echo "--- scratch generated-matrix source-selection permutations vs the route diagnostic (each must give a completed functional FAIL on the predicted routes) ---"
-python3 -I - "$T/LOGIC4_switch_matrix.v" "$OUT" <<'PYEOF' || die "could not build route mutants"
-import sys
-sm, out = open(sys.argv[1]).read(), sys.argv[2]
-def swap(sink, i, j):   # exchange two sources of one sink mux (mux input list is {W,S,E,N})
-    pat = "assign %s_input = {W1END%s,S1END%s,E1END%s,N1END%s};" % ((sink,) + (sink[-1],) * 4)
-    assert sm.count(pat) == 1, pat
-    order = ["N", "E", "S", "W"]
-    order[i], order[j] = order[j], order[i]
-    new = "assign %s_input = {%s};" % (sink, ",".join(f"{order[k]}1END{sink[-1]}" for k in (3, 2, 1, 0)))
-    return sm.replace(pat, new)
-open(f"{out}/matrix_mut_C2_ES.v", "w").write(swap("LC_I2", 1, 2))
-open(f"{out}/matrix_mut_A0_NW.v", "w").write(swap("LA_I0", 0, 3))
-open(f"{out}/matrix_mut_D3_NE.v", "w").write(swap("LD_I3", 0, 1))
+matrix_mutate "could not build route mutants" <<'PYEOF'
+open(f"{out}/matrix_mut_C2_ES.v", "w").write(swap("LC_I2", 1, 2, directional=True))
+open(f"{out}/matrix_mut_A0_NW.v", "w").write(swap("LA_I0", 0, 3, directional=True))
+open(f"{out}/matrix_mut_D3_NE.v", "w").write(swap("LD_I3", 0, 1, directional=True))
 PYEOF
 # Predicted failing route cases, derived from the defect: the two exchanged sources of that one sink
 # on that one BEL, nothing else (every other sink, pin and BEL is untouched).
+# shellcheck disable=SC2034  # RDM_DESC is read by name (a nameref) through diag_mutants
 declare -A RDM_DESC=(
     [C2_ES]="BEL C pin I2: E and S sources exchanged in a scratch LOGIC4_switch_matrix.v"
     [A0_NW]="BEL A pin I0: N and W sources exchanged (the default select 0 moves to W)"
@@ -578,11 +593,9 @@ declare -A RDM_WANT=(
     [A0_NW]="R_A_I0_N R_A_I0_W"
     [D3_NE]="R_D_I3_E R_D_I3_N"
 )
+# shellcheck disable=SC2317  # reached by name only, through diag_mutants
 rdm_want() { echo "${RDM_WANT[$1]}"; }   # <mutant>: predicted failing route cases
-rdm_desc() { echo "${RDM_DESC[$1]}"; }
-diag_mutants route route matrix_mut_ "$RD_TB" R_ "" \
-    route_run route_cov_ok route_cfg_ok rdm_want rdm_desc \
-    C2_ES A0_NW D3_NE
+diag_mutants route "$RD" matrix_mut_ R_ "" rdm_want RDM_DESC C2_ES A0_NW D3_NE
 
 # ---- 7. control-jump directional route diagnostic (issue #181) ---------------
 # Diagnostic assembler-generated streams, NOT mapper output: proves that every
@@ -592,43 +605,19 @@ diag_mutants route route matrix_mut_ "$RD_TB" R_ "" \
 # the applied stimulus (sim/tb_ctrl_route.v). Not the LUT-input routes of step 6,
 # not a component select sweep, no timing or ratified-fabric claim.
 echo "=== control-jump route diagnostic (issue #181): 4 enables x 4 edges + shared reset x 4 edges through the integrated tile ==="
-CR="$OUT/ctrl_route"; CR_TB="$REPO/sim/tb_ctrl_route.v"; CR_NAME=tb_ctrl_route
-[[ -s "$CR_TB" ]] || die "missing $CR_TB"
-python3 -I "$REPO/flow/ctrl_route.py" "$CR" --snapshot "$BS/fabric_spec.json" || die "control-route stream generation failed"
-[[ "$(wc -l < "$CR/cases.txt")" -eq 20 && "$(wc -l < "$CR/required.txt")" -eq 20 ]] || die "expected 20 control-route cases and 20 required routes"
-CR_GEN="$OUT/ctrl_gen.vvp"; CR_RTL="$OUT/ctrl_rtl.vvp"
-gen_compile "$GEN_TILE_V" "$CR_GEN" "$CR_TB" \
-    || { cat "$CR_GEN.compile.log" >&2; die "compile of the generated-tile control-route bench failed"; }
-iverilog -g2012 -Wall -I "$REPO/sim" -o "$CR_RTL" "$REPO/design/rtl/lut4_slice.v" \
-    "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
-    "$CR_TB" >"$CR_RTL.compile.log" 2>&1 \
-    || { cat "$CR_RTL.compile.log" >&2; die "compile of the repository-composition control-route bench failed"; }
-# <vvp> <log>; prints the verdict
-ctrl_run() { rd_run ctrl "$CR_NAME" "$MAP" "$CR" "$CR/cases.txt" "$CR/ctrl.wiring" "$2" vvp "$1"; }
-# <log>: exactly one ConfigBits/cfg readback per case == python decode of the stream
-ctrl_cfg_ok() { rd_cfg_ok "control case" "$CR" "$CR/cases.txt" "$1"; }
-# <log>: the coverage report is the required route set, each route once, all 20 of them
-ctrl_cov_ok() { rd_cov_ok ctrl "$CR" "$1"; }
-diag_drive ctrl control-route 20 ctrl_run ctrl_cov_ok ctrl_cfg_ok
+CR="$OUT/ctrl_route"
+diag_setup ctrl "$CR" "$REPO/flow/ctrl_route.py" "control-route stream generation failed"
+diag_drive ctrl "$CR"
 
 echo "--- scratch generated-matrix control-source permutations and enable-destination aliases vs the control-route diagnostic (each must give a completed functional FAIL on the predicted cases) ---"
-python3 -I - "$T/LOGIC4_switch_matrix.v" "$OUT" <<'PYEOF' || die "could not build control-route mutants"
-import sys
-sm, out = open(sys.argv[1]).read(), sys.argv[2]
-def swap(sink, i, j):   # exchange two sources of one control-jump mux (mux input list is {W,S,E,N})
-    n = sink[-1]
-    pat = "assign %s_input = {W1END%s,S1END%s,E1END%s,N1END%s};" % ((sink,) + (n,) * 4)
-    assert sm.count(pat) == 1, pat
-    order = ["N", "E", "S", "W"]
-    order[i], order[j] = order[j], order[i]
-    return sm.replace(pat, "assign %s_input = {%s};" % (sink, ",".join(f"{order[k]}1END{n}" for k in (3, 2, 1, 0))))
+matrix_mutate "could not build control-route mutants" <<'PYEOF'
 def alias(dst, src):    # the destination BEL's enable takes another BEL's enable jump wire
     pat = f"assign {dst} = {src[0]};"
     assert sm.count(pat) == 1, pat
     return sm.replace(pat, f"assign {dst} = {src[1]};")
-open(f"{out}/matrix_mut_ctrl_EN1_ES.v", "w").write(swap("J_EN_BEG1", 1, 2))
-open(f"{out}/matrix_mut_ctrl_EN3_NW.v", "w").write(swap("J_EN_BEG3", 0, 3))
-open(f"{out}/matrix_mut_ctrl_SR_ES.v", "w").write(swap("J_SR_BEG0", 1, 2))
+open(f"{out}/matrix_mut_ctrl_EN1_ES.v", "w").write(swap("J_EN_BEG1", 1, 2, directional=True))
+open(f"{out}/matrix_mut_ctrl_EN3_NW.v", "w").write(swap("J_EN_BEG3", 0, 3, directional=True))
+open(f"{out}/matrix_mut_ctrl_SR_ES.v", "w").write(swap("J_SR_BEG0", 1, 2, directional=True))
 open(f"{out}/matrix_mut_ctrl_ALIAS_BA.v", "w").write(alias("LB_EN", ("J_EN_END1", "J_EN_END0")))
 open(f"{out}/matrix_mut_ctrl_ALIAS_DC.v", "w").write(alias("LD_EN", ("J_EN_END3", "J_EN_END2")))
 PYEOF
@@ -639,6 +628,7 @@ PYEOF
 #   ALIAS_BA        : BEL B's enable becomes BEL A's: every case where enable A and enable B differ at some
 #                     phase = the four enable-A cases, the four enable-B cases and the four reset cases
 #   ALIAS_DC        : likewise for BEL D taking BEL C's enable: enable-C, enable-D and reset cases
+# shellcheck disable=SC2034  # CRM_DESC is read by name (a nameref) through diag_mutants
 declare -A CRM_DESC=(
     [EN1_ES]="BEL B enable: E and S sources exchanged in a scratch LOGIC4_switch_matrix.v"
     [EN3_NW]="BEL D enable: N and W sources exchanged"
@@ -646,6 +636,7 @@ declare -A CRM_DESC=(
     [ALIAS_BA]="enable-destination alias: LB_EN driven by J_EN_END0 (BEL A's enable)"
     [ALIAS_DC]="enable-destination alias: LD_EN driven by J_EN_END2 (BEL C's enable)"
 )
+# shellcheck disable=SC2317  # reached by name only, through diag_mutants
 crm_expect() {
     case "$1" in
         EN1_ES) echo C_EN_B_E C_EN_B_S ;;
@@ -655,10 +646,7 @@ crm_expect() {
         ALIAS_DC) echo C_EN_C_N C_EN_C_E C_EN_C_S C_EN_C_W C_EN_D_N C_EN_D_E C_EN_D_S C_EN_D_W C_SR_N C_SR_E C_SR_S C_SR_W ;;
     esac | tr ' ' '\n' | sort | xargs
 }
-crm_desc() { echo "${CRM_DESC[$1]}"; }
-diag_mutants ctrl control-route matrix_mut_ctrl_ "$CR_TB" C_ 20 \
-    ctrl_run ctrl_cov_ok ctrl_cfg_ok crm_expect crm_desc \
-    EN1_ES EN3_NW SR_ES ALIAS_BA ALIAS_DC
+diag_mutants ctrl "$CR" matrix_mut_ctrl_ C_ 20 crm_expect CRM_DESC EN1_ES EN3_NW SR_ES ALIAS_BA ALIAS_DC
 
 # ---- 8. boundary output-track source diagnostic (issue #180) ----------------
 # Diagnostic assembler-generated streams, NOT mapper output: proves that every
@@ -668,36 +656,12 @@ diag_mutants ctrl control-route matrix_mut_ctrl_ "$CR_TB" C_ 20 \
 # step 5, not the routes into the BELs of steps 6/7, not a component select
 # sweep; no inter-tile, timing or ratified-fabric claim.
 echo "=== boundary output-route diagnostic (issue #180): 16 output tracks x 7 sources through the integrated tile ==="
-OR="$OUT/output_route"; OR_TB="$REPO/sim/tb_output_route.v"; OR_NAME=tb_output_route
-[[ -s "$OR_TB" ]] || die "missing $OR_TB"
-python3 -I "$REPO/flow/output_route.py" "$OR" --snapshot "$BS/fabric_spec.json" || die "output-route stream generation failed"
-[[ "$(wc -l < "$OR/cases.txt")" -eq 112 && "$(wc -l < "$OR/required.txt")" -eq 112 ]] || die "expected 112 output-route cases and 112 required routes"
-OR_GEN="$OUT/outroute_gen.vvp"; OR_RTL="$OUT/outroute_rtl.vvp"
-gen_compile "$GEN_TILE_V" "$OR_GEN" "$OR_TB" \
-    || { cat "$OR_GEN.compile.log" >&2; die "compile of the generated-tile output-route bench failed"; }
-iverilog -g2012 -Wall -I "$REPO/sim" -o "$OR_RTL" "$REPO/design/rtl/lut4_slice.v" \
-    "$REPO/design/rtl/logic_tile_switch_matrix.v" "$REPO/design/rtl/logic_tile_routed.v" \
-    "$OR_TB" >"$OR_RTL.compile.log" 2>&1 \
-    || { cat "$OR_RTL.compile.log" >&2; die "compile of the repository-composition output-route bench failed"; }
-# <vvp> <log>; prints the verdict
-outroute_run() { rd_run outroute "$OR_NAME" "$MAP" "$OR" "$OR/cases.txt" "$OR/out.wiring" "$2" vvp "$1"; }
-# <log>: exactly one ConfigBits/cfg readback per case == python decode of the stream
-outroute_cfg_ok() { rd_cfg_ok "output-route case" "$OR" "$OR/cases.txt" "$1"; }
-# <log>: the coverage report is the required route set, each route once, all 112 of them
-outroute_cov_ok() { rd_cov_ok outroute "$OR" "$1"; }
-diag_drive outroute output-route 112 outroute_run outroute_cov_ok outroute_cfg_ok
+OR="$OUT/output_route"
+diag_setup outroute "$OR" "$REPO/flow/output_route.py" "output-route stream generation failed"
+diag_drive outroute "$OR"
 
 echo "--- scratch generated-matrix output-source permutations and output-sink select aliases vs the output-route diagnostic (each must give a completed functional FAIL on the predicted cases) ---"
-python3 -I - "$T/LOGIC4_switch_matrix.v" "$OUT" <<'PYEOF' || die "could not build output-route mutants"
-import re, sys
-sm, out = open(sys.argv[1]).read(), sys.argv[2]
-def swap(sink, i, j):   # exchange the sources at mux positions i, j of one output-track mux (position 0 = rightmost)
-    m = re.findall(r"^assign %s_input = \{([^}]*)\};$" % sink, sm, re.M)
-    assert len(m) == 1, sink
-    mem = m[0].split(",")[::-1]
-    mem[i], mem[j] = mem[j], mem[i]
-    new = "assign %s_input = {%s};" % (sink, ",".join(mem[::-1]))
-    return sm.replace("assign %s_input = {%s};" % (sink, m[0]), new)
+matrix_mutate "could not build output-route mutants" <<'PYEOF'
 def alias(sink, other):  # `sink` selects with the select field of `other`
     pat = re.compile(r"^(assign #80 %s = %s_input\[)(ConfigBits\[[0-9:]+\])(\];)$" % (sink, sink), re.M)
     pat_o = re.compile(r"^assign #80 %s = %s_input\[(ConfigBits\[[0-9:]+\])\];$" % (other, other), re.M)
@@ -711,6 +675,7 @@ open(f"{out}/matrix_mut_out_ALIAS_N3E3.v", "w").write(alias("N1BEG3", "E1BEG3"))
 PYEOF
 # Predicted failing cases: derived by flow/output_route.py predict from the case list, the stimulus
 # set and the source order of the committed switch-matrix .list (never from the generated RTL or the DUT).
+# shellcheck disable=SC2034  # ORM_DESC is read by name (a nameref) through diag_mutants
 declare -A ORM_DESC=(
     [N0_AB]="output N1BEG0: BEL A and BEL B sources exchanged in a scratch LOGIC4_switch_matrix.v"
     [W3_SD]="output W1BEG3: S and BEL D sources exchanged"
@@ -723,14 +688,12 @@ declare -A ORM_ARGS=(
     [ALIAS_S2S1]="alias S1BEG2 S1BEG1"
     [ALIAS_N3E3]="alias N1BEG3 E1BEG3"
 )
+# shellcheck disable=SC2317  # reached by name only, through diag_mutants
 orm_want() {   # <mutant>: flow/output_route.py's independent predicted failing set
     # shellcheck disable=SC2086
     python3 -I "$REPO/flow/output_route.py" predict "$OR" ${ORM_ARGS[$1]}
 }
-orm_desc() { echo "${ORM_DESC[$1]}"; }
-diag_mutants outroute output-route matrix_mut_out_ "$OR_TB" O_ 112 \
-    outroute_run outroute_cov_ok outroute_cfg_ok orm_want orm_desc \
-    N0_AB W3_SD ALIAS_S2S1 ALIAS_N3E3
+diag_mutants outroute "$OR" matrix_mut_out_ O_ 112 orm_want ORM_DESC N0_AB W3_SD ALIAS_S2S1 ALIAS_N3E3
 
 # ---- 9. tile clock and frame forwarding diagnostic (issue #188) ---------------
 # Generated-tile-only companion bench (sim/tb_boundary_fwd.v): the repository
