@@ -351,7 +351,7 @@ matrix_mutate() {
     { cat <<'PYEOF'
 import re, sys
 sm, out = open(sys.argv[1]).read(), sys.argv[2]
-def swap(sink, i, j, directional=False):   # exchange the sources at mux positions i, j of one sink (position 0 = leftmost)
+def swap(sink, i, j, directional=False):   # exchange the sources at mux positions i, j of one sink (position 0 = rightmost)
     m = re.findall(r"^assign %s_input = \{([^}]*)\};$" % sink, sm, re.M)
     assert len(m) == 1, sink
     if directional:   # a 4-input directional mux is committed in {W,S,E,N} order of its own edge index
