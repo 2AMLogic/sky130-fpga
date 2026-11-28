@@ -1,13 +1,19 @@
 # Work Plan
 
-This roadmap is generated from the current GitHub label state by the Loom Guide role.
+Backlog snapshot from current GitHub label state, maintained by the Guide role.
+Direction lives in the hand-written roadmap: [`ROADMAP.md`](ROADMAP.md).
+
+The body below is a snapshot of GitHub label state as of the last merged docs-maintenance PR — it may lag live labels until the next one merges. The `_Generated:` stamp at the top of the generated region dates the snapshot; `git log -1 -- WORK_PLAN.md` finds the merge that wrote it.
+
+<!-- Maintained automatically by the Guide triage agent. Manual edits are fine but may be overwritten. -->
 
 <!-- guide:plan-body:start -->
+_Generated: 2026-11-28T08:00:29Z (snapshot; compare against live labels)_
 ## Operator Attention: Merge-Risk-Hold Pileup
 
-Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — only a human merge decision is missing.
+Judge-approved PRs under a hold (`loom:blocked` or `loom:operator`) — a human merge decision, or the prerequisite shown, is missing.
 
-_None._
+- **#397**: chore: resync installed Loom surfaces *(held: champion merge-risk hold)*
 
 ## Very Important
 
@@ -24,7 +30,13 @@ _None._
 
 ## Ready
 
-Human-approved issues ready for implementation (`loom:issue`).
+Human-approved issues (`loom:issue`) ready for implementation — excluding held (`loom:blocked`/`loom:operator`/`loom:frozen`), `loom:building`, and issues with an open linked PR (native admission `OPEN_PR`; listed under Issues with Open PRs).
+
+_None._
+
+## Issues with Open PRs (Not Dispatchable)
+
+`loom:issue` issues an open linked PR already holds — native admission would refuse them (`OPEN_PR`); listed with the PR and its stage, not counted above.
 
 _None._
 
@@ -42,9 +54,9 @@ _None._
 
 ## Approved (Awaiting Merge)
 
-PRs that passed review and are queued for Champion auto-merge (`loom:pr`).
+PRs that passed review (`loom:pr`); unmarked PRs are queued for Champion auto-merge, PRs marked `*(held …)*` are not (the hold decides).
 
-_None._
+- **#397**: chore: resync installed Loom surfaces *(held: champion merge-risk hold)*
 
 ## Proposed
 
@@ -56,7 +68,7 @@ Issues carrying `loom:curated`.
 ## Proposed (Architect / Hermit)
 
 - **#254**: Remove the stranded def-unescape CLI mode: superseded by def-connections since klt 0.6.0, zero callers *(hermit)* *(held)*
-- **#393**: Remove flow/sdf_sanitize_names.py: unwired workaround superseded by klt v0.8.0 *(hermit)* *(operator)*
+- **#393**: Remove flow/sdf_sanitize_names.py: unwired workaround superseded by klt v0.8.0 *(hermit)* *(held)*
 
 ## Epics
 
@@ -66,13 +78,14 @@ _None._
 
 | Bucket | Count |
 |------|-------|
-| Operator merge-risk holds | 0 |
+| Operator merge-risk holds | 1 |
 | Very important | 0 |
 | Important | 2 |
-| Ready (`loom:issue`) | 0 |
+| Ready (`loom:issue`, net of holds/building/open-linked-PRs) | 0 |
 | In Progress (`loom:building`) | 0 |
+| Held, no other bucket | 2 |
 | PRs awaiting review | 0 |
-| Approved PRs awaiting merge | 0 |
+| Approved PRs awaiting merge | 1 |
 | Curated | 2 |
 | Architect / Hermit proposals | 2 |
 | Active epics | 0 |
