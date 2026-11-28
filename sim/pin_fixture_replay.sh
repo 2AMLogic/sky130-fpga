@@ -76,13 +76,8 @@ while read -r stem oracle; do
             echo "pin-experiment [$oracle] $stem [$LABEL]: FAIL (infrastructure failure: rc=$rc, $why, see $log)" >&2
             tail -n 8 "$log" >&2; status=1; continue ;;
     esac
-    sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$log" | cut -d= -f2)"
-    py_cfg="$(python3 -I "$BS_TOOL" decode "$FIX_DIR/$stem.bin" --snapshot "$BS_DIR/fabric_spec.json")"
-    rec_cfg="$(tr -d '\n' < "$FIX_DIR/$stem.cfg")"
-    if [[ -z "$sim_cfg" || "$sim_cfg" != "$py_cfg" || "$sim_cfg" != "$rec_cfg" ]]; then
-        echo "pin-experiment [$oracle] $stem [$LABEL]: FAIL (cfg mismatch sim=$sim_cfg python=$py_cfg recorded=$rec_cfg)" >&2
-        status=1; continue
-    fi
+    gs_cfg_ok "pin-experiment [$oracle] $stem [$LABEL]" "$log" "$FIX_DIR/$stem.bin" "$FIX_DIR/$stem.cfg" \
+        "$BS_DIR/fabric_spec.json" || { status=1; continue; }
     pass=$((pass + 1))
     echo "pin-experiment [$oracle] $stem [$LABEL]: PASS ($(grep -m1 '^PASS' "$log" | sed 's/^PASS: //'); cfg: sim == python == recorded)"
 done <<< "$cases"

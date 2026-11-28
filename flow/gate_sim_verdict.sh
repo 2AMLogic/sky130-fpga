@@ -1,5 +1,7 @@
 # flow/gate_sim_verdict.sh -- sourced helper (issue #141): the ONE place that
-# classifies a gate-level testbench run for flow/gate-sim-bitstream.sh.
+# classifies a gate-level testbench run for flow/gate-sim-bitstream.sh, and
+# (issue #401, bottom of this file) the ONE loaded-cfg cross-check, corpus
+# index validation and gate-level bench compile of the replay drivers.
 #
 # gs_classify <rc> <log> <tb_name> <design>  prints exactly one of:
 #   PASS      vvp exit 0, exactly one terminal "PASS: <tb>[<design>]" line,
@@ -164,4 +166,94 @@ gs_configmem_is_setup_error() {
     [[ "$(gs_classify_configmem "$rc" "$log")" == INFRA ]] || return 1
     grep -q '^ERROR: configmem_fabulous_equiv setup:' "$log" || return 1
     ! grep -q -E '^(PASS|FAIL):' "$log"
+}
+
+# ---------------------------------------------------------------------------
+# Shared replay checks of the tb_logic_tile_bitstream drivers (issue #401):
+# sim/run.sh, flow/gate-sim-bitstream.sh (+ flow/gate_route_diag.sh),
+# sim/pin_fixture_replay.sh and flow/blinky.sh. Each carried its own copy of
+# the loaded-cfg cross-check, the corpus-index validation and the gate-level
+# bench compile, and the copies had drifted: a log without a CFG= line killed
+# five of them inside `grep | cut` under `set -euo pipefail` before their own
+# error branch, none rejected a duplicated CFG= line, and the gate-level ones
+# skipped the python decode. The functions below are the only implementations.
+
+# This file's directory: reaches flow/fasm_to_bitstream.py whatever the
+# caller names its repo root (REPO_ROOT, REPO, HERE).
+_GS_FLOW_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# gs_cfg_ok <label> <log> <bin> <cfg> <snapshot>
+#   <label>     names the fixture in the diagnostic
+#   <log>       simulator output holding the loader's "CFG=<hex>" readback
+#   <bin>       the frame stream that was loaded, decoded by
+#               flow/fasm_to_bitstream.py under <snapshot> (fabric_spec.json)
+#   <cfg>       the assembler's recorded cfg of the same stream
+# True (exit 0) iff <log> holds exactly one well-formed CFG= line whose value
+# equals both the python decode and the recorded cfg; then GS_SIM_CFG holds
+# that value. Otherwise prints "error: <label>: ..." on stderr and returns 1
+# -- including for a log with no CFG= line, which must reach the caller's
+# error branch instead of aborting it. The message never says "infrastructure
+# failure": sim/pin_fixture_negative.sh reads that phrase as a crash/timeout,
+# i.e. as not a rejection by the replay's checks.
+# shellcheck disable=SC2034  # GS_SIM_CFG is read by the scripts that source this file
+gs_cfg_ok() {
+    local label="$1" log="$2" bin="$3" cfg="$4" snapshot="$5" f n sim_cfg py_cfg rec_cfg
+    for f in "$log" "$bin" "$cfg" "$snapshot"; do
+        [[ -s "$f" ]] || { echo "error: $label: missing or empty input $f" >&2; return 1; }
+    done
+    n="$(grep -c -E '^CFG=[0-9a-f]+$' "$log" || true)"
+    if [[ "$n" -ne 1 ]]; then
+        echo "error: $label: expected exactly one CFG=<hex> readback in $log, found ${n:-0}" >&2; return 1
+    fi
+    sim_cfg="$(grep -m1 -E '^CFG=[0-9a-f]+$' "$log" | cut -d= -f2)"
+    py_cfg="$(python3 -I "$_GS_FLOW_DIR/fasm_to_bitstream.py" decode "$bin" --snapshot "$snapshot" 2>&1)" \
+        || { echo "error: $label: python decode of $bin failed: $py_cfg" >&2; return 1; }
+    rec_cfg="$(tr -d '\n' < "$cfg")"
+    if [[ "$sim_cfg" == "$py_cfg" && "$sim_cfg" == "$rec_cfg" ]]; then
+        GS_SIM_CFG="$sim_cfg"
+        return 0
+    fi
+    echo "error: $label: loaded cfg mismatch: sim=$sim_cfg python=$py_cfg recorded=$rec_cfg" >&2
+    return 1
+}
+
+# GS_RECOGNISED_ORACLES: the oracles a routability-corpus fixture may name
+# (matched as *" $oracle "*).
+GS_RECOGNISED_ORACLES=" comb reg quad4 casc2 fan4 casc_fan regcasc regbel "
+
+# gs_corpus_index_ok <index>: the routability-corpus index ("<stem> <oracle>"
+# per line, sim/bitstream/corpus/index.txt) exists and has at least one
+# non-blank line, so a blank index cannot pass as "0 fixtures simulated".
+gs_corpus_index_ok() {
+    local n
+    [[ -s "$1" ]] || { echo "error: corpus index missing or empty: $1" >&2; return 1; }
+    n="$(grep -c -E '[^[:space:]]' "$1" || true)"
+    [[ "$n" -gt 0 ]] || { echo "error: corpus index has no entries: $1" >&2; return 1; }
+}
+
+# gs_corpus_entry_ok <corpus_dir> <stem> <oracle> <extra>: one index line as
+# read by `read -r stem oracle extra` is well formed (no extra field, a
+# recognised oracle) and its .bin/.wiring/.cfg are present and non-empty.
+# Reports every defect of the line; returns 1 if any.
+gs_corpus_entry_ok() {
+    local dir="$1" stem="$2" oracle="$3" extra="$4" ext bad=0
+    if [[ -n "$extra" || -z "$oracle" || "$GS_RECOGNISED_ORACLES" != *" $oracle "* ]]; then
+        echo "error: [$stem] corpus index entry invalid or oracle '${oracle:-}' unrecognised" >&2
+        return 1
+    fi
+    for ext in bin wiring cfg; do
+        [[ -s "$dir/$stem.$ext" ]] || { echo "error: [$stem] missing corpus file $dir/$stem.$ext" >&2; bad=1; }
+    done
+    return "$bad"
+}
+
+# gs_gate_compile <bench> <netlist> <out.vvp> <log> <sim_dir> <cell_dir>: the
+# ONE gate-level bench compile behind `build` in flow/gate-sim-bitstream.sh
+# (bitstream, LUT-basis and corrupted-netlist images) and rd_compile in
+# flow/gate_route_diag.sh: <sim_dir>/<bench>.v as top, <netlist> in place of
+# the RTL, the sky130_fd_sc_hd behavioral models of <cell_dir>. Returns
+# iverilog's status and prints nothing -- output and diagnostics go to <log>;
+# the caller names the bench and the log in its own error.
+gs_gate_compile() {
+    iverilog -g2012 -s "$1" -I "$5" -o "$3" "$5/$1.v" "$2" "$6/primitives.v" "$6/sky130_fd_sc_hd.v" >"$4" 2>&1
 }

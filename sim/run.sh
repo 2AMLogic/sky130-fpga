@@ -204,20 +204,17 @@ else
             overall_status=1
             continue
         fi
-        if ! grep -q "^PASS: ${name}\[${dname}\]" "$log_file"; then
-            echo "error: ${name} [${dname}] did not report PASS (see $log_file)" >&2
+        v="$(gs_classify 0 "$log_file" "$name" "$dname")"
+        if [[ "$v" != PASS ]]; then
+            echo "error: ${name} [${dname}] did not report PASS (verdict $v; see $log_file)" >&2
             overall_status=1
         fi
         # three independent reads of the same stream must agree on the tile vector:
         # the simulation loader, the python decoder, and the assembler's own record.
-        sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$log_file" | cut -d= -f2)"
-        py_cfg="$(python3 "$BS_TOOL" decode "$BS_DIR/$stem.bin" --snapshot "$BS_DIR/fabric_spec.json")"
-        rec_cfg="$(tr -d '\n' < "$BS_DIR/$stem.cfg")"
-        if [[ -z "$sim_cfg" || "$sim_cfg" != "$py_cfg" || "$sim_cfg" != "$rec_cfg" ]]; then
-            echo "error: [${dname}] loaded cfg mismatch: sim=$sim_cfg python=$py_cfg recorded=$rec_cfg" >&2
-            overall_status=1
+        if gs_cfg_ok "[${dname}/${stem}]" "$log_file" "$BS_DIR/$stem.bin" "$BS_DIR/$stem.cfg" "$BS_DIR/fabric_spec.json"; then
+            echo "cfg cross-check [${dname}/${stem}]: simulation loader == python decoder == recorded cfg ($GS_SIM_CFG)"
         else
-            echo "cfg cross-check [${dname}/${stem}]: simulation loader == python decoder == recorded cfg ($sim_cfg)"
+            overall_status=1
         fi
         # the alias fixture carries one provably redundant select flip (issue #342):
         # it must be reported with its mux/bit/driver, included in the PASS line,
@@ -340,30 +337,31 @@ run_pyunit test_check_regbel_fixtures \
 python3 -I "$REPO_ROOT/flow/check_regbel_fixtures.py" "$REPO_ROOT" || overall_status=1
 if [[ -f "$out_bin" ]]; then
     n_corpus=0
-    while read -r stem oracle; do
-        [[ -z "$stem" ]] && continue
-        n_corpus=$((n_corpus + 1))
-        log_file="$BUILD_DIR/${name}_${stem}.log"
-        echo "=== running ${name} [${oracle}] corpus fixture ${stem} (with perturbation checks) ==="
-        if ! gs_run_bounded_tee "${name}[${oracle}] corpus $stem" "$log_file" \
-                vvp "$out_bin" +bin="$CORPUS_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
-                +wiring="$CORPUS_DIR/$stem.wiring" +design="$oracle" +mutate; then
-            echo "error: simulation run failed for ${stem}" >&2
-            overall_status=1
-            continue
-        fi
-        if ! grep -q "^PASS: ${name}\[${oracle}\]" "$log_file"; then
-            echo "error: ${name} [${oracle}] ${stem} did not report PASS (see $log_file)" >&2
-            overall_status=1
-        fi
-        sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$log_file" | cut -d= -f2)"
-        py_cfg="$(python3 "$BS_TOOL" decode "$CORPUS_DIR/$stem.bin" --snapshot "$BS_DIR/fabric_spec.json")"
-        rec_cfg="$(tr -d '\n' < "$CORPUS_DIR/$stem.cfg")"
-        if [[ -z "$sim_cfg" || "$sim_cfg" != "$py_cfg" || "$sim_cfg" != "$rec_cfg" ]]; then
-            echo "error: [${stem}] loaded cfg mismatch: sim=$sim_cfg python=$py_cfg recorded=$rec_cfg" >&2
-            overall_status=1
-        fi
-    done < "$CORPUS_DIR/index.txt"
+    if ! gs_corpus_index_ok "$CORPUS_DIR/index.txt"; then
+        overall_status=1
+    else
+        while read -r stem oracle extra; do
+            [[ -z "$stem" ]] && continue
+            gs_corpus_entry_ok "$CORPUS_DIR" "$stem" "$oracle" "$extra" || { overall_status=1; continue; }
+            n_corpus=$((n_corpus + 1))
+            log_file="$BUILD_DIR/${name}_${stem}.log"
+            echo "=== running ${name} [${oracle}] corpus fixture ${stem} (with perturbation checks) ==="
+            if ! gs_run_bounded_tee "${name}[${oracle}] corpus $stem" "$log_file" \
+                    vvp "$out_bin" +bin="$CORPUS_DIR/$stem.bin" +map="$BS_DIR/logic4_configmem.map" \
+                    +wiring="$CORPUS_DIR/$stem.wiring" +design="$oracle" +mutate; then
+                echo "error: simulation run failed for ${stem}" >&2
+                overall_status=1
+                continue
+            fi
+            v="$(gs_classify 0 "$log_file" "$name" "$oracle")"
+            if [[ "$v" != PASS ]]; then
+                echo "error: ${name} [${oracle}] ${stem} did not report PASS (verdict $v; see $log_file)" >&2
+                overall_status=1
+            fi
+            gs_cfg_ok "corpus [${oracle}] ${stem}" "$log_file" "$CORPUS_DIR/$stem.bin" "$CORPUS_DIR/$stem.cfg" \
+                "$BS_DIR/fabric_spec.json" || overall_status=1
+        done < "$CORPUS_DIR/index.txt"
+    fi
     echo "corpus fixtures simulated: ${n_corpus}"
 fi
 

@@ -148,12 +148,6 @@ if [[ "$v" != "PASS" ]]; then
     exit 1
 fi
 # three-way cfg cross-check: simulation loader == python decoder == recorded cfg
-sim_cfg="$(grep -o '^CFG=[0-9a-f]*' "$W/blinky-sim.log" | cut -d= -f2)"
-py_cfg="$(python3 "$TOOL" decode "$W/blinky.bin" --snapshot "$W/fabric_spec.json")"
-rec_cfg="$(tr -d '\n' < "$W/blinky.cfg")"
-if [[ -z "$sim_cfg" || "$sim_cfg" != "$py_cfg" || "$sim_cfg" != "$rec_cfg" ]]; then
-    echo "error: cfg cross-check mismatch (sim loader '$sim_cfg' / python decoder '$py_cfg' / recorded '$rec_cfg')" >&2
-    exit 1
-fi
+gs_cfg_ok "blinky" "$W/blinky-sim.log" "$W/blinky.bin" "$W/blinky.cfg" "$W/fabric_spec.json" || exit 1
 grep -E "^(PASS|baseline)" "$W/blinky-sim.log"
 echo "=== blinky PASS: RTL -> FASM -> frame stream -> simulated blink ($SECONDS s wall clock, tools $([[ "$OSS_FETCHED" -eq 1 ]] && echo fetched-this-run || echo cached)) ==="
