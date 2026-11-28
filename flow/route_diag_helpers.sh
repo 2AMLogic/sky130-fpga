@@ -26,7 +26,7 @@
 # RD_COV_SED, RD_COUNT, RD_SUMMARY and the rd_* functions -- must stay free in
 # the sourcing script: assigning a scalar to a sourced associative array
 # silently writes element 0 instead of failing, which is why the bench table is
-# RD_BENCH and not the RD_TB scalar of flow/generated_tile_replay.sh.
+# RD_BENCH and not a plain scalar in a sourcing script.
 
 # The RD_* tables are read by the scripts that source this file.
 # shellcheck disable=SC2034
